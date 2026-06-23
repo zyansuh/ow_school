@@ -27,6 +27,69 @@ export function getGuildConfig() {
   return { guildId, botToken };
 }
 
+/** OAuth access token으로 사용자가 서버에 가입했는지 확인 (봇 미초대 시에도 동작) */
+export async function isUserInGuildViaOAuth(
+  accessToken: string,
+  guildId: string,
+): Promise<boolean | null> {
+  const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    console.warn('[discord] users/@me/guilds failed:', res.status, await res.text());
+    return null;
+  }
+
+  const guilds = (await res.json()) as { id: string }[];
+  return guilds.some((g) => g.id === guildId);
+}
+
+/** 봇이 서버에 들어가 있는지 확인 */
+export async function isBotInGuild(): Promise<boolean> {
+  const config = getGuildConfig();
+  if (!config) return false;
+
+  const res = await fetch(`${DISCORD_API}/guilds/${config.guildId}`, {
+    headers: botHeaders(config.botToken),
+    cache: 'no-store',
+  });
+  return res.ok;
+}
+
+/**
+ * 사용자 서버 가입 여부 (OAuth guilds 목록 우선, 실패 시 봇 API)
+ * - in: 가입됨
+ * - out: 미가입
+ * - unknown: 확인 불가 (로그인 허용)
+ */
+export async function checkUserGuildMembership(
+  discordUserId: string,
+  accessToken?: string | null,
+): Promise<'in' | 'out' | 'unknown'> {
+  const config = getGuildConfig();
+  if (!config) return 'in';
+
+  if (accessToken) {
+    const viaOAuth = await isUserInGuildViaOAuth(accessToken, config.guildId);
+    if (viaOAuth === true) return 'in';
+    if (viaOAuth === false) return 'out';
+  }
+
+  const member = await fetchGuildMember(discordUserId);
+  if (member === 'api_error') {
+    const botInGuild = await isBotInGuild();
+    if (!botInGuild) {
+      console.warn(
+        '[discord] bot is not in guild or DISCORD_GUILD_ID is wrong — invite bot to server',
+      );
+    }
+    return 'unknown';
+  }
+  return member ? 'in' : 'out';
+}
+
 function botHeaders(botToken: string) {
   return { Authorization: `Bot ${botToken}` };
 }
@@ -74,6 +137,36 @@ function resolveRoleNames(memberRoles: string[], guildRoles: DiscordRole[]) {
     .map((r) => r.name);
 }
 
+/** 서버 닉 → 전역 표시 이름 → 유저네임 순 */
+export function resolveMemberDisplayName(member: {
+  nick?: string | null;
+  user: { username: string; global_name?: string | null };
+}): string {
+  return member.nick ?? member.user.global_name ?? member.user.username;
+}
+
+/**
+ * 로그인한 사용자 본인의 서버 멤버 정보 (봇 없이 OAuth access token으로 조회)
+ * scope: guilds.members.read 필요
+ */
+export async function fetchSelfGuildMemberViaOAuth(
+  accessToken: string,
+  guildId: string,
+): Promise<DiscordMember | null> {
+  const res = await fetch(`${DISCORD_API}/users/@me/guilds/${guildId}/member`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    console.warn('[discord] oauth self guild member:', res.status, await res.text());
+    return null;
+  }
+
+  return res.json() as Promise<DiscordMember>;
+}
+
 export async function getGuildMemberInfo(discordUserId: string): Promise<GuildMemberInfo> {
   const member = await fetchGuildMember(discordUserId);
   if (!member || member === 'api_error') {
@@ -82,9 +175,41 @@ export async function getGuildMemberInfo(discordUserId: string): Promise<GuildMe
 
   const roles = await fetchGuildRoles();
   const roleNames = resolveRoleNames(member.roles, roles);
-  const serverNick = member.nick ?? member.user.global_name ?? member.user.username;
+  const serverNick = resolveMemberDisplayName(member);
 
   return { isInGuild: true, serverNick, roleNames };
+}
+
+/** OAuth 토큰으로 서버 닉·역할 동기화 (실패 시 봇 API로 폴백) */
+export async function syncUserGuildDataBestEffort(
+  discordUserId: string,
+  accessToken?: string | null,
+) {
+  const config = getGuildConfig();
+  if (!config) return getGuildMemberInfo(discordUserId);
+
+  if (accessToken) {
+    const member = await fetchSelfGuildMemberViaOAuth(accessToken, config.guildId);
+    if (member) {
+      const roles = await fetchGuildRoles();
+      const roleNames = roles.length > 0 ? resolveRoleNames(member.roles, roles) : [];
+      const serverNick = resolveMemberDisplayName(member);
+      const info: GuildMemberInfo = { isInGuild: true, serverNick, roleNames };
+
+      await prisma.user.update({
+        where: { discordId: discordUserId },
+        data: {
+          isInGuild: true,
+          discordServerNick: serverNick,
+          discordRoleNames: JSON.stringify(roleNames),
+          discordNickname: member.user.global_name ?? member.user.username,
+        },
+      });
+      return info;
+    }
+  }
+
+  return syncUserGuildData(discordUserId);
 }
 
 export async function syncUserGuildData(discordUserId: string) {
