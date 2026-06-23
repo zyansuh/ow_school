@@ -1,5 +1,5 @@
 import NextAuth from 'next-auth';
-import { prisma } from '@/lib/prisma';
+import { prisma, db } from '@/lib/prisma';
 import { ensureDefaultAdmin, isAdmin } from '@/lib/rbac';
 import { authConfig } from '@/lib/auth.config';
 import {
@@ -43,10 +43,12 @@ declare module 'next-auth' {
 }
 
 async function syncTokenFromUser(userId: string, token: Record<string, unknown>) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: { class: true, teacher: true, adminRole: true },
-  });
+  const user = await db((client) =>
+    client.user.findUnique({
+      where: { id: userId },
+      include: { class: true, teacher: true, adminRole: true },
+    }),
+  );
   if (!user) return token;
 
   token.userId = user.id;
@@ -70,6 +72,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   logger: {
     error(error) {
       console.error('[auth]', error);
+      const cause = error instanceof Error ? error.cause : undefined;
+      if (cause) console.error('[auth] cause:', cause);
     },
     warn(code) {
       console.warn('[auth]', code);
@@ -99,35 +103,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         }
 
-        const discordAvatar = p.avatar
-          ? `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.png`
-          : null;
-
-        const user = await prisma.user.upsert({
-          where: { discordId: p.id },
-          create: {
-            discordId: p.id,
-            discordUsername: username,
-            discordNickname: p.global_name || username,
-            discordAvatar,
-          },
-          update: {
-            discordUsername: username,
-            discordNickname: p.global_name || username,
-            discordAvatar,
-          },
-        });
-
-        await ensureDefaultAdmin(username, user.id);
-
-        if (getGuildConfig()) {
-          await syncUserGuildData(p.id);
-        }
-
         return true;
       } catch (e) {
         console.error('[auth] signIn failed:', e);
-        return '/login?error=AuthError';
+        return false;
       }
     },
     async jwt({ token, profile, trigger }) {
@@ -135,14 +114,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const p = profile as DiscordProfile | undefined;
 
         if (p?.id) {
-          const user = await prisma.user.findUnique({ where: { discordId: p.id } });
-          if (user) await syncTokenFromUser(user.id, token);
+          const username = discordUsernameFromProfile(p);
+          const discordAvatar = p.avatar
+            ? `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.png`
+            : null;
+
+          const user = await db((client) =>
+            client.user.upsert({
+              where: { discordId: p.id },
+              create: {
+                discordId: p.id,
+                discordUsername: username,
+                discordNickname: p.global_name || username,
+                discordAvatar,
+              },
+              update: {
+                discordUsername: username,
+                discordNickname: p.global_name || username,
+                discordAvatar,
+              },
+            }),
+          );
+
+          await db((client) => ensureDefaultAdmin(username, user.id, client));
+
+          if (getGuildConfig()) {
+            await syncUserGuildData(p.id);
+          }
+
+          await syncTokenFromUser(user.id, token);
         } else if (token.userId) {
           if (trigger === 'update' && token.discordId) {
             await syncUserGuildData(token.discordId as string);
           }
           await syncTokenFromUser(token.userId as string, token);
-          token.isAdmin = await isAdmin(token.userId as string);
+          token.isAdmin = await db((client) => isAdmin(token.userId as string, client));
         }
       } catch (e) {
         console.error('[auth] jwt failed:', e);

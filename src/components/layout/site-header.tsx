@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { Gamepad2, Menu, X, Moon, Sun } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 
@@ -21,7 +21,12 @@ export function SiteHeader() {
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const user = session?.user;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <header className="relative z-20 border-b border-gray-800/50 bg-gray-950/70 backdrop-blur-md sticky top-0">
@@ -46,7 +51,11 @@ export function SiteHeader() {
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             aria-label="테마 전환"
           >
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {mounted ? (
+              theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />
+            ) : (
+              <span className="inline-block h-4 w-4" aria-hidden />
+            )}
           </Button>
 
           {user ? (
