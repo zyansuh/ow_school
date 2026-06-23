@@ -62,20 +62,23 @@ npm run dev
 
 ## Vercel 배포
 
-1. [Neon](https://neon.tech) 또는 Vercel Postgres로 DB 생성
-2. Vercel 프로젝트 환경 변수 설정:
-   - `DATABASE_URL`
-   - `AUTH_SECRET`
-   - `DISCORD_CLIENT_ID`
-   - `DISCORD_CLIENT_SECRET`
-   - `NEXTAUTH_URL` = `https://ow-school.vercel.app`
-3. 배포 후 한 번 실행 (Vercel Shell 또는 로컬에서 프로덕션 URL로):
+1. [Neon](https://neon.tech)에서 프로젝트 생성 → **Connection string** → **Pooled** 복사
+2. Vercel → **Settings → Environment Variables** 에 아래 설정 (**따옴표 없이** Value만 붙여넣기):
 
-```bash
-npm run db:setup
-```
+| 변수 | 예시 |
+|------|------|
+| `DATABASE_URL` | `postgresql://user:pass@ep-xxx-pooler....neon.tech/neondb?sslmode=require` |
+| `AUTH_SECRET` | `openssl rand -base64 32` 로 생성 |
+| `DISCORD_CLIENT_ID` | Discord 앱 ID |
+| `DISCORD_CLIENT_SECRET` | Discord 시크릿 |
+| `NEXTAUTH_URL` | `https://ow-school.vercel.app` (Production) |
 
-4. Discord 개발자 포털에 프로덕션 Redirect URI 등록
+**주의:** `DATABASE_URL`은 반드시 `postgresql://` 또는 `postgres://`로 시작해야 합니다.  
+`file:./dev.db`(SQLite)나 `"postgresql://..."`(따옴표 포함)는 동작하지 않습니다.
+
+3. 환경 변수 저장 후 **Redeploy** — 빌드 시 자동으로 `db push` + `seed` 실행됩니다.
+4. Discord Redirect URI: `https://ow-school.vercel.app/api/auth/callback/discord`
+5. 배포 확인: `https://ow-school.vercel.app/api/health`
 
 ## 기본 관리자
 
