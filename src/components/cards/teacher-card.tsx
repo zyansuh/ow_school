@@ -4,7 +4,7 @@ import { Users, Clock, Calendar } from 'lucide-react';
 import { PageCard, PageCardHeader, PageCardBody, PageCardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { parseActivityDays } from '@/hooks/admin/use-admin-teachers';
+import { parseActivityDays } from '@/lib/teacher-activity';
 
 type TeacherCardData = {
   id: string;
@@ -24,25 +24,29 @@ type Props = {
 };
 
 function classLine(teacher: TeacherCardData) {
-  const fromJoin = teacher.teacherClasses?.map((tc) => tc.class) ?? [];
+  const fromJoin = teacher.teacherClasses?.map((tc) => tc.class).filter(Boolean) ?? [];
   if (fromJoin.length > 0) {
     return fromJoin.map((c) => `${c.name} · ${c.gameKr}`).join(' / ');
   }
-  return `${teacher.class.name} · ${teacher.class.gameKr}`;
+  if (teacher.class) {
+    return `${teacher.class.name} · ${teacher.class.gameKr}`;
+  }
+  return '반 미배정';
 }
 
 export function TeacherCard({ teacher, activeCount }: Props) {
   const full = activeCount >= teacher.maxStudents;
   const days = parseActivityDays(teacher.activityDays);
   const daysLabel = days.length ? days.join(', ') : '미정';
+  const profileSrc = teacher.profileImage?.trim();
 
   return (
     <PageCard hover className="min-h-[320px]">
       <PageCardHeader>
         <div className="flex items-start gap-4">
           <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
-            {teacher.profileImage ? (
-              <Image src={teacher.profileImage} alt={teacher.name} fill className="object-cover" sizes="56px" />
+            {profileSrc ? (
+              <Image src={profileSrc} alt={teacher.name} fill className="object-cover" sizes="56px" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-lg font-bold text-primary">
                 {teacher.name.charAt(0)}

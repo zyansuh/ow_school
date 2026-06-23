@@ -55,15 +55,7 @@ export const emptyTeacherForm: TeacherFormState = {
   activityTimeSlot: '',
 };
 
-export function parseActivityDays(json?: string | null) {
-  if (!json) return [];
-  try {
-    const v = JSON.parse(json);
-    return Array.isArray(v) ? v : [];
-  } catch {
-    return [];
-  }
-}
+export { parseActivityDays } from '@/lib/teacher-activity';
 
 export function useAdminTeachers() {
   const [teachers, setTeachers] = useState<AdminTeacher[]>([]);
