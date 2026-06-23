@@ -1,0 +1,28 @@
+import { unstable_cache } from 'next/cache';
+import { prisma } from '@/lib/prisma';
+
+export type HomeSiteStats = {
+  students: number;
+  teachers: number;
+  graduated: number;
+};
+
+export const getHomeSiteStats = unstable_cache(
+  async (): Promise<HomeSiteStats> => {
+    try {
+      const [students, teachers, graduated] = await Promise.all([
+        prisma.user.count({
+          where: { adminRole: null, status: 'active', teacherId: { not: null } },
+        }),
+        prisma.teacher.count({ where: { isActive: true } }),
+        prisma.user.count({ where: { status: 'graduated', adminRole: null } }),
+      ]);
+      return { students, teachers, graduated };
+    } catch (e) {
+      console.error('[home] site stats failed:', e);
+      return { students: 0, teachers: 0, graduated: 0 };
+    }
+  },
+  ['home-site-stats'],
+  { revalidate: 120 },
+);

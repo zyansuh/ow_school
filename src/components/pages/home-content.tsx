@@ -1,14 +1,18 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { unstable_cache } from 'next/cache';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ClipboardList, Megaphone, Gamepad2, Users } from 'lucide-react';
+import { ClipboardList, Megaphone, Users, GraduationCap, UserCheck } from 'lucide-react';
 import { GAME_CLASSES } from '@/lib/constants';
 import { prisma } from '@/lib/prisma';
 import { DEFAULT_NOTICES, defaultClassStats } from '@/lib/db-fallbacks';
 import { getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
+import { getHomeSiteStats } from '@/lib/home-stats';
 import { SITE_NAME } from '@/lib/site-brand';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, PageCardBody } from '@/components/ui/card';
+import { StatCard } from '@/components/ui/stat-card';
+import { ClassCard } from '@/components/cards/class-card';
 import type { ClassWithTeachers } from '@/types/db';
 
 type ClassStats = Record<string, { recruiting: boolean; current: number; max: number }>;
@@ -55,113 +59,104 @@ const getNotices = unstable_cache(
 );
 
 export async function HomeContent() {
-  const [stats, notices] = await Promise.all([getClassStats(), getNotices()]);
+  const [stats, notices, siteStats] = await Promise.all([getClassStats(), getNotices(), getHomeSiteStats()]);
 
   return (
-    <div className="section-gap pb-16">
-      <section className="relative overflow-hidden py-12 sm:py-20 md:py-28">
-        <div className="page-container relative z-10 text-center">
+    <div className="section-gap pb-16 page-enter">
+      {/* Hero */}
+      <section className="relative overflow-hidden border-b border-border/60">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
+        <div className="page-container relative z-10 py-16 sm:py-24 text-center">
           <div className="flex justify-center mb-6">
             <Image
               src="/images/logo/logo-peaceful-gaming-village.webp"
               alt={SITE_NAME}
-              width={80}
-              height={80}
+              width={72}
+              height={72}
               priority
-              sizes="80px"
-              className="rounded-2xl"
+              sizes="72px"
+              className="rounded-2xl border border-border shadow-card"
             />
           </div>
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black mb-4 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground mb-4">
             {SITE_NAME}
           </h1>
-          <p className="text-base sm:text-xl text-gray-300 mb-2 flex items-center justify-center gap-2">
-            <Gamepad2 className="h-5 w-5 text-purple-400" />
-            평화로운 게임마을 · 담당선생님 배정
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-lg mx-auto mb-2">
+            오버워치를 함께 배우고
+            <br className="sm:hidden" /> 함께 성장하는 공간
           </p>
-          <p className="text-sm text-gray-400 max-w-xl mx-auto mb-8">
-            수달반 · 사자반 · 여우반과 함께 게임 실력을 키워보세요
+          <p className="text-sm text-subtle max-w-md mx-auto mb-8">
+            수달반 · 사자반 · 여우반 — Discord 기반 게임 멘토링 커뮤니티
           </p>
-        </div>
-      </section>
-
-      <section id="classes" className="page-container section-gap">
-        <h2 className="heading-section text-center text-gray-100 mb-8">클래스 소개</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 items-stretch">
-          {GAME_CLASSES.map((cls) => {
-            const s = stats[cls.slug];
-            return (
-              <Link key={cls.slug} href={`/classes/${cls.slug}`} className="block group h-full">
-                <Card className={`h-full flex flex-col overflow-hidden border ${cls.borderColor} ${cls.hoverBorder} transition-all duration-300 hover:shadow-xl ${cls.bgGlow} hover:-translate-y-1 bg-gray-900/80 ${cls.laserClass}`}>
-                  <div className="relative h-44 sm:h-52 shrink-0 overflow-hidden">
-                    <Image
-                      src={cls.bannerImage}
-                      alt={cls.gameKr}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      loading="lazy"
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-gray-900/90 to-transparent" />
-                  </div>
-                  <div className="card-pad flex flex-col flex-1 gap-3">
-                    <div className="flex items-center gap-3">
-                      <Image
-                        src={cls.mascotImage}
-                        alt={cls.name}
-                        width={40}
-                        height={40}
-                        sizes="40px"
-                        loading="lazy"
-                        className="rounded-full border-2 border-gray-700 shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-gray-100">{cls.name}</h3>
-                        <p className={`text-sm ${cls.color}`}>{cls.game}</p>
-                      </div>
-                    </div>
-                    <p className="text-gray-400 text-sm leading-relaxed flex-1 min-h-[2.5rem]">{cls.description}</p>
-                    <div className="flex items-center justify-between gap-2 pt-1 mt-auto">
-                      <Badge variant={s?.recruiting ? 'success' : 'danger'}>
-                        {s?.recruiting ? '모집중' : '마감'}
-                      </Badge>
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {s?.current ?? 0}/{s?.max ?? 0}명
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="page-container">
-        <Link href="/interview" className="block max-w-4xl mx-auto">
-          <div className="bg-gradient-to-r from-purple-600/80 to-blue-600/80 hover:from-purple-500/90 hover:to-blue-500/90 border border-purple-400/30 rounded-xl card-pad text-center transition-all hover:scale-[1.01]">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <ClipboardList className="h-6 w-6 text-white" />
-              <h3 className="text-xl sm:text-2xl font-bold text-white">졸업면담지 작성</h3>
-            </div>
-            <p className="text-purple-200 text-sm">졸업 면담을 작성해주세요</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Button asChild size="lg" className="w-full sm:w-auto min-w-[160px]">
+              <Link href="/apply">수강 신청</Link>
+            </Button>
+            <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto min-w-[160px]">
+              <Link href="/teachers">선생님 보기</Link>
+            </Button>
           </div>
+        </div>
+      </section>
+
+      {/* Site stats */}
+      <section className="page-container -mt-8 relative z-20">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard label="학생 수" value={siteStats.students} suffix="명" icon={Users} />
+          <StatCard label="선생님 수" value={siteStats.teachers} suffix="명" icon={UserCheck} />
+          <StatCard label="졸업생 수" value={siteStats.graduated} suffix="명" icon={GraduationCap} />
+        </div>
+      </section>
+
+      {/* Classes */}
+      <section id="classes" className="page-container section-gap pt-4">
+        <div className="text-center mb-8">
+          <h2 className="heading-section text-foreground mb-2">클래스 소개</h2>
+          <p className="text-sm text-muted-foreground">게임별 반을 선택하고 담당 선생님을 만나보세요</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+          {GAME_CLASSES.map((cls) => (
+            <ClassCard key={cls.slug} cls={cls} stats={stats[cls.slug]} />
+          ))}
+        </div>
+      </section>
+
+      {/* Graduation CTA */}
+      <section className="page-container">
+        <Link href="/interview" className="block max-w-3xl mx-auto group">
+          <Card className="overflow-hidden border-primary/30 bg-gradient-to-r from-primary/20 to-secondary/10 hover:border-primary/50 hover:shadow-card-hover transition-all duration-200">
+            <PageCardBody className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6 text-center sm:text-left">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20 text-primary">
+                  <ClipboardList className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">졸업면담지 작성</h3>
+                  <p className="text-sm text-muted-foreground">졸업 면담을 작성해주세요</p>
+                </div>
+              </div>
+              <Badge variant="info">포인트 지급</Badge>
+            </PageCardBody>
+          </Card>
         </Link>
       </section>
 
+      {/* Notices */}
       <section className="page-container">
-        <Card className="bg-gray-900/50 border-gray-800 max-w-2xl mx-auto">
-          <div className="card-pad">
-            <h3 className="heading-section text-gray-200 mb-3 flex items-center gap-2">
-              <Megaphone className="h-4 w-4 text-amber-400" /> 공지사항
+        <Card className="max-w-2xl mx-auto border-border">
+          <PageCardBody>
+            <h3 className="heading-section text-foreground mb-4 flex items-center gap-2">
+              <Megaphone className="h-4 w-4 text-warning" /> 공지사항
             </h3>
-            <ul className="text-gray-400 text-sm space-y-2">
+            <ul className="text-muted-foreground text-sm space-y-2.5">
               {notices.map((line) => (
-                <li key={line}>• {line}</li>
+                <li key={line} className="flex gap-2">
+                  <span className="text-primary shrink-0">•</span>
+                  <span>{line}</span>
+                </li>
               ))}
             </ul>
-          </div>
+          </PageCardBody>
         </Card>
       </section>
     </div>
