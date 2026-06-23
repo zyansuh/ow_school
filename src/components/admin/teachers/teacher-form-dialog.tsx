@@ -13,10 +13,12 @@ import {
 } from '@/components/ui/dialog';
 import { MBTI_TYPES } from '@/lib/mbti';
 import { cn } from '@/lib/utils';
+import { isDiscordSnowflake } from '@/lib/discord-id';
 import {
   DiscordUserSearch,
   DiscordUserIdLookup,
   type DiscordSearchUser,
+  type DiscordIdLookupResult,
 } from '@/components/admin/discord-user-search';
 import { ProfileImageField } from '@/components/admin/teachers/profile-image-field';
 import type { TeacherFormState, ClassItem } from '@/hooks/admin/use-admin-teachers';
@@ -42,6 +44,21 @@ function Field({ label, children, hint }: { label: string; children: React.React
   );
 }
 
+/** 대상 유저 lookup 결과만 discord 필드에 반영 (운영자 세션 미사용) */
+function applyTargetDiscordLabel(
+  current: TeacherFormState,
+  targetUserId: string,
+  discordLabel: string | null,
+): TeacherFormState {
+  if (current.discordUserId.trim() !== targetUserId.trim()) {
+    return current;
+  }
+  if (!discordLabel || isDiscordSnowflake(discordLabel)) {
+    return current;
+  }
+  return { ...current, discord: discordLabel };
+}
+
 export function TeacherFormDialog({
   open,
   editing,
@@ -64,23 +81,33 @@ export function TeacherFormDialog({
 
   const applyDiscordUser = useCallback(
     (user: DiscordSearchUser) => {
+      const label = user.discordLabel?.trim();
       onChange({
         ...formRef.current,
         discordUserId: user.discordId,
-        discord: user.serverNickname ?? '',
+        discord: label && !isDiscordSnowflake(label) ? label : '',
       });
     },
     [onChange],
   );
 
   const onIdLookupResolved = useCallback(
-    (payload: { serverNickname: string | null; discordUsername: string | null }) => {
-      if (payload.serverNickname) {
-        onChange({ ...formRef.current, discord: payload.serverNickname });
-      }
+    (payload: DiscordIdLookupResult) => {
+      const targetId = formRef.current.discordUserId.trim();
+      onChange(
+        applyTargetDiscordLabel(formRef.current, targetId, payload.discordLabel),
+      );
     },
     [onChange],
   );
+
+  const onDiscordUserIdChange = (raw: string) => {
+    const next: TeacherFormState = { ...form, discordUserId: raw };
+    if (!isDiscordSnowflake(raw.trim())) {
+      next.discord = '';
+    }
+    onChange(next);
+  };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -88,7 +115,7 @@ export function TeacherFormDialog({
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
           <DialogTitle>{editing ? '선생님 수정' : '새 선생님 등록'}</DialogTitle>
           <DialogDescription>
-            담당 반은 여러 개 선택할 수 있습니다. 저장 시 DB에 즉시 반영됩니다.
+            담당 반은 여러 개 선택할 수 있습니다. Discord 정보는 검색·ID로 선택한 대상 유저 기준입니다.
           </DialogDescription>
         </DialogHeader>
 
@@ -114,11 +141,18 @@ export function TeacherFormDialog({
                   ))}
                 </Select>
               </Field>
-              <Field label="서버 닉네임" hint="Discord User ID 입력·검색 시 서버 닉이 자동으로 채워집니다.">
+              <Field
+                label="디스코드 서버 닉네임"
+                hint="개인 계정명이 아닌, 해당 서버에서 표시되는 닉네임이 저장됩니다. 대상 유저 선택·ID 조회 시 자동 입력됩니다."
+              >
                 <Input
                   value={form.discord}
-                  onChange={(e) => onChange({ ...form, discord: e.target.value })}
-                  placeholder="디스코드 서버 닉네임"
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (isDiscordSnowflake(v.trim())) return;
+                    onChange({ ...form, discord: v });
+                  }}
+                  placeholder="서버 닉네임 (없으면 글로벌 닉·username)"
                 />
               </Field>
               <Field label="최대 인원">
@@ -132,18 +166,18 @@ export function TeacherFormDialog({
               </Field>
             </div>
 
-            <Field label="Discord 계정 연결" hint="서버 닉·Discord User ID로 검색해 연결하세요.">
+            <Field label="Discord 계정 연결" hint="등록할 대상 유저를 검색해 선택하세요. 운영자 본인 정보는 자동 입력되지 않습니다.">
               <DiscordUserSearch
                 selectedDiscordId={form.discordUserId || undefined}
-                selectedServerNickname={form.discord || null}
+                selectedDiscordLabel={form.discord || null}
                 onSelect={applyDiscordUser}
               />
             </Field>
 
-            <Field label="Discord User ID" hint="ID를 입력하면 서버 닉네임을 자동 조회합니다.">
+            <Field label="Discord User ID" hint="대상 유저의 Discord User ID만 입력하세요.">
               <Input
                 value={form.discordUserId}
-                onChange={(e) => onChange({ ...form, discordUserId: e.target.value })}
+                onChange={(e) => onDiscordUserIdChange(e.target.value)}
                 placeholder="예: 123456789012345678"
                 className="font-mono text-sm"
               />

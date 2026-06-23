@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { isDiscordSnowflake } from '@/lib/discord-id';
 
 export type AdminTeacher = {
   id: string;
@@ -99,6 +100,14 @@ export function useAdminTeachers() {
   const save = async (editingId: string | null, form: TeacherFormState) => {
     if (form.classIds.length === 0) {
       toast.error('담당 반을 1개 이상 선택하세요');
+      return false;
+    }
+
+    const discord = form.discord.trim();
+    const discordUserId = form.discordUserId.trim();
+
+    if (discord && isDiscordSnowflake(discord)) {
+      toast.error('디스코드 서버 닉네임에 User ID를 넣을 수 없습니다');
       return false;
     }
 

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { SkeletonTable } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/loading';
@@ -26,7 +25,6 @@ function classLabels(t: AdminTeacher) {
 }
 
 export default function AdminTeachersPage() {
-  const { data: session } = useSession();
   const { teachers, classes, loading, saving, deletingId, save, remove, toggleActive } = useAdminTeachers();
   const [form, setForm] = useState<TeacherFormState>(emptyTeacherForm);
   const [editing, setEditing] = useState<string | null>(null);
@@ -34,11 +32,7 @@ export default function AdminTeachersPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({
-      ...emptyTeacherForm,
-      discordUserId: session?.user?.discordId ?? '',
-      discord: session?.user?.discordUsername ?? '',
-    });
+    setForm(emptyTeacherForm);
     setFormOpen(true);
   };
 
