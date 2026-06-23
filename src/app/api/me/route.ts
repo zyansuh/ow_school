@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireUser } from '@/lib/api-helpers';
-import { syncUserGuildDataIfStale, resolveMembershipForSession } from '@/lib/discord-guild';
+import {
+  syncUserGuildDataIfStale,
+  runGuildSyncIfStale,
+  resolveMembershipForSession,
+} from '@/lib/discord-guild';
 import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 
 export async function GET(req: NextRequest) {
@@ -9,7 +14,17 @@ export async function GET(req: NextRequest) {
     const user = await requireUser();
     const refresh = req.nextUrl.searchParams.get('refresh') === '1';
 
-    await syncUserGuildDataIfStale(user.discordId, null, refresh);
+    if (refresh) {
+      await syncUserGuildDataIfStale(user.discordId, null, true);
+    } else {
+      after(async () => {
+        try {
+          await runGuildSyncIfStale(user.discordId);
+        } catch (e) {
+          console.warn('[me] background guild sync failed:', e);
+        }
+      });
+    }
 
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },

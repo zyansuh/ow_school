@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { syncUserGuildDataBestEffort } from '@/lib/discord-guild';
-import { syncAllTeacherStudentCounts, countActiveStudentsForTeacher } from '@/lib/teacher-counts';
+import { syncAllTeacherStudentCounts, getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
+import { mapWithConcurrency } from '@/lib/async-utils';
 import { resolveTeacherEntityForUser } from '@/lib/teacher/identity';
 import { userDisplayName, normalizeNickFields } from '@/lib/user-display';
 
@@ -45,17 +46,16 @@ export async function runAdminDiscordSync(): Promise<DiscordSyncReport> {
     select: { id: true, discordId: true, teacherId: true },
   });
 
-  let usersSynced = 0;
-  let usersFailed = 0;
-
-  for (const user of users) {
+  const syncResults = await mapWithConcurrency(users, 10, async (user) => {
     try {
       await syncUserGuildDataBestEffort(user.discordId);
-      usersSynced += 1;
+      return true;
     } catch {
-      usersFailed += 1;
+      return false;
     }
-  }
+  });
+  const usersSynced = syncResults.filter(Boolean).length;
+  const usersFailed = syncResults.length - usersSynced;
 
   const teacherCounts = await syncAllTeacherStudentCounts();
 
@@ -117,18 +117,15 @@ export async function runAdminDiscordSync(): Promise<DiscordSyncReport> {
     select: { id: true, name: true, currentStudents: true, discordUserId: true, discord: true },
   });
 
-  const studentCountMismatches: StudentCountMismatch[] = [];
-  for (const t of allTeachers) {
-    const live = await countActiveStudentsForTeacher(t.id);
-    if (live !== t.currentStudents) {
-      studentCountMismatches.push({
-        teacherId: t.id,
-        teacherName: t.name,
-        cachedCount: t.currentStudents,
-        liveCount: live,
-      });
-    }
-  }
+  const liveCounts = await getActiveStudentCountsByTeacher();
+  const studentCountMismatches: StudentCountMismatch[] = allTeachers
+    .filter((t) => (liveCounts[t.id] ?? 0) !== t.currentStudents)
+    .map((t) => ({
+      teacherId: t.id,
+      teacherName: t.name,
+      cachedCount: t.currentStudents,
+      liveCount: liveCounts[t.id] ?? 0,
+    }));
 
   const stillMissing = await prisma.teacher.findMany({
     where: { discordUserId: null },

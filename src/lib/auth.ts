@@ -8,11 +8,9 @@ import {
   parseRoleNames,
   syncUserGuildData,
   syncUserGuildDataBestEffort,
-  syncUserGuildDataIfStale,
 } from '@/lib/discord-guild';
 import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
-import { resolveTeacherForUser } from '@/lib/teacher-auth';
-import { resolveIsTeacherForUser } from '@/lib/teacher/identity';
+import { resolveTeacherEntityForUser, hasTeacherDiscordRole } from '@/lib/teacher/identity';
 
 type DiscordProfile = {
   id: string;
@@ -58,18 +56,13 @@ async function syncTokenFromUser(userId: string, token: Record<string, unknown>)
   if (!user) return token;
 
   const roleNames = parseRoleNames(user.discordRoleNames);
-  const teacherRecord = await resolveTeacherForUser({
+  const teacherRecord = await resolveTeacherEntityForUser({
     id: user.id,
     discordId: user.discordId,
     discordUsername: user.discordUsername,
     discordRoleNames: user.discordRoleNames,
   });
-  const isTeacher = await resolveIsTeacherForUser({
-    id: user.id,
-    discordId: user.discordId,
-    discordUsername: user.discordUsername,
-    discordRoleNames: user.discordRoleNames,
-  });
+  const isTeacher = !!teacherRecord || hasTeacherDiscordRole(user.discordRoleNames);
 
   token.userId = user.id;
   token.discordId = user.discordId;
@@ -170,16 +163,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             discordRoleNames: user.discordRoleNames,
           });
 
-          const guildSync = getGuildConfig()
-            ? syncUserGuildDataBestEffort(p.id, account?.access_token)
-            : Promise.resolve();
+          await syncTokenFromUser(user.id, token);
 
-          await Promise.all([syncTokenFromUser(user.id, token), guildSync]);
+          if (getGuildConfig()) {
+            void syncUserGuildDataBestEffort(p.id, account?.access_token).catch((e) =>
+              console.warn('[auth] guild sync on sign-in failed:', e),
+            );
+          }
         } else if (token.userId) {
           if (trigger === 'update' && token.discordId) {
             await syncUserGuildData(token.discordId as string);
-          } else if (token.discordId) {
-            await syncUserGuildDataIfStale(token.discordId as string);
           }
           await syncTokenFromUser(token.userId as string, token);
           token.isAdmin = await db((client) => isAdmin(token.userId as string, client));

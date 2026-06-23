@@ -23,6 +23,8 @@ export default function MyPage() {
     saveNick,
     requestingAdmin,
     requestAdminRole,
+    refreshingDiscord,
+    refreshDiscord,
   } = useMyPageData();
 
   if (loading) return <MainLayout><LoadingPage /></MainLayout>;
@@ -65,6 +67,15 @@ export default function MyPage() {
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="heading-section text-gray-200">디스코드 서버 정보</h2>
               <Badge variant="success">서버 가입</Badge>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={refreshingDiscord}
+                onClick={() => void refreshDiscord()}
+              >
+                {refreshingDiscord ? '동기화 중...' : 'Discord 새로고침'}
+              </Button>
             </div>
             <div className="grid sm:grid-cols-2 gap-4 text-sm">
               <div>

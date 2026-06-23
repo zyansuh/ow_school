@@ -26,9 +26,10 @@ export function useMyPageData() {
   const [nickInput, setNickInput] = useState('');
   const [savingNick, setSavingNick] = useState(false);
   const [requestingAdmin, setRequestingAdmin] = useState(false);
+  const [refreshingDiscord, setRefreshingDiscord] = useState(false);
 
-  const load = useCallback(() =>
-    fetch('/api/me?refresh=1')
+  const load = useCallback((refresh = false) =>
+    fetch(refresh ? '/api/me?refresh=1' : '/api/me')
       .then((r) => r.json())
       .then((d) => {
         setData(d);
@@ -64,6 +65,19 @@ export function useMyPageData() {
     }
   };
 
+  const refreshDiscord = async () => {
+    setRefreshingDiscord(true);
+    try {
+      await load(true);
+      await update();
+      toast.success('Discord 정보를 새로고침했습니다');
+    } catch {
+      toast.error('새로고침 실패');
+    } finally {
+      setRefreshingDiscord(false);
+    }
+  };
+
   const requestAdminRole = async () => {
     setRequestingAdmin(true);
     try {
@@ -92,5 +106,7 @@ export function useMyPageData() {
     saveNick,
     requestingAdmin,
     requestAdminRole,
+    refreshingDiscord,
+    refreshDiscord,
   };
 }

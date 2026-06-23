@@ -82,7 +82,7 @@ export default function InterviewPage() {
   useEffect(() => {
     if (!session) return;
     Promise.all([
-      fetch('/api/me?refresh=1').then((r) => r.json()),
+      fetch('/api/me').then((r) => r.json()),
       fetch('/api/interviews/mine').then((r) => r.json()),
     ]).then(([meData, interview]) => {
       if (meData && !meData.error) setMe(meData);

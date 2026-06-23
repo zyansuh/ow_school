@@ -195,19 +195,25 @@ export async function fetchSelfGuildMemberViaOAuth(
   return res.json() as Promise<DiscordMember>;
 }
 
-export async function getGuildMemberInfo(discordUserId: string): Promise<GuildMemberInfo> {
-  const member = await fetchGuildMember(discordUserId);
-  if (member === 'api_error') {
-    const existing = await prisma.user.findUnique({ where: { discordId: discordUserId } });
-    if (existing) {
-      return {
-        isInGuild: resolveMembershipForSession(existing.isInGuild),
-        guildNickname: existing.discordServerNick,
-        globalDisplayName: existing.discordNickname,
-        username: existing.discordUsername,
-        roleNames: parseRoleNames(existing.discordRoleNames),
-      };
-    }
+function guildInfoFromDbUser(user: {
+  isInGuild: boolean;
+  discordServerNick: string | null;
+  discordNickname: string | null;
+  discordUsername: string;
+  discordRoleNames: string | null;
+}): GuildMemberInfo {
+  return {
+    isInGuild: resolveMembershipForSession(user.isInGuild),
+    guildNickname: user.discordServerNick,
+    globalDisplayName: user.discordNickname,
+    username: user.discordUsername,
+    roleNames: parseRoleNames(user.discordRoleNames),
+  };
+}
+
+async function guildInfoFromDb(discordUserId: string): Promise<GuildMemberInfo> {
+  const existing = await prisma.user.findUnique({ where: { discordId: discordUserId } });
+  if (!existing) {
     return {
       isInGuild: resolveMembershipForSession(false),
       guildNickname: null,
@@ -216,13 +222,22 @@ export async function getGuildMemberInfo(discordUserId: string): Promise<GuildMe
       roleNames: [],
     };
   }
-  if (!member) {
-    return { isInGuild: false, guildNickname: null, globalDisplayName: null, username: '', roleNames: [] };
-  }
+  return guildInfoFromDbUser(existing);
+}
 
+async function guildInfoFromMember(member: DiscordMember): Promise<GuildMemberInfo> {
   const roles = await fetchGuildRoles();
   const roleNames = resolveRoleNames(member.roles, roles);
   return memberToGuildInfo(member, roleNames);
+}
+
+export async function getGuildMemberInfo(discordUserId: string): Promise<GuildMemberInfo> {
+  const member = await fetchGuildMember(discordUserId);
+  if (member === 'api_error') return guildInfoFromDb(discordUserId);
+  if (!member) {
+    return { isInGuild: false, guildNickname: null, globalDisplayName: null, username: '', roleNames: [] };
+  }
+  return guildInfoFromMember(member);
 }
 
 async function persistGuildInfo(discordUserId: string, info: GuildMemberInfo) {
@@ -243,10 +258,21 @@ async function persistGuildInfo(discordUserId: string, info: GuildMemberInfo) {
 
 export async function syncUserGuildData(discordUserId: string) {
   const member = await fetchGuildMember(discordUserId);
-  if (member === 'api_error') {
-    return getGuildMemberInfo(discordUserId);
+  if (member === 'api_error') return guildInfoFromDb(discordUserId);
+
+  if (!member) {
+    const info: GuildMemberInfo = {
+      isInGuild: false,
+      guildNickname: null,
+      globalDisplayName: null,
+      username: '',
+      roleNames: [],
+    };
+    await persistGuildInfo(discordUserId, info);
+    return info;
   }
-  const info = await getGuildMemberInfo(discordUserId);
+
+  const info = await guildInfoFromMember(member);
   await persistGuildInfo(discordUserId, info);
   return info;
 }
@@ -286,7 +312,18 @@ export async function syncUserGuildDataBestEffort(
   return syncUserGuildData(discordUserId);
 }
 
-const GUILD_SYNC_TTL_MS = 2 * 60 * 1000;
+const DEFAULT_GUILD_SYNC_TTL_MS = 30 * 1000;
+
+function guildSyncTtlMs() {
+  const sec = Number(process.env.GUILD_SYNC_TTL_SEC);
+  if (Number.isFinite(sec) && sec > 0) return sec * 1000;
+  return DEFAULT_GUILD_SYNC_TTL_MS;
+}
+
+export function isGuildSyncStale(guildSyncedAt: Date | null | undefined, force = false) {
+  if (force || !guildSyncedAt) return true;
+  return Date.now() - guildSyncedAt.getTime() >= guildSyncTtlMs();
+}
 
 export async function syncUserGuildDataIfStale(
   discordUserId: string,
@@ -295,20 +332,27 @@ export async function syncUserGuildDataIfStale(
 ) {
   if (!force) {
     const user = await prisma.user.findUnique({ where: { discordId: discordUserId } });
-    if (user?.guildSyncedAt) {
-      const age = Date.now() - user.guildSyncedAt.getTime();
-      if (age < GUILD_SYNC_TTL_MS) {
-        return {
-          isInGuild: user.isInGuild,
-          guildNickname: user.discordServerNick,
-          globalDisplayName: user.discordNickname,
-          username: user.discordUsername,
-          roleNames: parseRoleNames(user.discordRoleNames),
-        };
-      }
+    if (user && !isGuildSyncStale(user.guildSyncedAt)) {
+      return guildInfoFromDbUser(user);
     }
   }
   return syncUserGuildDataBestEffort(discordUserId, accessToken);
+}
+
+/** stale일 때만 Discord 동기화 (await용). */
+export async function runGuildSyncIfStale(
+  discordUserId: string,
+  accessToken?: string | null,
+  force = false,
+) {
+  if (!force) {
+    const user = await prisma.user.findUnique({
+      where: { discordId: discordUserId },
+      select: { guildSyncedAt: true },
+    });
+    if (!isGuildSyncStale(user?.guildSyncedAt)) return;
+  }
+  await syncUserGuildDataBestEffort(discordUserId, accessToken);
 }
 
 export async function updateGuildNickname(discordUserId: string, nick: string | null) {
@@ -350,11 +394,12 @@ export async function updateGuildNickname(discordUserId: string, nick: string | 
     },
   });
 
-  try {
-    return await syncUserGuildData(discordUserId);
-  } catch {
-    return getGuildMemberInfo(discordUserId);
-  }
+  const roles = await fetchGuildRoles();
+  const roleNames = resolveRoleNames(member.roles, roles);
+  return {
+    ...memberToGuildInfo({ ...member, nick: trimmed }, roleNames),
+    guildNickname: trimmed,
+  };
 }
 
 export function parseRoleNames(json: string | null | undefined): string[] {
