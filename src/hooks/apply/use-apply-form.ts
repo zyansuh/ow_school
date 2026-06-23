@@ -32,7 +32,7 @@ export function useApplyForm() {
     if (session?.user) {
       setForm((f) => ({
         ...f,
-        discord: session.user.discordUsername,
+        discord: session.user.discordId,
       }));
       // 세션 JWT는 길드 닉 동기화 전 값일 수 있어 /api/me 최신 표시명 사용
       fetch('/api/me')

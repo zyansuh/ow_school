@@ -32,8 +32,8 @@ function ApplyForm() {
           <Input id="nickname" required value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} className="mt-2" />
         </div>
         <div>
-          <Label htmlFor="discord">디스코드 *</Label>
-          <Input id="discord" required value={form.discord} onChange={(e) => setForm({ ...form, discord: e.target.value })} className="mt-2" />
+          <Label htmlFor="discord">Discord User ID *</Label>
+          <Input id="discord" required readOnly value={form.discord} className="mt-2 font-mono text-sm bg-muted/40" />
         </div>
         <div>
           <Label htmlFor="playTimeSlot">평소 게임하는 시간대 *</Label>
