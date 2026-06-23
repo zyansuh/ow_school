@@ -22,7 +22,10 @@ export default async function TeachersPage() {
         },
         orderBy: [{ class: { slug: 'asc' } }, { name: 'asc' }],
       }),
-      getActiveStudentCountsByTeacher(),
+      getActiveStudentCountsByTeacher().catch((e) => {
+        console.error('[teachers] student counts failed:', e);
+        return {} as Record<string, number>;
+      }),
     ]);
   } catch (e) {
     console.error('[teachers] findMany failed:', e);
