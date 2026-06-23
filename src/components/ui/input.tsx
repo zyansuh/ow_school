@@ -6,7 +6,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
     <input
       ref={ref}
       className={cn(
-        'flex h-11 w-full rounded-lg border border-input bg-gray-900/50 px-4 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex h-12 w-full rounded-xl border border-border bg-surface px-4 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/50 transition-shadow disabled:opacity-50',
         className,
       )}
       {...props}
@@ -20,7 +20,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
     <textarea
       ref={ref}
       className={cn(
-        'flex min-h-[120px] w-full rounded-lg border border-input bg-gray-900/50 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex min-h-[140px] w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/50 transition-shadow disabled:opacity-50 resize-y',
         className,
       )}
       {...props}
@@ -31,7 +31,7 @@ Textarea.displayName = 'Textarea';
 
 export const Label = React.forwardRef<HTMLLabelElement, React.LabelHTMLAttributes<HTMLLabelElement>>(
   ({ className, ...props }, ref) => (
-    <label ref={ref} className={cn('text-sm font-medium text-gray-200 mb-2 block', className)} {...props} />
+    <label ref={ref} className={cn('text-sm font-medium text-foreground mb-2 block', className)} {...props} />
   ),
 );
 Label.displayName = 'Label';
@@ -41,7 +41,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
     <select
       ref={ref}
       className={cn(
-        'flex h-11 w-full rounded-lg border border-input bg-gray-900/50 px-4 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex h-12 w-full rounded-xl border border-border bg-surface px-4 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50',
         className,
       )}
       {...props}
@@ -51,3 +51,8 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
   ),
 );
 Select.displayName = 'Select';
+
+export function FormError({ children }: { children?: string | null }) {
+  if (!children) return null;
+  return <p className="text-xs text-danger mt-1.5">{children}</p>;
+}

@@ -4,16 +4,19 @@ export function Badge({
   className,
   variant = 'default',
   ...props
-}: React.HTMLAttributes<HTMLSpanElement> & { variant?: 'default' | 'outline' | 'success' | 'warning' | 'danger' }) {
+}: React.HTMLAttributes<HTMLSpanElement> & {
+  variant?: 'default' | 'outline' | 'success' | 'warning' | 'danger' | 'info';
+}) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-3 py-1 text-xs font-medium',
-        variant === 'default' && 'bg-primary/20 text-primary',
-        variant === 'outline' && 'border border-gray-600 text-gray-300',
-        variant === 'success' && 'bg-green-500/20 text-green-400',
-        variant === 'warning' && 'bg-amber-500/20 text-amber-400',
-        variant === 'danger' && 'bg-red-500/20 text-red-400',
+        'inline-flex items-center rounded-lg px-2.5 py-0.5 text-xs font-medium',
+        variant === 'default' && 'bg-primary/15 text-primary',
+        variant === 'info' && 'bg-secondary/15 text-secondary',
+        variant === 'outline' && 'border border-border text-muted-foreground',
+        variant === 'success' && 'bg-success/15 text-success',
+        variant === 'warning' && 'bg-warning/15 text-warning',
+        variant === 'danger' && 'bg-danger/15 text-danger',
         className,
       )}
       {...props}
