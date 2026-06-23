@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 import { parseClubNames } from '@/lib/interview-utils';
+import { filterStudentUsers, isStudentUser, loadUserRoleContext } from '@/lib/user-role';
 
 export type TeacherStudentRow = {
   id: string;
@@ -55,10 +56,11 @@ export type TeacherStudentDetail = {
 };
 
 async function collectStudentIds(teacherId: string): Promise<string[]> {
+  const ctx = await loadUserRoleContext();
   const [active, interviews, applications] = await Promise.all([
     prisma.user.findMany({
       where: { teacherId, adminRole: null },
-      select: { id: true },
+      select: { id: true, adminRole: true, discordRoleNames: true, discordId: true },
     }),
     prisma.interview.findMany({
       where: { teacherId },
@@ -71,11 +73,22 @@ async function collectStudentIds(teacherId: string): Promise<string[]> {
   ]);
 
   const ids = new Set<string>();
-  for (const u of active) ids.add(u.id);
-  for (const iv of interviews) ids.add(iv.userId);
+  for (const u of filterStudentUsers(active, ctx)) ids.add(u.id);
+
+  const extraIds = new Set<string>();
+  for (const iv of interviews) extraIds.add(iv.userId);
   for (const app of applications) {
-    if (app.userId) ids.add(app.userId);
+    if (app.userId) extraIds.add(app.userId);
   }
+
+  if (!extraIds.size) return Array.from(ids);
+
+  const extras = await prisma.user.findMany({
+    where: { id: { in: Array.from(extraIds) }, adminRole: null },
+    select: { id: true, adminRole: true, discordRoleNames: true, discordId: true },
+  });
+  for (const u of filterStudentUsers(extras, ctx)) ids.add(u.id);
+
   return Array.from(ids);
 }
 
@@ -100,20 +113,25 @@ export async function getTeacherStudents(teacherId: string) {
     };
   }
 
-  const users = await prisma.user.findMany({
-    where: { id: { in: studentIds }, adminRole: null },
-    include: {
-      class: true,
-      applications: {
-        where: { teacherId },
-        include: { class: true },
-        orderBy: { createdAt: 'desc' },
-        take: 1,
+  const ctx = await loadUserRoleContext();
+  const users = filterStudentUsers(
+    await prisma.user.findMany({
+      where: { id: { in: studentIds }, adminRole: null },
+      include: {
+        class: true,
+        adminRole: true,
+        applications: {
+          where: { teacherId },
+          include: { class: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+        interviews: { orderBy: { createdAt: 'desc' }, take: 1 },
       },
-      interviews: { orderBy: { createdAt: 'desc' }, take: 1 },
-    },
-    orderBy: { updatedAt: 'desc' },
-  });
+      orderBy: { updatedAt: 'desc' },
+    }),
+    ctx,
+  );
 
   const students: TeacherStudentRow[] = users.map((u) => {
     const app = u.applications[0];
@@ -171,7 +189,7 @@ export async function getTeacherStudentDetail(teacherId: string, studentId: stri
     prisma.teacher.findUnique({ where: { id: teacherId } }),
   ]);
 
-  if (!user || user.adminRole) return null;
+  if (!user || !isStudentUser(user, await loadUserRoleContext())) return null;
 
   const app = user.applications[0];
   const interview = user.interviews[0];

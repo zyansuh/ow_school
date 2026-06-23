@@ -8,18 +8,16 @@ import {
 } from '@/lib/monthly-stats';
 import { parseRoleNames } from '@/lib/discord-guild';
 import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
+import { findAssignedStudentsForTeacher } from '@/lib/student-users';
+import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
 
 export async function GET() {
   try {
     const { teacher } = await requireTeacherUser();
     const months = lastMonths(6);
 
-    const [students, applications, interviews, classes] = await Promise.all([
-      prisma.user.findMany({
-        where: { teacherId: teacher.id, status: 'active', adminRole: null },
-        include: { class: true },
-        orderBy: { createdAt: 'desc' },
-      }),
+    const [students, applications, interviews, activeCount] = await Promise.all([
+      findAssignedStudentsForTeacher(teacher.id),
       prisma.application.findMany({
         where: { teacherId: teacher.id },
         select: { createdAt: true },
@@ -28,22 +26,7 @@ export async function GET() {
         where: { teacherId: teacher.id },
         select: { createdAt: true },
       }),
-      prisma.class.findMany({
-        where: { id: teacher.classId },
-        include: {
-          _count: {
-            select: {
-              users: {
-                where: {
-                  teacherId: teacher.id,
-                  status: 'active',
-                  adminRole: null,
-                },
-              },
-            },
-          },
-        },
-      }),
+      countActiveStudentsForTeacher(teacher.id),
     ]);
 
     const monthlyApplications = await mergeMonthlyStats(
@@ -54,6 +37,9 @@ export async function GET() {
       buildMonthlyCounts(interviews, months),
       'interviews',
     );
+
+    const className = teacher.class?.name ?? '';
+    const byClass = className ? { [className]: activeCount } : {};
 
     return NextResponse.json({
       teacher: {
@@ -67,13 +53,13 @@ export async function GET() {
           }
         })(),
         activityTimeSlot: teacher.activityTimeSlot,
-        className: teacher.class?.name ?? '',
-        currentStudents: students.length,
+        className,
+        currentStudents: activeCount,
         maxStudents: teacher.maxStudents,
       },
       stats: {
-        totalStudents: students.length,
-        byClass: Object.fromEntries(classes.map((c) => [c.name, c._count.users])),
+        totalStudents: activeCount,
+        byClass,
         monthlyApplications,
         monthlyInterviews,
       },

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { filterStudentUsers, loadUserRoleContext } from '@/lib/user-role';
 
 /** teacherId 기준 활성 담당 학생 (Discord userId로 User 연결) */
 export function activeAssignedStudentWhere(teacherId: string) {
@@ -10,7 +11,12 @@ export function activeAssignedStudentWhere(teacherId: string) {
 }
 
 export async function countActiveStudentsForTeacher(teacherId: string) {
-  return prisma.user.count({ where: activeAssignedStudentWhere(teacherId) });
+  const ctx = await loadUserRoleContext();
+  const users = await prisma.user.findMany({
+    where: activeAssignedStudentWhere(teacherId),
+    include: { adminRole: true },
+  });
+  return filterStudentUsers(users, ctx).length;
 }
 
 /** Teacher.currentStudents를 실제 활성 담당 학생 수와 동기화 */
@@ -40,18 +46,24 @@ export async function syncAllTeacherStudentCounts() {
 }
 
 export async function getActiveStudentCountsByTeacher() {
-  const rows = await prisma.user.groupBy({
-    by: ['teacherId'],
+  const ctx = await loadUserRoleContext();
+  const users = await prisma.user.findMany({
     where: {
       status: 'active',
       teacherId: { not: null },
       adminRole: { is: null },
     },
-    _count: { _all: true },
+    select: {
+      teacherId: true,
+      adminRole: true,
+      discordRoleNames: true,
+      discordId: true,
+    },
   });
-  return Object.fromEntries(
-    rows
-      .filter((r): r is typeof r & { teacherId: string } => r.teacherId != null)
-      .map((r) => [r.teacherId, r._count._all]),
-  );
+  const students = filterStudentUsers(users, ctx);
+  const counts: Record<string, number> = {};
+  for (const u of students) {
+    if (u.teacherId) counts[u.teacherId] = (counts[u.teacherId] ?? 0) + 1;
+  }
+  return counts;
 }

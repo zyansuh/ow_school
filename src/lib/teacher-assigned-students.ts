@@ -1,7 +1,6 @@
-import { prisma } from '@/lib/prisma';
+import { findAssignedStudentsForTeacher } from '@/lib/student-users';
 import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 import { parseClubNames } from '@/lib/interview-utils';
-import { activeAssignedStudentWhere } from '@/lib/teacher-counts';
 
 export type TeacherAssignedStudentRow = {
   id: string;
@@ -13,20 +12,7 @@ export type TeacherAssignedStudentRow = {
 };
 
 export async function fetchAssignedStudentsForTeacher(teacherId: string) {
-  return prisma.user.findMany({
-    where: activeAssignedStudentWhere(teacherId),
-    include: {
-      class: true,
-      applications: {
-        where: { teacherId },
-        include: { class: true },
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-      },
-      interviews: { orderBy: { createdAt: 'desc' }, take: 1 },
-    },
-    orderBy: { createdAt: 'asc' },
-  });
+  return findAssignedStudentsForTeacher(teacherId);
 }
 
 export async function getTeacherAssignedStudentRows(teacherId: string): Promise<TeacherAssignedStudentRow[]> {
@@ -45,7 +31,10 @@ export async function getTeacherAssignedStudentRows(teacherId: string): Promise<
   });
 }
 
-export function mapAssignedStudentDetail(user: Awaited<ReturnType<typeof fetchAssignedStudentsForTeacher>>[number], teacherId: string) {
+export function mapAssignedStudentDetail(
+  user: Awaited<ReturnType<typeof fetchAssignedStudentsForTeacher>>[number],
+  teacherId: string,
+) {
   const app = user.applications[0];
   const interview = user.interviews[0];
   return {
