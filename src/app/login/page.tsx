@@ -25,6 +25,11 @@ function LoginContent() {
                 평화로운 게임마을 디스코드 서버에 가입한 뒤 다시 로그인해 주세요.
               </p>
             )}
+            {error === 'AuthError' && (
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                로그인 처리 중 오류가 발생했습니다. DB 마이그레이션(npm run db:setup) 후 다시 시도해 주세요.
+              </p>
+            )}
             <Button className="w-full" size="lg" onClick={() => signIn('discord', { callbackUrl: '/' })}>
               Discord로 계속하기
             </Button>

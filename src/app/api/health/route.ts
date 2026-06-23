@@ -10,8 +10,15 @@ export async function GET() {
     DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID ? 'set' : 'missing',
     DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID ? 'set' : 'missing',
     DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN ? 'set' : 'missing',
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL ? 'set' : 'missing',
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL ?? 'missing',
+    VERCEL: process.env.VERCEL ? 'yes' : 'no',
   };
+
+  const warnings: string[] = [];
+  const nextAuthUrl = process.env.NEXTAUTH_URL ?? '';
+  if (process.env.VERCEL && nextAuthUrl.includes('localhost')) {
+    warnings.push('NEXTAUTH_URL이 localhost입니다. Production에는 https://ow-school.vercel.app 로 설정하세요.');
+  }
 
   let db = 'unknown';
   try {
@@ -22,5 +29,5 @@ export async function GET() {
     db = e instanceof Error ? e.message : 'error';
   }
 
-  return NextResponse.json({ ok: db.startsWith('ok'), db, env: checks });
+  return NextResponse.json({ ok: db.startsWith('ok'), db, env: checks, warnings });
 }

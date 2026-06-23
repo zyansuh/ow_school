@@ -65,40 +65,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     ...authConfig.callbacks,
     async signIn({ profile }) {
-      const p = profile as DiscordProfile | undefined;
-      if (!p?.id || !p.username) return false;
+      try {
+        const p = profile as DiscordProfile | undefined;
+        if (!p?.id || !p.username) return false;
 
-      if (getGuildConfig()) {
-        const member = await fetchGuildMember(p.id);
-        if (!member) return '/login?error=NotInGuild';
+        if (getGuildConfig()) {
+          const member = await fetchGuildMember(p.id);
+          if (!member) return '/login?error=NotInGuild';
+        }
+
+        const discordAvatar = p.avatar
+          ? `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.png`
+          : null;
+
+        const user = await prisma.user.upsert({
+          where: { discordId: p.id },
+          create: {
+            discordId: p.id,
+            discordUsername: p.username,
+            discordNickname: p.global_name || p.username,
+            discordAvatar,
+          },
+          update: {
+            discordUsername: p.username,
+            discordNickname: p.global_name || p.username,
+            discordAvatar,
+          },
+        });
+
+        await ensureDefaultAdmin(p.username, user.id);
+
+        if (getGuildConfig()) {
+          await syncUserGuildData(p.id);
+        }
+
+        return true;
+      } catch (e) {
+        console.error('[auth] signIn failed:', e);
+        return '/login?error=AuthError';
       }
-
-      const discordAvatar = p.avatar
-        ? `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.png`
-        : null;
-
-      const user = await prisma.user.upsert({
-        where: { discordId: p.id },
-        create: {
-          discordId: p.id,
-          discordUsername: p.username,
-          discordNickname: p.global_name || p.username,
-          discordAvatar,
-        },
-        update: {
-          discordUsername: p.username,
-          discordNickname: p.global_name || p.username,
-          discordAvatar,
-        },
-      });
-
-      await ensureDefaultAdmin(p.username, user.id);
-
-      if (getGuildConfig()) {
-        await syncUserGuildData(p.id);
-      }
-
-      return true;
     },
     async jwt({ token, profile, trigger }) {
       const p = profile as DiscordProfile | undefined;

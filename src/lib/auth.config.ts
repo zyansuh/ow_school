@@ -4,6 +4,7 @@ import Discord from 'next-auth/providers/discord';
 export const DISCORD_OAUTH_SCOPES = 'identify guilds guilds.members.read';
 
 export const authConfig = {
+  trustHost: true,
   providers: [
     Discord({
       clientId: process.env.DISCORD_CLIENT_ID!,
