@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { unstable_cache } from 'next/cache';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ClipboardList, Megaphone, Gamepad2, Users } from 'lucide-react';
@@ -11,37 +12,45 @@ import type { ClassWithTeachers } from '@/types/db';
 
 type ClassStats = Record<string, { recruiting: boolean; current: number; max: number }>;
 
-async function getClassStats(): Promise<ClassStats> {
-  try {
-    const classes: ClassWithTeachers[] = await prisma.class.findMany({
-      include: { teachers: { where: { isActive: true } } },
-    });
-    return Object.fromEntries(
-      classes.map((c) => [
-        c.slug,
-        {
-          recruiting: c.teachers.some((t) => t.currentStudents < t.maxStudents),
-          current: c.teachers.reduce((sum, t) => sum + t.currentStudents, 0),
-          max: c.teachers.reduce((sum, t) => sum + t.maxStudents, 0),
-        },
-      ]),
-    );
-  } catch (e) {
-    console.error('[home] getClassStats failed:', e);
-    return defaultClassStats();
-  }
-}
+const getClassStats = unstable_cache(
+  async (): Promise<ClassStats> => {
+    try {
+      const classes: ClassWithTeachers[] = await prisma.class.findMany({
+        include: { teachers: { where: { isActive: true } } },
+      });
+      return Object.fromEntries(
+        classes.map((c) => [
+          c.slug,
+          {
+            recruiting: c.teachers.some((t) => t.currentStudents < t.maxStudents),
+            current: c.teachers.reduce((sum, t) => sum + t.currentStudents, 0),
+            max: c.teachers.reduce((sum, t) => sum + t.maxStudents, 0),
+          },
+        ]),
+      );
+    } catch (e) {
+      console.error('[home] getClassStats failed:', e);
+      return defaultClassStats();
+    }
+  },
+  ['home-class-stats'],
+  { revalidate: 60 },
+);
 
-async function getNotices() {
-  try {
-    const setting = await prisma.siteSetting.findUnique({ where: { key: 'notices' } });
-    if (!setting?.value) return DEFAULT_NOTICES;
-    return JSON.parse(setting.value) as string[];
-  } catch (e) {
-    console.error('[home] getNotices failed:', e);
-    return DEFAULT_NOTICES;
-  }
-}
+const getNotices = unstable_cache(
+  async (): Promise<string[]> => {
+    try {
+      const setting = await prisma.siteSetting.findUnique({ where: { key: 'notices' } });
+      if (!setting?.value) return DEFAULT_NOTICES;
+      return JSON.parse(setting.value) as string[];
+    } catch (e) {
+      console.error('[home] getNotices failed:', e);
+      return DEFAULT_NOTICES;
+    }
+  },
+  ['home-notices'],
+  { revalidate: 120 },
+);
 
 export async function HomeContent() {
   const [stats, notices] = await Promise.all([getClassStats(), getNotices()]);
@@ -51,7 +60,15 @@ export async function HomeContent() {
       <section className="relative overflow-hidden py-12 sm:py-20 md:py-28">
         <div className="page-container relative z-10 text-center">
           <div className="flex justify-center mb-6">
-            <Image src="/images/logo/logo-peaceful-gaming-village.png" alt={SITE_NAME} width={80} height={80} className="rounded-2xl" />
+            <Image
+              src="/images/logo/logo-peaceful-gaming-village.webp"
+              alt={SITE_NAME}
+              width={80}
+              height={80}
+              priority
+              sizes="80px"
+              className="rounded-2xl"
+            />
           </div>
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-black mb-4 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
             {SITE_NAME}
@@ -75,12 +92,27 @@ export async function HomeContent() {
               <Link key={cls.slug} href={`/classes/${cls.slug}`} className="block group h-full">
                 <Card className={`h-full flex flex-col overflow-hidden border ${cls.borderColor} ${cls.hoverBorder} transition-all duration-300 hover:shadow-xl ${cls.bgGlow} hover:-translate-y-1 bg-gray-900/80 ${cls.laserClass}`}>
                   <div className="relative h-44 sm:h-52 shrink-0 overflow-hidden">
-                    <Image src={cls.bannerImage} alt={cls.gameKr} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <Image
+                      src={cls.bannerImage}
+                      alt={cls.gameKr}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      loading="lazy"
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
                     <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-gray-900/90 to-transparent" />
                   </div>
                   <div className="card-pad flex flex-col flex-1 gap-3">
                     <div className="flex items-center gap-3">
-                      <Image src={cls.mascotImage} alt={cls.name} width={40} height={40} className="rounded-full border-2 border-gray-700 shrink-0" />
+                      <Image
+                        src={cls.mascotImage}
+                        alt={cls.name}
+                        width={40}
+                        height={40}
+                        sizes="40px"
+                        loading="lazy"
+                        className="rounded-full border-2 border-gray-700 shrink-0"
+                      />
                       <div className="min-w-0">
                         <h3 className="font-bold text-gray-100">{cls.name}</h3>
                         <p className={`text-sm ${cls.color}`}>{cls.game}</p>

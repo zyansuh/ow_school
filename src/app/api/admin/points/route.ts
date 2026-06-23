@@ -1,58 +1,22 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from 'next/server';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { POINT_TYPE_LABELS } from '@/lib/points';
-import { userDisplayName } from '@/lib/user-display';
+import { getMonthlyPointReport } from '@/lib/admin-points';
 
-export async function GET() {
+function parseYearMonth(req: NextRequest) {
+  const year = Number(req.nextUrl.searchParams.get('year'));
+  const month = Number(req.nextUrl.searchParams.get('month'));
+  const now = new Date();
+  const y = Number.isFinite(year) && year >= 2020 ? year : now.getFullYear();
+  const m = Number.isFinite(month) && month >= 1 && month <= 12 ? month : now.getMonth() + 1;
+  return { year: y, month: m };
+}
+
+export async function GET(req: NextRequest) {
   try {
     await requireAdminUser();
-
-    const histories = await prisma.pointHistory.findMany({
-      include: { user: true },
-      orderBy: [{ userId: 'asc' }, { createdAt: 'desc' }],
-    });
-
-    const grouped = new Map<
-      string,
-      {
-        userId: string;
-        displayName: string;
-        serverNick: string | null;
-        items: Array<{
-          id: string;
-          pointType: string;
-          pointTypeLabel: string;
-          pointAmount: number;
-          createdAt: Date;
-        }>;
-        totalPoints: number;
-      }
-    >();
-
-    for (const h of histories) {
-      const key = h.userId;
-      const entry = grouped.get(key) ?? {
-        userId: h.userId,
-        displayName: userDisplayName(h.user),
-        serverNick: h.user.discordServerNick,
-        items: [],
-        totalPoints: 0,
-      };
-      entry.items.push({
-        id: h.id,
-        pointType: h.pointType,
-        pointTypeLabel: POINT_TYPE_LABELS[h.pointType] ?? h.pointType,
-        pointAmount: h.pointAmount,
-        createdAt: h.createdAt,
-      });
-      entry.totalPoints += h.pointAmount;
-      grouped.set(key, entry);
-    }
-
-    return NextResponse.json(
-      Array.from(grouped.values()).sort((a, b) => b.totalPoints - a.totalPoints),
-    );
+    const { year, month } = parseYearMonth(req);
+    const report = await getMonthlyPointReport(year, month);
+    return NextResponse.json(report);
   } catch (e) {
     return apiError(e);
   }

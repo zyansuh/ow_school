@@ -1,9 +1,13 @@
 export const GRADUATION_POINT = 15000;
 export const CLUB_POINT = 5000;
 
+export const CLUB_RECOMMENDATION_URL =
+  'https://discord.com/channels/1336943227273482280/1456506970696847370';
+
 export const POINT_TYPE_LABELS: Record<string, string> = {
   graduation: '졸업 포인트',
   club: '동호회 가입 포인트',
+  other: '기타 포인트',
 };
 
 export function formatPoint(amount: number) {

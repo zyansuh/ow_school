@@ -12,18 +12,15 @@ function generateStarField(count: number, size: number): string {
 
 export function SpaceBackground() {
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none motion-reduce:opacity-90" aria-hidden>
       <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-[#0a0a1a] to-gray-950" />
-      <div className="absolute inset-0 opacity-30 blur-3xl animate-nebula-drift-1">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-gradient-radial from-blue-900/40 via-purple-900/20 to-transparent" />
-        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full bg-gradient-radial from-purple-900/30 via-indigo-900/15 to-transparent" />
+      <div className="absolute inset-0 opacity-20 blur-2xl motion-reduce:opacity-0">
+        <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-gradient-radial from-blue-900/30 via-purple-900/15 to-transparent" />
       </div>
-      <div className="absolute inset-0 opacity-20 blur-3xl animate-nebula-drift-2">
-        <div className="absolute top-1/2 right-1/3 w-72 h-72 rounded-full bg-gradient-radial from-pink-900/30 via-violet-900/15 to-transparent" />
-      </div>
-      <div className="absolute inset-0 animate-stars-drift-1" style={{ backgroundImage: generateStarField(120, 1) }} />
-      <div className="absolute inset-0 animate-stars-drift-2" style={{ backgroundImage: generateStarField(60, 1.5) }} />
-      <div className="absolute inset-0 animate-stars-twinkle" style={{ backgroundImage: generateStarField(20, 2) }} />
+      <div
+        className="absolute inset-0 motion-reduce:animate-none"
+        style={{ backgroundImage: generateStarField(50, 1) }}
+      />
       <div className="absolute inset-0 bg-gray-950/40" />
     </div>
   );

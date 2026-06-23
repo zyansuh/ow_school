@@ -11,7 +11,7 @@ import { LoadingPage } from '@/components/ui/loading';
 import { toast } from 'sonner';
 import { resolveDisplayName } from '@/lib/user-display';
 import { GraduationReviewFab } from '@/components/interview/graduation-review-fab';
-import { CLUB_POINT, formatPoint, GRADUATION_POINT } from '@/lib/points';
+import { CLUB_POINT, CLUB_RECOMMENDATION_URL, formatPoint, GRADUATION_POINT } from '@/lib/points';
 import { Plus } from 'lucide-react';
 
 type MeData = {
@@ -192,6 +192,18 @@ export default function InterviewPage() {
                 <option value="no">아니오</option>
                 <option value="yes">예</option>
               </Select>
+
+              <p className="text-xs text-gray-500 mt-2">
+                동호회를 찾고 계신가요?{' '}
+                <a
+                  href={CLUB_RECOMMENDATION_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-400 hover:text-purple-300 underline"
+                >
+                  동호회 추천 채널 바로가기
+                </a>
+              </p>
 
               {form.joinedClub === 'yes' && (
                 <div className="mt-4 space-y-3">

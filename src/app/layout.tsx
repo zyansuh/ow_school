@@ -10,13 +10,13 @@ const siteUrl = process.env.NEXTAUTH_URL || 'https://ow-school.vercel.app';
 export const metadata: Metadata = {
   title: `${SITE_NAME} | ${SITE_TAGLINE}`,
   description: '게임 멘토링 클래스 · 수강 신청 · 선생님 관리 · 졸업면담',
-  icons: { icon: '/images/logo/logo-peaceful-gaming-village.png', apple: '/images/logo/logo-peaceful-gaming-village.png' },
+  icons: { icon: '/images/logo/logo-peaceful-gaming-village.webp', apple: '/images/logo/logo-peaceful-gaming-village.webp' },
   openGraph: {
     title: `${SITE_NAME} | ${SITE_TAGLINE}`,
     description: '수달반 · 사자반 · 여우반 게임 멘토링 클래스',
     url: siteUrl,
     siteName: SITE_NAME,
-    images: [{ url: `${siteUrl}/images/logo/logo-peaceful-gaming-village.png`, width: 512, height: 512 }],
+    images: [{ url: `${siteUrl}/images/logo/logo-peaceful-gaming-village.webp`, width: 256, height: 256 }],
     locale: 'ko_KR',
     type: 'website',
   },
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     card: 'summary',
     title: `${SITE_NAME} | ${SITE_TAGLINE}`,
     description: '게임 멘토링 클래스 플랫폼',
-    images: [`${siteUrl}/images/logo/logo-peaceful-gaming-village.png`],
+    images: [`${siteUrl}/images/logo/logo-peaceful-gaming-village.webp`],
   },
 };
 
