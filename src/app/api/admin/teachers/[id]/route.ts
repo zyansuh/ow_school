@@ -3,29 +3,40 @@ import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { assertDiscordUserIdAvailable } from '@/lib/teacher-auth';
 import { deleteTeacherById } from '@/lib/teacher-delete';
+import { mapTeacherWithClasses, syncTeacherClasses } from '@/lib/teacher-classes';
 import { z } from 'zod';
 
 const updateSchema = z.object({
-  name: z.string().optional(),
+  name: z.string().min(1).optional(),
   profileImage: z.string().optional(),
   mbti: z.string().optional(),
   intro: z.string().optional(),
+  classIds: z.array(z.string().min(1)).min(1).optional(),
   classId: z.string().optional(),
   discord: z.string().optional(),
-  discordUserId: z.string().min(1).optional().nullable(),
+  discordUserId: z
+    .union([z.string().min(1), z.null()])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v && v.trim() ? v.trim() : null)),
   activityDays: z.array(z.string()).optional(),
   activityTimeSlot: z.string().max(64).nullable().optional(),
   isActive: z.boolean().optional(),
-  maxStudents: z.number().optional(),
+  maxStudents: z.number().int().min(1).max(99).optional(),
   currentStudents: z.number().optional(),
 });
 
+const teacherInclude = {
+  class: true,
+  teacherClasses: { include: { class: true } },
+} as const;
+
 function serializeTeacherData(body: z.infer<typeof updateSchema>) {
-  const { activityDays, discordUserId, ...rest } = body;
+  const { activityDays, discordUserId, classIds, classId, ...rest } = body;
   const data: Record<string, unknown> = { ...rest };
   if (activityDays) data.activityDays = JSON.stringify(activityDays);
-  if (discordUserId !== undefined) data.discordUserId = discordUserId?.trim() || null;
-  return data;
+  if (discordUserId !== undefined) data.discordUserId = discordUserId;
+  if (classIds?.length) data.classId = classIds[0];
+  return { data, classIds };
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -36,13 +47,28 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (body.discordUserId) {
       await assertDiscordUserIdAvailable(body.discordUserId, id);
     }
+
+    const { data, classIds } = serializeTeacherData(body);
     const teacher = await prisma.teacher.update({
       where: { id },
-      data: serializeTeacherData(body),
-      include: { class: true },
+      data,
+      include: teacherInclude,
     });
-    return NextResponse.json(teacher);
+
+    if (classIds?.length) {
+      await syncTeacherClasses(id, classIds);
+    }
+
+    const refreshed = await prisma.teacher.findUniqueOrThrow({
+      where: { id },
+      include: teacherInclude,
+    });
+
+    return NextResponse.json(mapTeacherWithClasses(refreshed));
   } catch (e) {
+    if (e instanceof z.ZodError) {
+      return NextResponse.json({ error: e.errors[0]?.message ?? '입력값 오류' }, { status: 400 });
+    }
     if (e instanceof Error && e.message.startsWith('DISCORD_USER_ID_TAKEN')) {
       return NextResponse.json({ error: '이미 다른 선생님에 연결된 Discord User ID입니다' }, { status: 409 });
     }
