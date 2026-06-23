@@ -21,9 +21,10 @@ model User {
   class           Class?        @relation(fields: [classId], references: [id])
   teacherId       String?
   teacher         Teacher?      @relation("AssignedTeacher", fields: [teacherId], references: [id])
-  applications    Application[]
-  interviews      Interview[]
-  adminRole       AdminRole?
+  applications       Application[]
+  interviews         Interview[]
+  graduationReview   GraduationReview?
+  adminRole          AdminRole?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 }
@@ -90,6 +91,16 @@ model Interview {
   improvements String?
   review       String
   createdAt    DateTime @default(now())
+}
+
+model GraduationReview {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id])
+  authorName String
+  className  String
+  content    String
+  createdAt  DateTime @default(now())
 }
 
 model AdminRole {
