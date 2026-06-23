@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { MBTI_TYPES } from '@/lib/mbti';
 import { cn } from '@/lib/utils';
+import { DiscordUserSearch } from '@/components/admin/discord-user-search';
 import type { TeacherFormState, ClassItem } from '@/hooks/admin/use-admin-teachers';
 
 type Props = {
@@ -101,6 +102,19 @@ export function TeacherFormDialog({
                 />
               </Field>
             </div>
+
+            <Field label="Discord 계정 연결" hint="로그인한 유저를 검색해 User ID를 자동 입력하세요.">
+              <DiscordUserSearch
+                selectedDiscordId={form.discordUserId || undefined}
+                onSelect={(u) =>
+                  onChange({
+                    ...form,
+                    discordUserId: u.discordId,
+                    discord: u.discordUsername,
+                  })
+                }
+              />
+            </Field>
 
             <Field label="Discord User ID" hint="닉 변경에도 유지되는 고유 ID. 비워두면 미연결 상태로 저장됩니다.">
               <Input
