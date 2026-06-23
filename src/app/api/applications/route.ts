@@ -38,6 +38,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '모집이 마감되었습니다' }, { status: 400 });
     }
 
+    const pending = await prisma.application.findFirst({
+      where: { userId: user.id, status: 'pending' },
+    });
+    if (pending) {
+      return NextResponse.json({ error: '이미 대기 중인 신청이 있습니다' }, { status: 400 });
+    }
+
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+    if (dbUser?.teacherId && dbUser.status === 'active') {
+      return NextResponse.json({ error: '이미 담당 선생님이 배정되어 있습니다' }, { status: 400 });
+    }
+
     const app = await prisma.application.create({
       data: {
         userId: user.id,

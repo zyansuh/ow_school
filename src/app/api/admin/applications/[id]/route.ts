@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
+import { applyApplicationStatusChange } from '@/lib/applications';
 import { z } from 'zod';
 
 const patchSchema = z.object({ status: z.enum(['pending', 'approved', 'rejected']) });
@@ -14,25 +15,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const app = await prisma.application.findUnique({ where: { id }, include: { teacher: true } });
     if (!app) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+    const oldStatus = app.status;
+    if (status === 'approved' && oldStatus !== 'approved') {
+      const teacher = await prisma.teacher.findUnique({ where: { id: app.teacherId } });
+      if (teacher && teacher.currentStudents >= teacher.maxStudents) {
+        return NextResponse.json({ error: '선생님 정원이 가득 찼습니다' }, { status: 400 });
+      }
+    }
+
     const updated = await prisma.application.update({
       where: { id },
       data: { status },
       include: { teacher: true, class: true },
     });
 
-    if (status === 'approved' && app.status !== 'approved' && app.userId) {
-      const teacher = app.teacher;
-      await prisma.user.update({
-        where: { id: app.userId },
-        data: { classId: app.classId, teacherId: app.teacherId, status: 'active' },
-      });
-      if (teacher.currentStudents < teacher.maxStudents) {
-        await prisma.teacher.update({
-          where: { id: teacher.id },
-          data: { currentStudents: teacher.currentStudents + 1 },
-        });
-      }
-    }
+    await applyApplicationStatusChange(app, oldStatus, status);
 
     return NextResponse.json(updated);
   } catch (e) {
