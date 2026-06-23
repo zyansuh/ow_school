@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { graduateUser, restoreGraduatedUser } from '@/lib/graduation';
 import { assignStudentTeacher } from '@/lib/student-assignment';
+import { isStudentUser, loadUserRoleContext } from '@/lib/user-role';
 
 const patchSchema = z.object({
   action: z.enum(['graduate', 'ungraduate']).optional(),
@@ -18,7 +19,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = patchSchema.parse(await req.json());
 
     const user = await prisma.user.findUnique({ where: { id }, include: { adminRole: true } });
-    if (!user || user.adminRole) {
+    const ctx = await loadUserRoleContext();
+    if (!user || !isStudentUser(user, ctx)) {
       return NextResponse.json({ error: '학생을 찾을 수 없습니다' }, { status: 404 });
     }
 

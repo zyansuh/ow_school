@@ -1,27 +1,14 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { parseRoleNames } from '@/lib/discord-guild';
 import { normalizeNickFields, adminUserDisplayName, guildNicknameOnly } from '@/lib/user-display';
+import { findGraduatedStudentUsers } from '@/lib/student-users';
 
 export async function GET() {
   try {
     await requireAdminUser();
 
-    const users = await prisma.user.findMany({
-      where: { adminRole: null, status: 'graduated' },
-      include: {
-        class: true,
-        teacher: true,
-        applications: {
-          where: { status: 'approved' },
-          include: { class: true, teacher: true },
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
+    const users = await findGraduatedStudentUsers();
 
     return NextResponse.json(
       users.map((u) => ({
