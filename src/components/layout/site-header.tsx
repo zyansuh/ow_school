@@ -29,16 +29,16 @@ export function SiteHeader() {
   const NAV = buildNav(user?.isTeacher);
 
   return (
-    <header className="relative z-20 border-b border-gray-800/50 bg-gray-950/70 backdrop-blur-md sticky top-0">
+    <header className="relative z-20 border-b border-border bg-background/80 backdrop-blur-md sticky top-0">
       <div className="page-container flex h-16 items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2 font-bold text-white hover:text-purple-300 transition-colors shrink-0">
-          <Gamepad2 className="h-5 w-5 text-purple-400" />
+        <Link href="/" className="flex items-center gap-2 font-bold text-foreground hover:text-primary transition-colors shrink-0">
+          <Gamepad2 className="h-5 w-5 text-primary" />
           <span className="text-sm sm:text-base hidden xs:inline">{SITE_NAME}</span>
         </Link>
 
         <nav className="hidden lg:flex items-center gap-1">
           {NAV.map((item) => (
-            <Button key={item.href} variant="ghost" asChild className="text-gray-300 hover:text-white">
+            <Button key={item.href} variant="ghost" asChild className="text-muted-foreground hover:text-foreground">
               <Link href={item.href}>{item.label}</Link>
             </Button>
           ))}
@@ -48,10 +48,10 @@ export function SiteHeader() {
           {user ? (
             <div className="hidden sm:flex items-center gap-3 text-right">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-100 truncate">
+                <p className="text-sm font-medium text-foreground truncate">
                   {userDisplayName(user)}님
                 </p>
-                <p className="text-xs text-purple-300 truncate">
+                <p className="text-xs text-secondary truncate">
                   {userHeaderSubtitle(user)}
                 </p>
                 {user.discordRoleNames?.length > 0 && (
@@ -76,9 +76,9 @@ export function SiteHeader() {
       </div>
 
       {open && (
-        <div className="lg:hidden border-t border-gray-800/50 bg-gray-950/95 px-4 py-4 space-y-2">
+        <div className="lg:hidden border-t border-border bg-background/95 px-4 py-4 space-y-2">
           {NAV.map((item) => (
-            <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="block py-2.5 text-gray-300 hover:text-white">
+            <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="block py-2.5 text-muted-foreground hover:text-foreground">
               {item.label}
             </Link>
           ))}
