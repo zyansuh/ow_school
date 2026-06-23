@@ -12,6 +12,7 @@ import {
 } from '@/lib/discord-guild';
 import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 import { isTeacherFromDiscordRoles } from '@/lib/user-header';
+import { resolveTeacherForUser } from '@/lib/teacher-auth';
 
 type DiscordProfile = {
   id: string;
@@ -57,12 +58,12 @@ async function syncTokenFromUser(userId: string, token: Record<string, unknown>)
   if (!user) return token;
 
   const roleNames = parseRoleNames(user.discordRoleNames);
-  const teacherRecord = await db((client) =>
-    client.teacher.findFirst({
-      where: { discord: { equals: user.discordUsername, mode: 'insensitive' } },
-      select: { id: true },
-    }),
-  );
+  const teacherRecord = await resolveTeacherForUser({
+    id: user.id,
+    discordId: user.discordId,
+    discordUsername: user.discordUsername,
+    discordRoleNames: user.discordRoleNames,
+  });
 
   token.userId = user.id;
   token.discordId = user.discordId;

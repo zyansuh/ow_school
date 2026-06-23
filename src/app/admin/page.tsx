@@ -50,6 +50,13 @@ export default function AdminDashboard() {
   const [noticesText, setNoticesText] = useState('');
   const [savingNotices, setSavingNotices] = useState(false);
   const [reviews, setReviews] = useState<GraduationReview[]>([]);
+  const [syncingDiscord, setSyncingDiscord] = useState(false);
+  const [syncReport, setSyncReport] = useState<{
+    usersSynced: number;
+    usersFailed: number;
+    teachersRecounted: number;
+    teacherLinkMismatches: Array<{ userId: string; discordId: string }>;
+  } | null>(null);
 
   const loadStats = () => fetch('/api/admin/stats').then((r) => r.json()).then((d) => setStats(d.stats));
 
@@ -60,6 +67,23 @@ export default function AdminDashboard() {
       if (Array.isArray(d)) setReviews(d);
     });
   }, []);
+
+  const runDiscordSync = async () => {
+    setSyncingDiscord(true);
+    setSyncReport(null);
+    try {
+      const res = await fetch('/api/admin/discord-sync', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '동기화 실패');
+      setSyncReport(data);
+      toast.success(`Discord 동기화 완료 (유저 ${data.usersSynced}명, 실패 ${data.usersFailed}명)`);
+      loadStats();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '동기화 실패');
+    } finally {
+      setSyncingDiscord(false);
+    }
+  };
 
   const saveNotices = async () => {
     const items = noticesText.split('\n').map((s) => s.trim()).filter(Boolean);
@@ -103,6 +127,29 @@ export default function AdminDashboard() {
           </Card>
         ))}
       </div>
+
+      <Card className="bg-gray-900/80 border-gray-800">
+        <div className="card-pad space-y-3">
+          <h2 className="font-semibold">Discord 동기화</h2>
+          <p className="text-sm text-gray-400">
+            서버 닉네임·역할을 최신화하고, 담당 학생 수·선생님 연결을 검증합니다.
+          </p>
+          <Button onClick={runDiscordSync} disabled={syncingDiscord}>
+            {syncingDiscord ? '동기화 중...' : 'Discord 동기화'}
+          </Button>
+          {syncReport && (
+            <div className="text-sm text-gray-400 space-y-1 pt-2 border-t border-gray-800">
+              <p>동기화 성공: {syncReport.usersSynced}명 · 실패: {syncReport.usersFailed}명</p>
+              <p>선생님 학생 수 재계산: {syncReport.teachersRecounted}명</p>
+              {syncReport.teacherLinkMismatches.length > 0 && (
+                <p className="text-amber-400">
+                  선생님 연결 불일치 {syncReport.teacherLinkMismatches.length}건 (관리자 확인 필요)
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
 
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className="bg-gray-900/80 border-gray-800">

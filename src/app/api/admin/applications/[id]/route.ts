@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { applyApplicationStatusChange } from '@/lib/applications';
+import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
 import { z } from 'zod';
 
 const patchSchema = z.object({ status: z.enum(['pending', 'approved', 'rejected']) });
@@ -18,8 +19,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const oldStatus = app.status;
     if (status === 'approved' && oldStatus !== 'approved') {
       const teacher = await prisma.teacher.findUnique({ where: { id: app.teacherId } });
-      if (teacher && teacher.currentStudents >= teacher.maxStudents) {
-        return NextResponse.json({ error: '선생님 정원이 가득 찼습니다' }, { status: 400 });
+      if (teacher) {
+        const activeCount = await countActiveStudentsForTeacher(teacher.id);
+        if (activeCount >= teacher.maxStudents) {
+          return NextResponse.json({ error: '선생님 정원이 가득 찼습니다' }, { status: 400 });
+        }
       }
     }
 

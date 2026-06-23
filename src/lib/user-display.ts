@@ -30,11 +30,8 @@ export function guildNicknameOnly(user: UserNickFields): string | null {
   return guildNick(user);
 }
 
-/** API /api/me 응답 등 displayName 필드 우선 */
-export function resolveDisplayName(
-  user: UserNickFields & { displayName?: string | null },
-): string {
-  if (user.displayName?.trim()) return user.displayName.trim();
+/** 화면 표시: 서버 닉 → 글로벌 → 유저네임 (displayName 우회 없음) */
+export function resolveDisplayName(user: UserNickFields): string {
   return userDisplayName(user);
 }
 

@@ -1,6 +1,7 @@
 import type { UserNickFields } from '@/lib/user-display';
 
 export type TeacherCapacity = {
+  id: string;
   currentStudents: number;
   maxStudents: number;
 };

@@ -4,18 +4,24 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/loading';
 import { prisma } from '@/lib/prisma';
-import type { TeacherWithClass } from '@/types/db';
+import { getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
+
+type TeacherListItem = Awaited<ReturnType<typeof prisma.teacher.findMany<{ include: { class: true } }>>>[number];
 
 export { dynamic } from '@/lib/segment';
 
 export default async function TeachersPage() {
-  let teachers: TeacherWithClass[] = [];
+  let teachers: TeacherListItem[] = [];
+  let liveCounts: Record<string, number> = {};
   try {
-    teachers = await prisma.teacher.findMany({
-      where: { isActive: true },
-      include: { class: true },
-      orderBy: [{ class: { slug: 'asc' } }, { name: 'asc' }],
-    });
+    [teachers, liveCounts] = await Promise.all([
+      prisma.teacher.findMany({
+        where: { isActive: true },
+        include: { class: true },
+        orderBy: [{ class: { slug: 'asc' } }, { name: 'asc' }],
+      }),
+      getActiveStudentCountsByTeacher(),
+    ]);
   } catch (e) {
     console.error('[teachers] findMany failed:', e);
   }
@@ -33,7 +39,8 @@ export default async function TeachersPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {teachers.map((t) => {
-              const full = t.currentStudents >= t.maxStudents;
+              const active = liveCounts[t.id] ?? 0;
+              const full = active >= t.maxStudents;
               return (
                 <Link key={t.id} href={`/teachers/${t.id}`}>
                   <Card className="bg-gray-900/80 border-gray-800 hover:border-purple-500/50 transition-all h-full">
@@ -46,6 +53,7 @@ export default async function TeachersPage() {
                         <Badge variant={full ? 'danger' : 'success'}>{full ? '마감' : '모집중'}</Badge>
                       </div>
                       <p className="text-sm text-gray-400 line-clamp-2">{t.intro}</p>
+                      <p className="text-xs text-gray-500">담당 학생 {active}/{t.maxStudents}</p>
                     </CardContent>
                   </Card>
                 </Link>

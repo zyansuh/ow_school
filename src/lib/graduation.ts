@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { syncTeacherStudentCount } from '@/lib/teacher-counts';
 
 /** 학생을 졸업생으로 전환하고 반·담당 선생님 배정을 해제한다 */
 export async function graduateUser(userId: string) {
@@ -16,16 +17,7 @@ export async function graduateUser(userId: string) {
   });
 
   if (teacherId) {
-    const teacher = await prisma.teacher.findUnique({ where: { id: teacherId } });
-    if (teacher && teacher.currentStudents > 0) {
-      await prisma.teacher.update({
-        where: { id: teacherId },
-        data: {
-          currentStudents: teacher.currentStudents - 1,
-          isActive: true,
-        },
-      });
-    }
+    await syncTeacherStudentCount(teacherId);
   }
 
   return prisma.user.findUnique({ where: { id: userId } });

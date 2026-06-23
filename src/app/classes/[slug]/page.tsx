@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Users, ArrowLeft } from 'lucide-react';
 import { getClassBySlug } from '@/lib/constants';
 import { prisma } from '@/lib/prisma';
-import type { TeacherRow } from '@/types/db';
+import { getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
 
 export { dynamic } from '@/lib/segment';
 
@@ -23,12 +23,17 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
   });
   if (!dbClass) notFound();
 
-  const teachers = dbClass.teachers as TeacherRow[];
-  const available = teachers
-    .filter((t) => t.isActive && t.currentStudents < t.maxStudents)
-    .reduce((sum, t) => sum + (t.maxStudents - t.currentStudents), 0);
+  const liveCounts = await getActiveStudentCountsByTeacher();
+  const teachers = dbClass.teachers.map((t) => ({
+    ...t,
+    activeStudents: liveCounts[t.id] ?? 0,
+  }));
 
-  const totalStudents = teachers.reduce((sum, t) => sum + t.currentStudents, 0);
+  const available = teachers
+    .filter((t) => t.isActive && t.activeStudents < t.maxStudents)
+    .reduce((sum, t) => sum + (t.maxStudents - t.activeStudents), 0);
+
+  const totalStudents = teachers.reduce((sum, t) => sum + t.activeStudents, 0);
 
   return (
     <MainLayout>
@@ -61,7 +66,7 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
           <h2 className="heading-section text-gray-100 mb-6">담당 선생님</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {teachers.map((teacher) => {
-              const full = !teacher.isActive || teacher.currentStudents >= teacher.maxStudents;
+              const full = !teacher.isActive || teacher.activeStudents >= teacher.maxStudents;
               return (
                 <Link key={teacher.id} href={`/teachers/${teacher.id}`}>
                   <Card className={`bg-gray-900/80 border-gray-800 hover:border-purple-500/50 transition-all h-full ${full ? 'opacity-60' : ''}`}>
@@ -72,7 +77,7 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
                       </div>
                       {teacher.mbti && <p className="text-xs text-purple-400">MBTI: {teacher.mbti}</p>}
                       <p className="text-sm text-gray-400 line-clamp-2">{teacher.intro}</p>
-                      <p className="text-xs text-gray-500">인원 {teacher.currentStudents}/{teacher.maxStudents}</p>
+                      <p className="text-xs text-gray-500">인원 {teacher.activeStudents}/{teacher.maxStudents}</p>
                     </CardContent>
                   </Card>
                 </Link>

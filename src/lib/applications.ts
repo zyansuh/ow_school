@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { syncTeacherStudentCount, countActiveStudentsForTeacher } from '@/lib/teacher-counts';
 
 type AppWithTeacher = Prisma.ApplicationGetPayload<{ include: { teacher: true } }>;
 
@@ -9,7 +10,8 @@ export async function applyApplicationStatusChange(app: AppWithTeacher, oldStatu
   if (newStatus === 'approved' && oldStatus !== 'approved') {
     const teacher = await prisma.teacher.findUnique({ where: { id: app.teacherId } });
     if (!teacher) return;
-    if (teacher.currentStudents >= teacher.maxStudents) {
+    const activeCount = await countActiveStudentsForTeacher(teacher.id);
+    if (activeCount >= teacher.maxStudents) {
       throw new Error('선생님 정원이 가득 찼습니다');
     }
 
@@ -19,13 +21,7 @@ export async function applyApplicationStatusChange(app: AppWithTeacher, oldStatu
         data: { classId: app.classId, teacherId: app.teacherId, status: 'active' },
       });
     }
-    await prisma.teacher.update({
-      where: { id: teacher.id },
-      data: {
-        currentStudents: teacher.currentStudents + 1,
-        isActive: teacher.currentStudents + 1 >= teacher.maxStudents ? false : teacher.isActive,
-      },
-    });
+    await syncTeacherStudentCount(teacher.id);
     return;
   }
 
@@ -40,14 +36,6 @@ export async function applyApplicationStatusChange(app: AppWithTeacher, oldStatu
       }
     }
     const teacher = app.teacher;
-    if (teacher.currentStudents > 0) {
-      await prisma.teacher.update({
-        where: { id: teacher.id },
-        data: {
-          currentStudents: teacher.currentStudents - 1,
-          isActive: true,
-        },
-      });
-    }
+    await syncTeacherStudentCount(teacher.id);
   }
 }

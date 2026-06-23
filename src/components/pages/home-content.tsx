@@ -7,6 +7,7 @@ import { ClipboardList, Megaphone, Gamepad2, Users } from 'lucide-react';
 import { GAME_CLASSES } from '@/lib/constants';
 import { prisma } from '@/lib/prisma';
 import { DEFAULT_NOTICES, defaultClassStats } from '@/lib/db-fallbacks';
+import { getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
 import { SITE_NAME } from '@/lib/site-brand';
 import type { ClassWithTeachers } from '@/types/db';
 
@@ -18,12 +19,13 @@ const getClassStats = unstable_cache(
       const classes: ClassWithTeachers[] = await prisma.class.findMany({
         include: { teachers: { where: { isActive: true } } },
       });
+      const liveCounts = await getActiveStudentCountsByTeacher();
       return Object.fromEntries(
         classes.map((c) => [
           c.slug,
           {
-            recruiting: c.teachers.some((t) => t.currentStudents < t.maxStudents),
-            current: c.teachers.reduce((sum, t) => sum + t.currentStudents, 0),
+            recruiting: c.teachers.some((t) => (liveCounts[t.id] ?? 0) < t.maxStudents),
+            current: c.teachers.reduce((sum, t) => sum + (liveCounts[t.id] ?? 0), 0),
             max: c.teachers.reduce((sum, t) => sum + t.maxStudents, 0),
           },
         ]),

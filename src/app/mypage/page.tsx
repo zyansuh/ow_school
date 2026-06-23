@@ -40,7 +40,7 @@ export default function MyPage() {
       .then((r) => r.json())
       .then((d) => {
         setData(d);
-        setNickInput(d.displayName || userDisplayName(d));
+        setNickInput(d.discordServerNick ?? d.serverNickname ?? '');
       });
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function MyPage() {
     );
   }
 
-  const displayNick = data?.displayName ?? (data ? userDisplayName(data) : '');
+  const displayNick = data ? userDisplayName(data) : '';
 
   const isTeacherOnly = session.user.isTeacher && !session.user.isAdmin;
 

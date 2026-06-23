@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireUser } from '@/lib/api-helpers';
 import { applyApplicationStatusChange } from '@/lib/applications';
+import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -32,7 +33,8 @@ export async function POST(req: NextRequest) {
     if (!teacher || !teacher.isActive) {
       return NextResponse.json({ error: '선생님을 찾을 수 없습니다' }, { status: 404 });
     }
-    if (teacher.currentStudents >= teacher.maxStudents) {
+    const activeCount = await countActiveStudentsForTeacher(teacher.id);
+    if (activeCount >= teacher.maxStudents) {
       return NextResponse.json({ error: '모집이 마감되었습니다' }, { status: 400 });
     }
 

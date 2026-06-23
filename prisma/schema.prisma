@@ -51,6 +51,7 @@ model Teacher {
   mbti             String?
   intro            String?
   discord          String?
+  discordUserId    String?       @unique
   activityDays     String?
   activityTimeSlot String?
   isActive         Boolean       @default(true)

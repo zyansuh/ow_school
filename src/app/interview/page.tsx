@@ -115,7 +115,6 @@ export default function InterviewPage() {
 
   const authorName = me
     ? resolveDisplayName({
-        displayName: me.displayName,
         discordUsername: me.discordUsername ?? '',
         discordServerNick: me.discordServerNick,
         discordNickname: me.discordNickname,

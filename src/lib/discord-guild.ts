@@ -337,7 +337,24 @@ export async function updateGuildNickname(discordUserId: string, nick: string | 
     throw new Error('NICK_UPDATE_FAILED');
   }
 
-  return syncUserGuildData(discordUserId);
+  const trimmed = nick?.trim() || null;
+  const existing = await prisma.user.findUnique({ where: { discordId: discordUserId } });
+
+  await prisma.user.update({
+    where: { discordId: discordUserId },
+    data: {
+      discordServerNick: trimmed,
+      isInGuild: true,
+      guildSyncedAt: new Date(),
+      discordNickname: existing?.discordNickname ?? null,
+    },
+  });
+
+  try {
+    return await syncUserGuildData(discordUserId);
+  } catch {
+    return getGuildMemberInfo(discordUserId);
+  }
 }
 
 export function parseRoleNames(json: string | null | undefined): string[] {
