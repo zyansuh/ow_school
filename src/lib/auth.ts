@@ -10,7 +10,8 @@ import {
   syncUserGuildDataBestEffort,
 } from '@/lib/discord-guild';
 import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
-import { resolveTeacherEntityForUser, hasTeacherDiscordRole } from '@/lib/teacher/identity';
+import { resolveTeacherEntityForUser } from '@/lib/teacher/identity';
+import { getUserRole, loadUserRoleContext } from '@/lib/user-role';
 import { backfillTeacherDiscordUserId } from '@/lib/teacher-discord-link';
 
 type DiscordProfile = {
@@ -57,13 +58,8 @@ async function syncTokenFromUser(userId: string, token: Record<string, unknown>)
   if (!user) return token;
 
   const roleNames = parseRoleNames(user.discordRoleNames);
-  const teacherRecord = await resolveTeacherEntityForUser({
-    id: user.id,
-    discordId: user.discordId,
-    discordUsername: user.discordUsername,
-    discordRoleNames: user.discordRoleNames,
-  });
-  const isTeacher = !!teacherRecord || hasTeacherDiscordRole(user.discordRoleNames);
+  const roleCtx = await loadUserRoleContext();
+  const siteRole = getUserRole(user, roleCtx);
 
   token.userId = user.id;
   token.discordId = user.discordId;
@@ -73,8 +69,8 @@ async function syncTokenFromUser(userId: string, token: Record<string, unknown>)
   token.discordServerNick = user.discordServerNick;
   token.discordRoleNames = roleNames;
   token.isInGuild = user.isInGuild;
-  token.isAdmin = !!user.adminRole;
-  token.isTeacher = isTeacher;
+  token.isAdmin = siteRole === 'admin';
+  token.isTeacher = siteRole === 'teacher';
   token.className = user.class?.name ?? null;
   token.teacherName = user.teacher?.name ?? null;
   token.status = user.status;
