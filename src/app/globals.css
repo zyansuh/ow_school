@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 5%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 8%;
+    --card-foreground: 210 40% 98%;
+    --primary: 263 70% 58%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 263 70% 58%;
+    --radius: 0.75rem;
+  }
+
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground antialiased; font-family: 'Pretendard', system-ui, sans-serif; }
+}
+
+@layer components {
+  .page-container { @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8; }
+  .heading-section { @apply text-xl sm:text-2xl font-bold; }
+  .card-pad { @apply p-5 sm:p-6; }
+  .btn-pad { @apply px-5 py-3 sm:px-6 sm:py-3.5; }
+  .section-gap { @apply space-y-6 sm:space-y-8; }
+  .laser-border { position: relative; }
+  .laser-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, transparent 40%, currentColor 50%, transparent 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .laser-border:hover::before { opacity: 0.5; }
+  .laser-border-blue { color: rgb(96 165 250); }
+  .laser-border-orange { color: rgb(251 146 60); }
+  .laser-border-purple { color: rgb(192 132 252); }
+}
