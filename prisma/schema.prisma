@@ -34,37 +34,50 @@ model User {
 }
 
 model Class {
-  id           String        @id @default(cuid())
-  slug         String        @unique
-  name         String
-  game         String
-  gameKr       String
-  description  String
-  users        User[]
-  teachers     Teacher[]
-  applications Application[]
+  id             String         @id @default(cuid())
+  slug           String         @unique
+  name           String
+  game           String
+  gameKr         String
+  description    String
+  users          User[]
+  teachers       Teacher[]
+  teacherClasses TeacherClass[]
+  applications   Application[]
 }
 
 model Teacher {
-  id               String        @id @default(cuid())
+  id               String         @id @default(cuid())
   name             String
   profileImage     String?
   mbti             String?
   intro            String?
   discord          String?
-  discordUserId    String?       @unique
+  discordUserId    String?        @unique
   activityDays     String?
   activityTimeSlot String?
-  isActive         Boolean       @default(true)
-  maxStudents      Int           @default(5)
-  currentStudents  Int           @default(0)
+  isActive         Boolean        @default(true)
+  maxStudents      Int            @default(5)
+  currentStudents  Int            @default(0)
   classId          String
-  class            Class         @relation(fields: [classId], references: [id])
-  assignedUsers    User[]        @relation("AssignedTeacher")
+  class            Class          @relation(fields: [classId], references: [id])
+  teacherClasses   TeacherClass[]
+  assignedUsers    User[]         @relation("AssignedTeacher")
   applications     Application[]
   interviews       Interview[]
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model TeacherClass {
+  teacherId String
+  classId   String
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([teacherId, classId])
+  @@index([classId])
 }
 
 model Application {
