@@ -106,17 +106,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
     },
     async jwt({ token, profile, trigger }) {
-      const p = profile as DiscordProfile | undefined;
+      try {
+        const p = profile as DiscordProfile | undefined;
 
-      if (p?.id) {
-        const user = await prisma.user.findUnique({ where: { discordId: p.id } });
-        if (user) await syncTokenFromUser(user.id, token);
-      } else if (token.userId) {
-        if (trigger === 'update' && token.discordId) {
-          await syncUserGuildData(token.discordId as string);
+        if (p?.id) {
+          const user = await prisma.user.findUnique({ where: { discordId: p.id } });
+          if (user) await syncTokenFromUser(user.id, token);
+        } else if (token.userId) {
+          if (trigger === 'update' && token.discordId) {
+            await syncUserGuildData(token.discordId as string);
+          }
+          await syncTokenFromUser(token.userId as string, token);
+          token.isAdmin = await isAdmin(token.userId as string);
         }
-        await syncTokenFromUser(token.userId as string, token);
-        token.isAdmin = await isAdmin(token.userId as string);
+      } catch (e) {
+        console.error('[auth] jwt failed:', e);
       }
 
       return token;
