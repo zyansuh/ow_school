@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -95,4 +95,10 @@ model AdminRole {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   grantedById String?
   createdAt   DateTime @default(now())
+}
+
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
