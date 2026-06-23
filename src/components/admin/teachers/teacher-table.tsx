@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { adminStyles } from '@/styles/admin';
+import { ds } from '@/styles/design-system';
 import type { AdminTeacher } from '@/hooks/admin/use-admin-teachers';
 
 type Props = {
@@ -22,7 +22,7 @@ export function TeacherTable({ teachers, deletingId, onEdit, onToggleActive, onR
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className={adminStyles.tableHead}>
+        <tr className={ds.tableHead}>
           <th className="p-4">이름</th>
           <th className="p-4">반</th>
           <th className="p-4">인원</th>
@@ -38,7 +38,7 @@ export function TeacherTable({ teachers, deletingId, onEdit, onToggleActive, onR
             <tr
               key={t.id}
               className={cn(
-                adminStyles.tableRow,
+                ds.tableRow,
                 'transition-opacity duration-200',
                 isDeleting && 'opacity-40',
                 busy && !isDeleting && 'opacity-60',

@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { LoadingPage, EmptyState } from '@/components/ui/loading';
-import { formatDate, STATUS_LABELS } from '@/lib/utils';
+import { SkeletonTable } from '@/components/ui/skeleton';
+import { DataTable } from '@/components/ui/data-table';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { formatDateTime, STATUS_LABELS } from '@/lib/utils';
 
 type App = {
   id: string;
@@ -21,47 +22,55 @@ export default function AdminApplicationsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/admin/applications').then((r) => r.json()).then((d) => { setApps(d); setLoading(false); });
+    fetch('/api/admin/applications')
+      .then((r) => r.json())
+      .then((d) => {
+        setApps(Array.isArray(d) ? d : []);
+        setLoading(false);
+      });
   }, []);
 
-  if (loading) return <LoadingPage />;
-
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">신청 관리</h1>
-      <p className="text-sm text-gray-500">수강 신청은 자동 승인됩니다.</p>
-      <Card className="bg-gray-900/80 border-gray-800 overflow-x-auto">
-        {apps.length === 0 ? <EmptyState title="신청이 없습니다" /> : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-800 text-gray-400 text-left">
-                <th className="p-4">신청자</th>
-                <th className="p-4">희망 선생님</th>
-                <th className="p-4">반</th>
-                <th className="p-4">게임 시간대</th>
-                <th className="p-4">신청일</th>
-                <th className="p-4">상태</th>
-              </tr>
-            </thead>
-            <tbody>
-              {apps.map((a) => (
-                <tr key={a.id} className="border-b border-gray-800/50">
-                  <td className="p-4">{a.nickname}</td>
-                  <td className="p-4">{a.teacher.name}</td>
-                  <td className="p-4">{a.class.name}</td>
-                  <td className="p-4 text-gray-400">{a.playTimeSlot || '-'}</td>
-                  <td className="p-4 text-gray-500">{formatDate(a.createdAt)}</td>
-                  <td className="p-4">
-                    <Badge variant={a.status === 'approved' ? 'success' : a.status === 'rejected' ? 'danger' : 'warning'}>
-                      {STATUS_LABELS[a.status]}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
+    <div>
+      <AdminPageHeader
+        title="신청 관리"
+        description="수강 신청은 선생님 선택 시 자동 승인됩니다."
+      />
+      {loading ? (
+        <SkeletonTable rows={6} />
+      ) : (
+        <DataTable
+          data={apps}
+          keyExtractor={(a) => a.id}
+          emptyTitle="아직 신청 내역이 없습니다"
+          emptyDescription="학생이 수강 신청을 완료하면 여기에 표시됩니다."
+          columns={[
+            { key: 'nick', header: '신청자', cell: (a) => a.nickname },
+            { key: 'teacher', header: '희망 선생님', cell: (a) => a.teacher.name },
+            { key: 'class', header: '반', cell: (a) => a.class.name },
+            {
+              key: 'slot',
+              header: '게임 시간대',
+              cell: (a) => a.playTimeSlot || '-',
+              hideOnMobile: true,
+            },
+            {
+              key: 'date',
+              header: '신청일',
+              cell: (a) => formatDateTime(a.createdAt),
+            },
+            {
+              key: 'status',
+              header: '상태',
+              cell: (a) => (
+                <Badge variant={a.status === 'approved' ? 'success' : a.status === 'rejected' ? 'danger' : 'warning'}>
+                  {STATUS_LABELS[a.status]}
+                </Badge>
+              ),
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }

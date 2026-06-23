@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LoadingPage, EmptyState } from '@/components/ui/loading';
-import { formatDate, STATUS_LABELS } from '@/lib/utils';
+import { SkeletonTable } from '@/components/ui/skeleton';
+import { DataTable } from '@/components/ui/data-table';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { formatDate, STATUS_LABELS, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { adminStyles } from '@/styles/admin';
 import {
   StudentTeacherAssign,
   type TeacherOption,
@@ -69,92 +68,107 @@ export default function AdminStudentsPage() {
     void load();
   };
 
-  if (loading) return <LoadingPage />;
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">학생 관리</h1>
-        <Link href="/admin/graduated" className="text-sm text-purple-400 hover:text-purple-300">
-          졸업생 목록 →
+    <div>
+      <AdminPageHeader
+        title="학생 관리"
+        description="담당 선생님 변경은 선생님 휴식·개인사정 시 다른 선생님으로 옮길 때 사용하세요."
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/graduated">졸업생 목록</Link>
+          </Button>
+        }
+      />
+      <p className="text-sm text-muted-foreground mb-4">
+        선생님 휴식은{' '}
+        <Link href="/admin/teachers" className="text-primary hover:underline">
+          선생님 관리
         </Link>
-      </div>
-      <p className={adminStyles.muted}>
-        담당 선생님 변경은 선생님 휴식·개인사정 시 다른 선생님으로 옮길 때 사용하세요. 선생님 휴식은
-        {' '}
-        <Link href="/admin/teachers" className="text-purple-400 hover:text-purple-300">선생님 관리</Link>
         에서 비활성 처리할 수 있습니다.
       </p>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 mb-6">
         {FILTERS.map((f) => (
           <button
             key={f}
+            type="button"
             onClick={() => setFilter(f)}
             className={cn(
-              'px-4 py-2 rounded-lg text-sm',
-              filter === f ? 'bg-purple-600/30 text-purple-300' : 'bg-gray-800 text-gray-400',
+              'px-4 py-2 rounded-xl text-sm transition-colors',
+              filter === f
+                ? 'bg-primary/15 text-primary font-medium'
+                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground',
             )}
           >
             {f}
           </button>
         ))}
       </div>
-      <Card className={`${adminStyles.card} overflow-x-auto`}>
-        {filtered.length === 0 ? (
-          <EmptyState title="학생이 없습니다" />
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className={adminStyles.tableHead}>
-                <th className="p-4">표시 이름</th>
-                <th className="p-4">길드 닉</th>
-                <th className="p-4">Discord ID</th>
-                <th className="p-4">반</th>
-                <th className="p-4">담당 선생님</th>
-                <th className="p-4">상태</th>
-                <th className="p-4">가입일</th>
-                <th className="p-4">관리</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((u) => (
-                <tr key={u.id} className={`${adminStyles.tableRow} hover:bg-gray-800/30`}>
-                  <td className="p-4">
-                    <StudentDisplayNickEdit
-                      studentId={u.id}
-                      currentDisplay={u.nickname}
-                      displayNickname={u.displayNickname}
-                      guildNickname={u.guildNickname}
-                      onSaved={load}
-                    />
-                  </td>
-                  <td className="p-4 text-gray-300">{u.guildNickname}</td>
-                  <td className="p-4 text-gray-500 font-mono text-xs">{u.discordId}</td>
-                  <td className="p-4">{u.className}</td>
-                  <td className="p-4">
-                    <StudentTeacherAssign
-                      key={`${u.id}-${u.teacherId ?? 'none'}`}
-                      studentId={u.id}
-                      currentTeacherId={u.teacherId}
-                      teachers={teachers}
-                      onChanged={load}
-                    />
-                  </td>
-                  <td className="p-4">
-                    <Badge variant="outline">{STATUS_LABELS[u.status] || u.status}</Badge>
-                  </td>
-                  <td className="p-4 text-gray-500">{formatDate(u.createdAt)}</td>
-                  <td className="p-4">
-                    <Button size="sm" variant="outline" onClick={() => void graduate(u.id)}>
-                      졸업
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
+      {loading ? (
+        <SkeletonTable rows={8} />
+      ) : (
+        <DataTable
+          data={filtered}
+          keyExtractor={(u) => u.id}
+          emptyTitle="학생이 없습니다"
+          columns={[
+            {
+              key: 'nick',
+              header: '표시 이름',
+              cell: (u) => (
+                <StudentDisplayNickEdit
+                  studentId={u.id}
+                  currentDisplay={u.nickname}
+                  displayNickname={u.displayNickname}
+                  guildNickname={u.guildNickname}
+                  onSaved={load}
+                />
+              ),
+            },
+            { key: 'guild', header: '길드 닉', cell: (u) => u.guildNickname },
+            {
+              key: 'discord',
+              header: 'Discord ID',
+              cell: (u) => <span className="font-mono text-xs text-muted-foreground">{u.discordId}</span>,
+              hideOnMobile: true,
+            },
+            { key: 'class', header: '반', cell: (u) => u.className },
+            {
+              key: 'teacher',
+              header: '담당 선생님',
+              cell: (u) => (
+                <StudentTeacherAssign
+                  key={`${u.id}-${u.teacherId ?? 'none'}`}
+                  studentId={u.id}
+                  currentTeacherId={u.teacherId}
+                  teachers={teachers}
+                  onChanged={load}
+                />
+              ),
+            },
+            {
+              key: 'status',
+              header: '상태',
+              cell: (u) => <Badge variant="outline">{STATUS_LABELS[u.status] || u.status}</Badge>,
+            },
+            {
+              key: 'date',
+              header: '가입일',
+              cell: (u) => <span className="text-muted-foreground">{formatDate(u.createdAt)}</span>,
+              hideOnMobile: true,
+            },
+            {
+              key: 'action',
+              header: '관리',
+              mobileFooter: true,
+              cell: (u) => (
+                <Button size="sm" variant="outline" onClick={() => void graduate(u.id)}>
+                  졸업
+                </Button>
+              ),
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }
