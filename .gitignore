@@ -12,4 +12,5 @@ venv/
 logs/
 .DS_Store
 tsconfig.tsbuildinfo
+.tmp-cookies.txt
 _legacy/
