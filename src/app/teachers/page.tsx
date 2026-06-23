@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { MainLayout } from '@/components/layout/main-layout';
 import { EmptyState } from '@/components/ui/loading';
-import { TeacherCard } from '@/components/cards/teacher-card';
+import { TeacherCard } from '@/components/cards';
 import { prisma } from '@/lib/prisma';
 import { getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
 
