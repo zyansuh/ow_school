@@ -6,6 +6,8 @@ import {
   lastMonths,
   mergeMonthlyStats,
 } from '@/lib/monthly-stats';
+import { countActiveStudents } from '@/lib/student-users';
+import { filterStudentUsers, loadUserRoleContext } from '@/lib/user-role';
 
 export async function GET() {
   try {
@@ -16,23 +18,20 @@ export async function GET() {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
+    const roleCtx = await loadUserRoleContext();
+
     const [totalStudents, totalTeachers, monthlyApplicationCount, classes, applications, interviews] =
       await Promise.all([
-        prisma.user.count({
-          where: { status: 'active', adminRole: null },
-        }),
+        countActiveStudents(roleCtx),
         prisma.teacher.count({ where: { isActive: true } }),
         prisma.application.count({
           where: { createdAt: { gte: monthStart } },
         }),
         prisma.class.findMany({
           include: {
-            _count: {
-              select: {
-                users: {
-                  where: { adminRole: null, status: { not: 'graduated' } },
-                },
-              },
+            users: {
+              where: { adminRole: null, status: { not: 'graduated' } },
+              include: { adminRole: true },
             },
           },
         }),
@@ -54,7 +53,9 @@ export async function GET() {
         totalStudents,
         totalTeachers,
         monthlyApplicationCount,
-        byClass: Object.fromEntries(classes.map((c) => [c.name, c._count.users])),
+        byClass: Object.fromEntries(
+          classes.map((c) => [c.name, filterStudentUsers(c.users, roleCtx).length]),
+        ),
         monthlyApplications,
         monthlyInterviews,
       },

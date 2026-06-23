@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+import { countActiveStudentsWithTeacher, countGraduatedStudents } from '@/lib/student-users';
 
 export type HomeSiteStats = {
   students: number;
@@ -11,11 +12,9 @@ export const getHomeSiteStats = unstable_cache(
   async (): Promise<HomeSiteStats> => {
     try {
       const [students, teachers, graduated] = await Promise.all([
-        prisma.user.count({
-          where: { adminRole: null, status: 'active', teacherId: { not: null } },
-        }),
+        countActiveStudentsWithTeacher(),
         prisma.teacher.count({ where: { isActive: true } }),
-        prisma.user.count({ where: { status: 'graduated', adminRole: null } }),
+        countGraduatedStudents(),
       ]);
       return { students, teachers, graduated };
     } catch (e) {
