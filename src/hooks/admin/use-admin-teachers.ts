@@ -64,6 +64,7 @@ export function useAdminTeachers() {
   const [teachers, setTeachers] = useState<AdminTeacher[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     return Promise.all([
@@ -102,9 +103,23 @@ export function useAdminTeachers() {
   };
 
   const remove = async (id: string) => {
-    await fetch(`/api/admin/teachers/${id}`, { method: 'DELETE' });
-    toast.success('삭제되었습니다');
-    await load();
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/admin/teachers/${id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || '삭제 실패');
+        return false;
+      }
+      toast.success('삭제되었습니다');
+      await load();
+      return true;
+    } catch {
+      toast.error('삭제 실패');
+      return false;
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const toggleActive = async (teacher: AdminTeacher) => {
@@ -116,5 +131,5 @@ export function useAdminTeachers() {
     await load();
   };
 
-  return { teachers, classes, loading, load, save, remove, toggleActive };
+  return { teachers, classes, loading, deletingId, load, save, remove, toggleActive };
 }

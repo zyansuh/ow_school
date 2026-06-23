@@ -17,7 +17,7 @@ import { TeacherFormCard } from '@/components/admin/teachers/teacher-form';
 import { TeacherTable } from '@/components/admin/teachers/teacher-table';
 
 export default function AdminTeachersPage() {
-  const { teachers, classes, loading, save, remove, toggleActive } = useAdminTeachers();
+  const { teachers, classes, loading, deletingId, save, remove, toggleActive } = useAdminTeachers();
   const [form, setForm] = useState<TeacherFormState>(emptyTeacherForm);
   const [editing, setEditing] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -84,9 +84,13 @@ export default function AdminTeachersPage() {
         <Card className={`${adminStyles.card} overflow-x-auto`}>
           <TeacherTable
             teachers={teachers}
+            deletingId={deletingId}
             onEdit={openEdit}
             onToggleActive={toggleActive}
-            onRemove={(id) => { if (confirm('삭제하시겠습니까?')) remove(id); }}
+            onRemove={(id) => {
+              if (!confirm('이 선생님을 삭제하시겠습니까?')) return;
+              void remove(id);
+            }}
           />
         </Card>
       )}
