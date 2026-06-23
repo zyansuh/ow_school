@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields } from '@/lib/user-display';
+import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields, teacherDiscordLabel } from '@/lib/user-display';
 
 function mapAdminSearchUser(u: {
   id: string;
@@ -20,6 +20,7 @@ function mapAdminSearchUser(u: {
     discordNickname: u.discordNickname,
     discordServerNick: u.discordServerNick,
     serverNickname: guildNicknameOnly(fields),
+    discordLabel: teacherDiscordLabel(fields),
     displayName: adminUserDisplayName(fields),
     isAdmin: !!u.adminRole,
   };

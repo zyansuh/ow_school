@@ -1,6 +1,11 @@
 import { prisma } from '@/lib/prisma';
 import { getGuildConfig, getGuildMemberInfo, syncUserGuildData } from '@/lib/discord-guild';
-import { guildNicknameOnly, normalizeNickFields } from '@/lib/user-display';
+import {
+  globalDisplayNameOnly,
+  guildNicknameOnly,
+  normalizeNickFields,
+  teacherDiscordLabel,
+} from '@/lib/user-display';
 import { isDiscordSnowflake } from '@/lib/discord-id';
 
 export type AdminDiscordUserLookup = {
@@ -8,11 +13,27 @@ export type AdminDiscordUserLookup = {
   discordId: string;
   discordUsername: string | null;
   serverNickname: string | null;
+  globalDisplayName: string | null;
+  /** Teacher.discord 저장용 — guild → global → username */
+  discordLabel: string | null;
   isInGuild: boolean;
   message?: string;
 };
 
-/** 관리자용 — Discord User ID로 서버 닉네임(guild nick) 조회 */
+function labelFromGuildInfo(info: {
+  guildNickname: string | null;
+  globalDisplayName: string | null;
+  username: string;
+}): string | null {
+  for (const candidate of [info.guildNickname, info.globalDisplayName, info.username]) {
+    const v = candidate?.trim();
+    if (!v || isDiscordSnowflake(v)) continue;
+    return v;
+  }
+  return null;
+}
+
+/** 관리자용 — Discord User ID로 대상 유저 닉네임 조회 (현재 로그인 사용자와 무관) */
 export async function lookupDiscordUserById(discordId: string): Promise<AdminDiscordUserLookup> {
   const id = discordId.trim();
   if (!isDiscordSnowflake(id)) {
@@ -21,6 +42,8 @@ export async function lookupDiscordUserById(discordId: string): Promise<AdminDis
       discordId: id,
       discordUsername: null,
       serverNickname: null,
+      globalDisplayName: null,
+      discordLabel: null,
       isInGuild: false,
       message: 'INVALID_ID',
     };
@@ -41,26 +64,34 @@ export async function lookupDiscordUserById(discordId: string): Promise<AdminDis
   }
 
   if (user) {
-    const serverNickname = guildNicknameOnly(normalizeNickFields(user));
+    const fields = normalizeNickFields(user);
+    const serverNickname = guildNicknameOnly(fields);
+    const globalDisplayName = globalDisplayNameOnly(fields);
+    const discordLabel = teacherDiscordLabel(fields);
     return {
       found: true,
       discordId: user.discordId,
       discordUsername: user.discordUsername,
       serverNickname,
+      globalDisplayName,
+      discordLabel,
       isInGuild: user.isInGuild,
-      message: serverNickname ? undefined : 'NO_SERVER_NICK',
+      message: discordLabel ? undefined : 'NO_LABEL',
     };
   }
 
   if (getGuildConfig()) {
     const info = await getGuildMemberInfo(id);
+    const discordLabel = labelFromGuildInfo(info);
     return {
       found: info.isInGuild,
       discordId: id,
       discordUsername: info.username || null,
       serverNickname: info.guildNickname,
+      globalDisplayName: info.globalDisplayName,
+      discordLabel,
       isInGuild: info.isInGuild,
-      message: info.guildNickname ? undefined : info.isInGuild ? 'NO_SERVER_NICK' : 'NOT_IN_GUILD',
+      message: discordLabel ? undefined : info.isInGuild ? 'NO_LABEL' : 'NOT_IN_GUILD',
     };
   }
 
@@ -69,6 +100,8 @@ export async function lookupDiscordUserById(discordId: string): Promise<AdminDis
     discordId: id,
     discordUsername: null,
     serverNickname: null,
+    globalDisplayName: null,
+    discordLabel: null,
     isInGuild: false,
     message: 'NOT_FOUND',
   };

@@ -4,6 +4,7 @@ import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { assertDiscordUserIdAvailable } from '@/lib/teacher-auth';
 import { deleteTeacherById } from '@/lib/teacher-delete';
 import { mapTeacherWithClasses, syncTeacherClasses } from '@/lib/teacher-classes';
+import { assertValidTeacherDiscordField } from '@/lib/teacher-discord-field';
 import { z } from 'zod';
 
 const updateSchema = z.object({
@@ -44,6 +45,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await requireAdminUser();
     const { id } = await params;
     const body = updateSchema.parse(await req.json());
+    if (body.discord !== undefined) {
+      assertValidTeacherDiscordField(body.discord);
+    }
     if (body.discordUserId) {
       await assertDiscordUserIdAvailable(body.discordUserId, id);
     }
@@ -68,6 +72,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   } catch (e) {
     if (e instanceof z.ZodError) {
       return NextResponse.json({ error: e.errors[0]?.message ?? '입력값 오류' }, { status: 400 });
+    }
+    if (e instanceof Error && e.message === 'TEACHER_DISCORD_IS_USER_ID') {
+      return NextResponse.json({ error: '디스코드 서버 닉네임에 User ID를 넣을 수 없습니다' }, { status: 400 });
     }
     if (e instanceof Error && e.message.startsWith('DISCORD_USER_ID_TAKEN')) {
       return NextResponse.json({ error: '이미 다른 선생님에 연결된 Discord User ID입니다' }, { status: 409 });

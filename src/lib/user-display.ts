@@ -1,3 +1,5 @@
+import { isDiscordSnowflake } from '@/lib/discord-id';
+
 /** Discord 닉네임 필드 (DB: discordServerNick, discordNickname, discordUsername) */
 export type UserNickFields = {
   discordServerNickname?: string | null;
@@ -36,6 +38,25 @@ export function adminUserDisplayName(user: UserNickFields): string {
 /** 서버 닉네임 컬럼 값만 (없으면 null) */
 export function guildNicknameOnly(user: UserNickFields): string | null {
   return guildNick(user);
+}
+
+/** 글로벌 표시 이름만 (없으면 null) */
+export function globalDisplayNameOnly(user: UserNickFields): string | null {
+  return globalDisplay(user);
+}
+
+/**
+ * Teacher.discord 저장용 라벨 — 대상 유저 기준
+ * 1순위 guild nick → 2순위 global display → 3순위 username
+ * User ID(snowflake)는 절대 반환하지 않음
+ */
+export function teacherDiscordLabel(user: UserNickFields): string | null {
+  for (const candidate of [guildNick(user), globalDisplay(user), user.discordUsername]) {
+    const v = candidate?.trim();
+    if (!v || isDiscordSnowflake(v)) continue;
+    return v;
+  }
+  return null;
 }
 
 /** @deprecated userDisplayName 사용 */
