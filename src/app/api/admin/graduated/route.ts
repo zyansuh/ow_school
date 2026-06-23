@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { parseRoleNames } from '@/lib/discord-guild';
-import { userDisplayName } from '@/lib/user-display';
+import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 
 export async function GET() {
   try {
@@ -26,7 +26,7 @@ export async function GET() {
     return NextResponse.json(
       users.map((u) => ({
         id: u.id,
-        nickname: userDisplayName(u),
+        nickname: userDisplayName(normalizeNickFields(u)),
         discord: u.discordUsername,
         className: u.applications[0]?.class?.name ?? u.class?.name ?? '미배정',
         teacherName: u.applications[0]?.teacher?.name ?? u.teacher?.name ?? '-',

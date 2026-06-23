@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
-import { userDisplayName } from '@/lib/user-display';
+import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 import type { AssignedStudent } from '@/types/db';
 
 export { dynamic } from '@/lib/segment';
@@ -89,7 +89,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                 <ul className="space-y-2">
                   {teacher.assignedUsers.map((u: AssignedStudent) => (
                     <li key={u.id} className="text-sm text-gray-300 border border-gray-800 rounded-lg px-3 py-2">
-                      {userDisplayName(u)}
+                      {userDisplayName(normalizeNickFields(u))}
                     </li>
                   ))}
                 </ul>

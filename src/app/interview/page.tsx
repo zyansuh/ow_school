@@ -19,11 +19,28 @@ type MeData = {
   discordUsername?: string;
   discordServerNick?: string | null;
   discordNickname?: string | null;
-  siteDisplayName?: string | null;
   class?: { name: string } | null;
   teacher?: { name: string } | null;
   applications?: Array<{ class?: { name: string } | null; status: string; teacher?: { name: string } }>;
 };
+
+type ExistingInterview = {
+  id: string;
+  contentExperience: string;
+  memorablePerson: string;
+  joinedClub: boolean;
+  clubNames?: string | null;
+};
+
+function parseClubNames(raw: string | null | undefined): string[] {
+  if (!raw) return [''];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length ? parsed : [''];
+  } catch {
+    return [''];
+  }
+}
 
 function resolveClassName(me: MeData | null): string {
   if (!me) return '—';
@@ -54,6 +71,7 @@ export default function InterviewPage() {
   const [loading, setLoading] = useState(false);
   const [me, setMe] = useState<MeData | null>(null);
   const [meReady, setMeReady] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
     contentExperience: '',
     memorablePerson: '',
@@ -63,12 +81,23 @@ export default function InterviewPage() {
 
   useEffect(() => {
     if (!session) return;
-    fetch('/api/me?refresh=1')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data && !data.error) setMe(data);
-        setMeReady(true);
-      });
+    Promise.all([
+      fetch('/api/me?refresh=1').then((r) => r.json()),
+      fetch('/api/interviews/mine').then((r) => r.json()),
+    ]).then(([meData, interview]) => {
+      if (meData && !meData.error) setMe(meData);
+      if (interview && interview.id) {
+        const existing = interview as ExistingInterview;
+        setEditId(existing.id);
+        setForm({
+          contentExperience: existing.contentExperience,
+          memorablePerson: existing.memorablePerson,
+          joinedClub: existing.joinedClub ? 'yes' : 'no',
+          clubNames: parseClubNames(existing.clubNames),
+        });
+      }
+      setMeReady(true);
+    });
   }, [session]);
 
   if (status === 'loading' || (session && !meReady)) return <MainLayout><LoadingPage /></MainLayout>;
@@ -90,7 +119,6 @@ export default function InterviewPage() {
         discordUsername: me.discordUsername ?? '',
         discordServerNick: me.discordServerNick,
         discordNickname: me.discordNickname,
-        siteDisplayName: me.siteDisplayName,
       })
     : '—';
 
@@ -114,24 +142,30 @@ export default function InterviewPage() {
         ? form.clubNames.map((n) => n.trim()).filter(Boolean)
         : [];
 
-      const res = await fetch('/api/interviews', {
-        method: 'POST',
+      const payload = {
+        contentExperience: form.contentExperience,
+        memorablePerson: form.memorablePerson,
+        joinedClub,
+        clubNames: joinedClub ? clubNames : undefined,
+      };
+
+      const res = await fetch(editId ? `/api/interviews/${editId}` : '/api/interviews', {
+        method: editId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contentExperience: form.contentExperience,
-          memorablePerson: form.memorablePerson,
-          joinedClub,
-          clubNames: joinedClub ? clubNames : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      const total = (data.pointsAwarded?.graduation ?? 0) + (data.pointsAwarded?.club ?? 0);
-      toast.success(`졸업면담이 제출되었습니다. ${formatPoint(total)} 지급!`);
+      if (editId) {
+        toast.success('졸업면담이 수정되었습니다');
+      } else {
+        const total = (data.pointsAwarded?.graduation ?? 0) + (data.pointsAwarded?.club ?? 0);
+        toast.success(`졸업면담이 제출되었습니다. ${formatPoint(total)} 지급!`);
+      }
       router.push('/mypage');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '제출 실패');
+      toast.error(err instanceof Error ? err.message : '저장 실패');
     } finally {
       setLoading(false);
     }
@@ -141,7 +175,9 @@ export default function InterviewPage() {
     <MainLayout>
       <GraduationReviewFab />
       <div className="page-container py-8 sm:py-12 section-gap">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">졸업면담</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">
+          {editId ? '졸업면담 수정' : '졸업면담'}
+        </h1>
 
         <Card className="bg-gray-900/80 border-gray-800 max-w-lg mx-auto">
           <div className="card-pad grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-gray-800">
@@ -228,21 +264,23 @@ export default function InterviewPage() {
               )}
             </div>
 
-            <Card className="bg-purple-950/40 border-purple-500/30">
-              <div className="card-pad space-y-3 text-sm">
-                <h3 className="font-semibold text-purple-200">동호회 가입 시 추가 포인트!</h3>
-                <div className="text-gray-300 space-y-1">
-                  <p>졸업 포인트 {formatPoint(GRADUATION_POINT)}</p>
-                  <p>+ 동호회 가입 포인트 {formatPoint(CLUB_POINT)}</p>
-                  <p className="text-purple-300 font-medium pt-1">
-                    = 총 {formatPoint(GRADUATION_POINT + CLUB_POINT)} 지급
-                  </p>
+            {!editId && (
+              <Card className="bg-purple-950/40 border-purple-500/30">
+                <div className="card-pad space-y-3 text-sm">
+                  <h3 className="font-semibold text-purple-200">동호회 가입 시 추가 포인트!</h3>
+                  <div className="text-gray-300 space-y-1">
+                    <p>졸업 포인트 {formatPoint(GRADUATION_POINT)}</p>
+                    <p>+ 동호회 가입 포인트 {formatPoint(CLUB_POINT)}</p>
+                    <p className="text-purple-300 font-medium pt-1">
+                      = 총 {formatPoint(GRADUATION_POINT + CLUB_POINT)} 지급
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            )}
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? '제출 중...' : '제출하기'}
+              {loading ? '저장 중...' : editId ? '수정하기' : '제출하기'}
             </Button>
           </form>
         </Card>

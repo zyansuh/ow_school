@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { apiError, requireUser } from '@/lib/api-helpers';
+import { apiError, requireAdminUser, requireUser } from '@/lib/api-helpers';
 import { graduateUser } from '@/lib/graduation';
+import { interviewAuthorName } from '@/lib/interview-access';
 import { CLUB_POINT, GRADUATION_POINT } from '@/lib/points';
-import { userDisplayName } from '@/lib/user-display';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -23,13 +23,28 @@ function resolveClassName(user: {
 }
 
 export async function GET(req: NextRequest) {
-  const userId = req.nextUrl.searchParams.get('userId');
-  const interviews = await prisma.interview.findMany({
-    where: userId ? { userId } : undefined,
-    include: { teacher: true },
-    orderBy: { createdAt: 'desc' },
-  });
-  return NextResponse.json(interviews);
+  try {
+    const userId = req.nextUrl.searchParams.get('userId');
+    if (userId) {
+      await requireAdminUser();
+      const interviews = await prisma.interview.findMany({
+        where: { userId },
+        include: { teacher: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      return NextResponse.json(interviews);
+    }
+
+    const user = await requireUser();
+    const interviews = await prisma.interview.findMany({
+      where: { userId: user.id },
+      include: { teacher: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return NextResponse.json(interviews);
+  } catch (e) {
+    return apiError(e);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -39,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     const existing = await prisma.interview.findFirst({ where: { userId: user.id } });
     if (existing) {
-      return NextResponse.json({ error: '이미 졸업면담을 제출하셨습니다' }, { status: 409 });
+      return NextResponse.json({ error: '이미 졸업면담을 제출하셨습니다. 수정하려면 기존 면담을 편집해주세요.' }, { status: 409 });
     }
 
     const dbUser = await prisma.user.findUnique({
@@ -57,7 +72,7 @@ export async function POST(req: NextRequest) {
     });
     if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    const nickname = userDisplayName(dbUser);
+    const nickname = interviewAuthorName(dbUser);
     const className = resolveClassName(dbUser);
     const teacherId = dbUser.teacherId;
     const clubNames =
@@ -86,6 +101,7 @@ export async function POST(req: NextRequest) {
       await tx.pointHistory.create({
         data: {
           userId: user.id,
+          interviewId: created.id,
           pointType: 'graduation',
           pointAmount: GRADUATION_POINT,
         },
@@ -95,6 +111,7 @@ export async function POST(req: NextRequest) {
         await tx.pointHistory.create({
           data: {
             userId: user.id,
+            interviewId: created.id,
             pointType: 'club',
             pointAmount: CLUB_POINT,
           },

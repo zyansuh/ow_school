@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireUser } from '@/lib/api-helpers';
 import { syncUserGuildDataIfStale } from '@/lib/discord-guild';
-import { userDisplayName } from '@/lib/user-display';
+import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 
 export async function GET(req: NextRequest) {
   try {
@@ -29,7 +29,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       ...dbUser,
       discordRoleNames: parseRoleNames(dbUser.discordRoleNames),
-      displayName: userDisplayName(dbUser),
+      displayName: userDisplayName(normalizeNickFields(dbUser)),
+      serverNickname: dbUser.discordServerNick,
+      globalDisplayName: dbUser.discordNickname,
     });
   } catch (e) {
     return apiError(e);

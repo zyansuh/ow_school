@@ -10,7 +10,7 @@ import {
   syncUserGuildDataBestEffort,
   syncUserGuildDataIfStale,
 } from '@/lib/discord-guild';
-import { userDisplayName } from '@/lib/user-display';
+import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 import { isTeacherFromDiscordRoles } from '@/lib/user-header';
 
 type DiscordProfile = {
@@ -142,12 +142,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               create: {
                 discordId: p.id,
                 discordUsername: username,
-                discordNickname: p.global_name || username,
+                discordNickname: p.global_name?.trim() || null,
                 discordAvatar,
               },
               update: {
                 discordUsername: username,
-                discordNickname: p.global_name || username,
+                discordNickname: p.global_name?.trim() || null,
                 discordAvatar,
               },
             }),
@@ -176,11 +176,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      const userFields = {
-        discordServerNick: (token.discordServerNick as string) ?? null,
-        discordNickname: (token.discordNickname as string) ?? null,
+      const userFields = normalizeNickFields({
         discordUsername: token.discordUsername as string,
-      };
+        discordNickname: (token.discordNickname as string) ?? null,
+        discordServerNick: (token.discordServerNick as string) ?? null,
+      });
       const displayName = userDisplayName(userFields);
 
       return {
@@ -189,9 +189,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: token.userId as string,
           discordId: token.discordId as string,
           discordUsername: userFields.discordUsername,
-          discordNickname: userFields.discordNickname,
+          discordNickname: userFields.discordDisplayName ?? null,
           discordAvatar: (token.discordAvatar as string) ?? null,
-          discordServerNick: userFields.discordServerNick,
+          discordServerNick: userFields.discordServerNickname ?? null,
           discordRoleNames: (token.discordRoleNames as string[]) ?? [],
           isInGuild: !!token.isInGuild,
           isAdmin: !!token.isAdmin,

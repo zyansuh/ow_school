@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { userDisplayName } from '@/lib/user-display';
+import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 
 export async function GET() {
   try {
@@ -13,7 +13,7 @@ export async function GET() {
     return NextResponse.json(
       interviews.map((iv) => ({
         ...iv,
-        nickname: iv.user ? userDisplayName(iv.user) : iv.nickname,
+        nickname: iv.user ? userDisplayName(normalizeNickFields(iv.user)) : iv.nickname,
       })),
     );
   } catch (e) {

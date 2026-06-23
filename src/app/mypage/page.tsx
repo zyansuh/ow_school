@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { MainLayout } from '@/components/layout/main-layout';
@@ -14,6 +15,8 @@ import { userDisplayName } from '@/lib/user-display';
 
 type MeData = {
   displayName: string;
+  serverNickname?: string | null;
+  globalDisplayName?: string | null;
   discordNickname: string | null;
   discordUsername: string;
   discordServerNick: string | null;
@@ -101,8 +104,16 @@ export default function MyPage() {
             </div>
             <div className="grid sm:grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-gray-500">서버 닉네임</span>
+                <span className="text-gray-500">표시 닉네임</span>
                 <p className="text-gray-200 mt-1">{displayNick}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">서버 닉네임 (Guild)</span>
+                <p className="text-gray-200 mt-1">{data?.serverNickname ?? data?.discordServerNick ?? '(미설정)'}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">글로벌 표시 이름</span>
+                <p className="text-gray-200 mt-1">{data?.globalDisplayName ?? data?.discordNickname ?? '(미설정)'}</p>
               </div>
               <div>
                 <span className="text-gray-500">디스코드 유저명</span>
@@ -182,9 +193,14 @@ export default function MyPage() {
           ) : (
             data.interviews.map((iv) => (
               <Card key={iv.id} className="bg-gray-900/80 border-gray-800">
-                <div className="card-pad flex justify-between">
-                  <span className="text-gray-300">제출 완료</span>
-                  <span className="text-sm text-gray-500">{formatDate(iv.createdAt)}</span>
+                <div className="card-pad flex flex-wrap justify-between items-center gap-3">
+                  <div>
+                    <span className="text-gray-300">제출 완료</span>
+                    <span className="text-sm text-gray-500 ml-2">{formatDate(iv.createdAt)}</span>
+                  </div>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/interview">내용 보기 · 수정</Link>
+                  </Button>
                 </div>
               </Card>
             ))

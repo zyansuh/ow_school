@@ -7,7 +7,7 @@ import {
   mergeMonthlyStats,
 } from '@/lib/monthly-stats';
 import { parseRoleNames } from '@/lib/discord-guild';
-import { userDisplayName } from '@/lib/user-display';
+import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 
 export async function GET() {
   try {
@@ -79,7 +79,7 @@ export async function GET() {
       },
       students: students.map((u) => ({
         id: u.id,
-        nickname: userDisplayName(u),
+        nickname: userDisplayName(normalizeNickFields(u)),
         discord: u.discordUsername,
         className: u.class?.name ?? '미배정',
         roleNames: parseRoleNames(u.discordRoleNames),

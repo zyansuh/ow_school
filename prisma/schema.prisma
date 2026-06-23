@@ -82,30 +82,50 @@ model Application {
 }
 
 model Interview {
-  id                String   @id @default(cuid())
+  id                String         @id @default(cuid())
   userId            String
-  user              User     @relation(fields: [userId], references: [id])
+  user              User           @relation(fields: [userId], references: [id])
   nickname          String
   className         String?
   teacherId         String?
-  teacher           Teacher? @relation(fields: [teacherId], references: [id])
+  teacher           Teacher?       @relation(fields: [teacherId], references: [id])
   contentExperience String
   memorablePerson   String
-  joinedClub        Boolean  @default(false)
+  joinedClub        Boolean        @default(false)
   clubNames         String?
-  createdAt         DateTime @default(now())
+  pointHistories    PointHistory[]
+  createdAt         DateTime       @default(now())
 }
 
 model PointHistory {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interviewId String?
+  interview   Interview? @relation(fields: [interviewId], references: [id], onDelete: SetNull)
   pointType   String
   pointAmount Int
-  createdAt   DateTime @default(now())
+  createdAt   DateTime   @default(now())
 
   @@index([userId])
   @@index([pointType])
+  @@index([interviewId])
+}
+
+model InterviewDeletionLog {
+  id                     String   @id @default(cuid())
+  interviewId            String
+  authorUserId           String
+  authorDisplayName      String
+  deletedByUserId        String
+  deletedByDisplayName   String
+  reason                 String?
+  graduationPointsRemoved Int     @default(0)
+  clubPointsRemoved       Int     @default(0)
+  createdAt              DateTime @default(now())
+
+  @@index([authorUserId])
+  @@index([deletedByUserId])
 }
 
 model GraduationReview {

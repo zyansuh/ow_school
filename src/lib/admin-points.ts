@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { userDisplayName } from '@/lib/user-display';
+import { userDisplayName, normalizeNickFields } from '@/lib/user-display';
 
 export type MonthlyPointRow = {
   userId: string;
@@ -57,7 +57,7 @@ export async function getMonthlyPointReport(year: number, month: number) {
   for (const h of histories) {
     const row = byUser.get(h.userId) ?? {
       userId: h.userId,
-      serverNick: h.user.discordServerNick ?? userDisplayName(h.user),
+      serverNick: userDisplayName(normalizeNickFields(h.user)),
       teacherName: resolveTeacherName(h.user),
       graduationPoint: 0,
       clubPoint: 0,

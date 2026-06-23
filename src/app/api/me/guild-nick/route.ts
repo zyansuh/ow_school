@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest) {
 
     const user = await prisma.user.findUnique({ where: { id: sessionUser.id } });
     return NextResponse.json({
-      serverNick: info.serverNick,
+      serverNick: info.guildNickname,
       roleNames: info.roleNames,
       isInGuild: info.isInGuild,
       user,
