@@ -23,8 +23,20 @@ async function getClassStats() {
   );
 }
 
+async function getNotices() {
+  const setting = await prisma.siteSetting.findUnique({ where: { key: 'notices' } });
+  if (!setting?.value) {
+    return ['신입 배정은 선착순입니다', '정원 마감 시 선택 불가', '신청 후 확인 1~2일 소요'];
+  }
+  try {
+    return JSON.parse(setting.value) as string[];
+  } catch {
+    return ['신입 배정은 선착순입니다', '정원 마감 시 선택 불가', '신청 후 확인 1~2일 소요'];
+  }
+}
+
 export async function HomeContent() {
-  const stats = await getClassStats();
+  const [stats, notices] = await Promise.all([getClassStats(), getNotices()]);
 
   return (
     <div className="section-gap pb-16">
@@ -52,26 +64,26 @@ export async function HomeContent() {
 
       <section id="classes" className="page-container section-gap">
         <h2 className="heading-section text-center text-gray-100 mb-8">클래스 소개</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 items-stretch">
           {GAME_CLASSES.map((cls) => {
             const s = stats[cls.slug];
             return (
-              <Link key={cls.slug} href={`/classes/${cls.slug}`} className="block group">
-                <Card className={`overflow-hidden border ${cls.borderColor} ${cls.hoverBorder} transition-all duration-300 hover:shadow-xl ${cls.bgGlow} hover:-translate-y-1 bg-gray-900/80 ${cls.laserClass}`}>
-                  <div className="relative h-44 sm:h-52 overflow-hidden">
+              <Link key={cls.slug} href={`/classes/${cls.slug}`} className="block group h-full">
+                <Card className={`h-full flex flex-col overflow-hidden border ${cls.borderColor} ${cls.hoverBorder} transition-all duration-300 hover:shadow-xl ${cls.bgGlow} hover:-translate-y-1 bg-gray-900/80 ${cls.laserClass}`}>
+                  <div className="relative h-44 sm:h-52 shrink-0 overflow-hidden">
                     <Image src={cls.bannerImage} alt={cls.gameKr} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                     <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-gray-900/90 to-transparent" />
                   </div>
-                  <div className="card-pad space-y-3">
+                  <div className="card-pad flex flex-col flex-1 gap-3">
                     <div className="flex items-center gap-3">
-                      <Image src={cls.mascotImage} alt={cls.name} width={40} height={40} className="rounded-full border-2 border-gray-700" />
-                      <div>
+                      <Image src={cls.mascotImage} alt={cls.name} width={40} height={40} className="rounded-full border-2 border-gray-700 shrink-0" />
+                      <div className="min-w-0">
                         <h3 className="font-bold text-gray-100">{cls.name}</h3>
                         <p className={`text-sm ${cls.color}`}>{cls.game}</p>
                       </div>
                     </div>
-                    <p className="text-gray-400 text-sm leading-relaxed">{cls.description}</p>
-                    <div className="flex items-center justify-between gap-2 pt-1">
+                    <p className="text-gray-400 text-sm leading-relaxed flex-1 min-h-[2.5rem]">{cls.description}</p>
+                    <div className="flex items-center justify-between gap-2 pt-1 mt-auto">
                       <Badge variant={s?.recruiting ? 'success' : 'danger'}>
                         {s?.recruiting ? '모집중' : '마감'}
                       </Badge>
@@ -107,9 +119,9 @@ export async function HomeContent() {
               <Megaphone className="h-4 w-4 text-amber-400" /> 공지사항
             </h3>
             <ul className="text-gray-400 text-sm space-y-2">
-              <li>• 신입 배정은 선착순입니다</li>
-              <li>• 정원 마감 시 선택 불가</li>
-              <li>• 신청 후 확인 1~2일 소요</li>
+              {notices.map((line) => (
+                <li key={line}>• {line}</li>
+              ))}
             </ul>
           </div>
         </Card>
