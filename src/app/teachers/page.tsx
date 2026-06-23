@@ -4,15 +4,23 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/loading';
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 
 export { dynamic } from '@/lib/segment';
 
+type TeacherWithClass = Prisma.TeacherGetPayload<{ include: { class: true } }>;
+
 export default async function TeachersPage() {
-  const teachers = await prisma.teacher.findMany({
-    where: { isActive: true },
-    include: { class: true },
-    orderBy: [{ class: { slug: 'asc' } }, { name: 'asc' }],
-  });
+  let teachers: TeacherWithClass[] = [];
+  try {
+    teachers = await prisma.teacher.findMany({
+      where: { isActive: true },
+      include: { class: true },
+      orderBy: [{ class: { slug: 'asc' } }, { name: 'asc' }],
+    });
+  } catch (e) {
+    console.error('[teachers] findMany failed:', e);
+  }
 
   return (
     <MainLayout>

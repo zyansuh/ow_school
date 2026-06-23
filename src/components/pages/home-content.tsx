@@ -6,32 +6,37 @@ import { Badge } from '@/components/ui/badge';
 import { ClipboardList, Megaphone, Gamepad2, Users } from 'lucide-react';
 import { GAME_CLASSES } from '@/lib/constants';
 import { prisma } from '@/lib/prisma';
+import { DEFAULT_NOTICES, defaultClassStats } from '@/lib/db-fallbacks';
 
 async function getClassStats() {
-  const classes = await prisma.class.findMany({
-    include: { teachers: { where: { isActive: true } } },
-  });
-  return Object.fromEntries(
-    classes.map((c) => [
-      c.slug,
-      {
-        recruiting: c.teachers.some((t) => t.currentStudents < t.maxStudents),
-        current: c.teachers.reduce((s, t) => s + t.currentStudents, 0),
-        max: c.teachers.reduce((s, t) => s + t.maxStudents, 0),
-      },
-    ]),
-  );
+  try {
+    const classes = await prisma.class.findMany({
+      include: { teachers: { where: { isActive: true } } },
+    });
+    return Object.fromEntries(
+      classes.map((c) => [
+        c.slug,
+        {
+          recruiting: c.teachers.some((t) => t.currentStudents < t.maxStudents),
+          current: c.teachers.reduce((s, t) => s + t.currentStudents, 0),
+          max: c.teachers.reduce((s, t) => s + t.maxStudents, 0),
+        },
+      ]),
+    );
+  } catch (e) {
+    console.error('[home] getClassStats failed:', e);
+    return defaultClassStats();
+  }
 }
 
 async function getNotices() {
-  const setting = await prisma.siteSetting.findUnique({ where: { key: 'notices' } });
-  if (!setting?.value) {
-    return ['신입 배정은 선착순입니다', '정원 마감 시 선택 불가', '신청 후 확인 1~2일 소요'];
-  }
   try {
+    const setting = await prisma.siteSetting.findUnique({ where: { key: 'notices' } });
+    if (!setting?.value) return DEFAULT_NOTICES;
     return JSON.parse(setting.value) as string[];
-  } catch {
-    return ['신입 배정은 선착순입니다', '정원 마감 시 선택 불가', '신청 후 확인 1~2일 소요'];
+  } catch (e) {
+    console.error('[home] getNotices failed:', e);
+    return DEFAULT_NOTICES;
   }
 }
 
