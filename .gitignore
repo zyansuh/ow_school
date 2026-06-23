@@ -14,3 +14,5 @@ logs/
 tsconfig.tsbuildinfo
 .tmp-cookies.txt
 _legacy/
+public/uploads/teachers/*
+!public/uploads/teachers/.gitkeep
