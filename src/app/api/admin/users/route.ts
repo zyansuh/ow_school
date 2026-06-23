@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { userDisplayName } from '@/lib/user-display';
+import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,9 +14,11 @@ export async function GET(req: NextRequest) {
     const users = await prisma.user.findMany({
       where: {
         OR: [
+          { discordId: { contains: q } },
           { discordUsername: { contains: q, mode: 'insensitive' } },
           { discordNickname: { contains: q, mode: 'insensitive' } },
           { discordServerNick: { contains: q, mode: 'insensitive' } },
+          { displayNickname: { contains: q, mode: 'insensitive' } },
         ],
       },
       take: 10,
@@ -27,10 +29,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       users.map((u) => ({
         id: u.id,
+        discordId: u.discordId,
         discordUsername: u.discordUsername,
         discordNickname: u.discordNickname,
         discordServerNick: u.discordServerNick,
-        displayName: userDisplayName(u),
+        displayName: adminUserDisplayName(normalizeNickFields(u)),
         isAdmin: !!u.adminRole,
       })),
     );

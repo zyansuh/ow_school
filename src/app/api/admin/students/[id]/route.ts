@@ -8,6 +8,7 @@ import { assignStudentTeacher } from '@/lib/student-assignment';
 const patchSchema = z.object({
   action: z.enum(['graduate', 'ungraduate']).optional(),
   teacherId: z.string().nullable().optional(),
+  displayNickname: z.string().max(32).nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -34,6 +35,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (body.teacherId !== undefined) {
       const updated = await assignStudentTeacher(id, body.teacherId);
+      return NextResponse.json(updated);
+    }
+
+    if (body.displayNickname !== undefined) {
+      const updated = await prisma.user.update({
+        where: { id },
+        data: { displayNickname: body.displayNickname?.trim() || null },
+      });
       return NextResponse.json(updated);
     }
 

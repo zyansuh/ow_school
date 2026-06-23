@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { db } from '@/lib/prisma';
-import { userDisplayName } from '@/lib/user-display';
+import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
 
 export async function GET() {
   try {
@@ -15,7 +15,7 @@ export async function GET() {
     return NextResponse.json(
       reviews.map((r) => ({
         id: r.id,
-        authorName: r.user ? userDisplayName(r.user) : r.authorName,
+        authorName: r.user ? adminUserDisplayName(normalizeNickFields(r.user)) : r.authorName,
         className: r.className,
         content: r.content,
         createdAt: r.createdAt,

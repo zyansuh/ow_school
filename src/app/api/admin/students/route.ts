@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { parseRoleNames } from '@/lib/discord-guild';
-import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
+import { normalizeNickFields, adminUserDisplayName, guildNicknameOnly, userDisplayName } from '@/lib/user-display';
 
 export async function GET() {
   try {
@@ -15,19 +15,25 @@ export async function GET() {
     });
 
     return NextResponse.json(
-      users.map((u) => ({
-        id: u.id,
-        nickname: userDisplayName(normalizeNickFields(u)),
-        discord: u.discordUsername,
-        serverNick: u.discordServerNick,
-        roleNames: parseRoleNames(u.discordRoleNames),
-        isInGuild: u.isInGuild,
-        className: u.class?.name ?? '미배정',
-        teacherId: u.teacherId,
-        teacherName: u.teacher?.name ?? '-',
-        status: u.status,
-        createdAt: u.createdAt,
-      })),
+      users.map((u) => {
+        const fields = normalizeNickFields(u);
+        return {
+          id: u.id,
+          discordId: u.discordId,
+          nickname: adminUserDisplayName(fields),
+          guildNickname: guildNicknameOnly(fields) ?? userDisplayName(fields),
+          displayNickname: u.displayNickname,
+          discord: u.discordUsername,
+          serverNick: u.discordServerNick,
+          roleNames: parseRoleNames(u.discordRoleNames),
+          isInGuild: u.isInGuild,
+          className: u.class?.name ?? '미배정',
+          teacherId: u.teacherId,
+          teacherName: u.teacher?.name ?? '-',
+          status: u.status,
+          createdAt: u.createdAt,
+        };
+      }),
     );
   } catch (e) {
     return apiError(e);

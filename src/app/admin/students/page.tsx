@@ -14,12 +14,16 @@ import {
   StudentTeacherAssign,
   type TeacherOption,
 } from '@/components/admin/students/student-teacher-assign';
+import { StudentDisplayNickEdit } from '@/components/admin/students/student-display-nick-edit';
 
 const FILTERS = ['전체', '수달반', '사자반', '여우반'];
 
 type Student = {
   id: string;
+  discordId: string;
   nickname: string;
+  guildNickname: string;
+  displayNickname: string | null;
   discord: string;
   className: string;
   teacherId: string | null;
@@ -102,8 +106,9 @@ export default function AdminStudentsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className={adminStyles.tableHead}>
-                <th className="p-4">서버 닉네임</th>
-                <th className="p-4">디스코드</th>
+                <th className="p-4">표시 이름</th>
+                <th className="p-4">길드 닉</th>
+                <th className="p-4">Discord ID</th>
                 <th className="p-4">반</th>
                 <th className="p-4">담당 선생님</th>
                 <th className="p-4">상태</th>
@@ -114,8 +119,17 @@ export default function AdminStudentsPage() {
             <tbody>
               {filtered.map((u) => (
                 <tr key={u.id} className={`${adminStyles.tableRow} hover:bg-gray-800/30`}>
-                  <td className="p-4 font-medium">{u.nickname}</td>
-                  <td className="p-4 text-gray-400">@{u.discord}</td>
+                  <td className="p-4">
+                    <StudentDisplayNickEdit
+                      studentId={u.id}
+                      currentDisplay={u.nickname}
+                      displayNickname={u.displayNickname}
+                      guildNickname={u.guildNickname}
+                      onSaved={load}
+                    />
+                  </td>
+                  <td className="p-4 text-gray-300">{u.guildNickname}</td>
+                  <td className="p-4 text-gray-500 font-mono text-xs">{u.discordId}</td>
                   <td className="p-4">{u.className}</td>
                   <td className="p-4">
                     <StudentTeacherAssign

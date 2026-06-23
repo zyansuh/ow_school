@@ -7,7 +7,7 @@ import {
   revokeAdminWithAudit,
 } from '@/lib/admin/role-requests';
 import { prisma } from '@/lib/prisma';
-import { userDisplayName } from '@/lib/user-display';
+import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
 import { z } from 'zod';
 
 export async function GET(req: NextRequest) {
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       requests.map((r) => ({
         ...r,
-        displayName: userDisplayName(r.user),
+        displayName: adminUserDisplayName(normalizeNickFields(r.user)),
       })),
     );
   } catch (e) {

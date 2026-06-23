@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { interviewAuthorName } from '@/lib/interview-access';
-import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
+import { normalizeNickFields, adminUserDisplayName } from '@/lib/user-display';
 import { z } from 'zod';
 
 const deleteSchema = z.object({
@@ -54,7 +54,7 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx) {
 
     const deletedByName = adminDb
       ? interviewAuthorName(adminDb)
-      : userDisplayName(
+      : adminUserDisplayName(
           normalizeNickFields({
             discordUsername: admin.discordUsername,
             discordServerNick: admin.discordServerNick,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { grantAdminWithAudit, revokeAdminWithAudit } from '@/lib/admin/role-requests';
 import { prisma } from '@/lib/prisma';
-import { userDisplayName } from '@/lib/user-display';
+import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
 import { z } from 'zod';
 
 export async function GET() {
@@ -15,7 +15,7 @@ export async function GET() {
     return NextResponse.json(
       roles.map((r) => ({
         ...r,
-        user: { ...r.user, displayName: userDisplayName(r.user) },
+        user: { ...r.user, displayName: adminUserDisplayName(normalizeNickFields(r.user)) },
       })),
     );
   } catch (e) {
