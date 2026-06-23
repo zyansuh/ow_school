@@ -1,18 +1,18 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { unstable_cache } from 'next/cache';
-import { ClipboardList, Megaphone, Users, GraduationCap, UserCheck } from 'lucide-react';
+import { Megaphone, Users, GraduationCap, UserCheck } from 'lucide-react';
 import { GAME_CLASSES } from '@/lib/constants';
 import { prisma } from '@/lib/prisma';
 import { DEFAULT_NOTICES } from '@/lib/db-fallbacks';
 import { getHomeClassStats } from '@/lib/home-class-stats';
 import { getHomeSiteStats } from '@/lib/home-stats';
-import { SITE_NAME } from '@/lib/site-brand';
+import { SITE_NAME, SITE_TAGLINE } from '@/lib/site-brand';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, PageCardBody } from '@/components/ui/card';
 import { StatCard } from '@/components/ui/stat-card';
 import { ClassCard } from '@/components/cards';
+import { ds } from '@/styles/design-system';
 
 const getNotices = unstable_cache(
   async (): Promise<string[]> => {
@@ -37,7 +37,7 @@ export async function HomeContent() {
   ]);
 
   return (
-    <div className="section-gap pb-16 page-enter">
+    <div className="section-gap pb-24 sm:pb-28 page-enter">
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border/60">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
@@ -53,15 +53,18 @@ export async function HomeContent() {
               className="rounded-2xl border border-border shadow-card"
             />
           </div>
-          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground mb-4">
+          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground mb-2">
             {SITE_NAME}
           </h1>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-lg mx-auto mb-2">
-            오버워치를 함께 배우고
-            <br className="sm:hidden" /> 함께 성장하는 공간
+          <p className="text-lg sm:text-xl font-medium text-primary/90 mb-3">
+            {SITE_TAGLINE}
           </p>
-          <p className="text-sm text-subtle max-w-md mx-auto mb-8">
-            수달반 · 사자반 · 여우반 — Discord 기반 게임 멘토링 커뮤니티
+          <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto mb-2">
+            오버워치 · 배틀그라운드 · 발로란트를 함께 배우고
+            <br className="sm:hidden" /> 함께 성장하는 게임 클래스
+          </p>
+          <p className="text-sm text-subtle max-w-lg mx-auto mb-8">
+            수달반 · 사자반 · 여우반 — 평겜마 Discord 멘토링 커뮤니티
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button asChild size="lg" className="w-full sm:w-auto min-w-[160px]">
@@ -87,7 +90,9 @@ export async function HomeContent() {
       <section id="classes" className="page-container section-gap pt-4">
         <div className="text-center mb-8">
           <h2 className="heading-section text-foreground mb-2">클래스 소개</h2>
-          <p className="text-sm text-muted-foreground">게임별 반을 선택하고 담당 선생님을 만나보세요</p>
+          <p className="text-sm text-muted-foreground">
+            오버워치 · PUBG · 발로란트 — 게임별 반을 선택하고 담당 선생님을 만나보세요
+          </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch">
           {GAME_CLASSES.map((cls, i) => (
@@ -96,32 +101,13 @@ export async function HomeContent() {
         </div>
       </section>
 
-      {/* Graduation CTA */}
-      <section className="page-container">
-        <Link href="/interview" className="block max-w-3xl mx-auto group">
-          <Card className="overflow-hidden border-primary/30 bg-gradient-to-r from-primary/20 to-secondary/10 hover:border-primary/50 hover:shadow-card-hover transition-all duration-200">
-            <PageCardBody className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6 text-center sm:text-left">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20 text-primary">
-                  <ClipboardList className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">졸업면담지 작성</h3>
-                  <p className="text-sm text-muted-foreground">졸업 면담을 작성해주세요</p>
-                </div>
-              </div>
-              <Badge variant="info">포인트 지급</Badge>
-            </PageCardBody>
-          </Card>
-        </Link>
-      </section>
-
       {/* Notices */}
       <section className="page-container">
-        <Card className="max-w-2xl mx-auto border-border">
+        <Card className={`${ds.card} mx-auto w-full max-w-[900px]`}>
           <PageCardBody>
             <h3 className="heading-section text-foreground mb-4 flex items-center gap-2">
-              <Megaphone className="h-4 w-4 text-warning" /> 공지사항
+              <Megaphone className="h-4 w-4 text-warning" aria-hidden />
+              공지사항
             </h3>
             <ul className="text-muted-foreground text-sm space-y-2.5">
               {notices.map((line) => (
