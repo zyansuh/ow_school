@@ -114,9 +114,9 @@ export async function HomeContent() {
           <h2 className="heading-section text-foreground mb-2">클래스 소개</h2>
           <p className="text-sm text-muted-foreground">게임별 반을 선택하고 담당 선생님을 만나보세요</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-          {GAME_CLASSES.map((cls) => (
-            <ClassCard key={cls.slug} cls={cls} stats={stats[cls.slug]} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch">
+          {GAME_CLASSES.map((cls, i) => (
+            <ClassCard key={cls.slug} cls={cls} stats={stats[cls.slug]} priority={i === 0} />
           ))}
         </div>
       </section>
