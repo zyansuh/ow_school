@@ -3,6 +3,7 @@ import { syncUserGuildDataBestEffort } from '@/lib/discord-guild';
 import { syncAllTeacherStudentCounts, getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
 import { mapWithConcurrency } from '@/lib/async-utils';
 import { resolveTeacherEntityForUser } from '@/lib/teacher/identity';
+import { backfillAllTeacherDiscordUserIds } from '@/lib/teacher-discord-link';
 import { userDisplayName, adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
 
 export type TeacherLinkMismatch = {
@@ -31,6 +32,7 @@ export type TeacherDiscordLinkGap = {
 export type DiscordSyncReport = {
   usersSynced: number;
   usersFailed: number;
+  teachersDiscordLinked: number;
   teachersRecounted: number;
   teacherLinksVerified: number;
   teacherLinkMismatches: TeacherLinkMismatch[];
@@ -56,6 +58,8 @@ export async function runAdminDiscordSync(): Promise<DiscordSyncReport> {
   });
   const usersSynced = syncResults.filter(Boolean).length;
   const usersFailed = syncResults.length - usersSynced;
+
+  const teachersDiscordLinked = await backfillAllTeacherDiscordUserIds();
 
   const teacherCounts = await syncAllTeacherStudentCounts();
 
@@ -116,6 +120,7 @@ export async function runAdminDiscordSync(): Promise<DiscordSyncReport> {
   return {
     usersSynced,
     usersFailed,
+    teachersDiscordLinked,
     teachersRecounted: teacherCounts.length,
     teacherLinksVerified: teacherUsers.length,
     teacherLinkMismatches,

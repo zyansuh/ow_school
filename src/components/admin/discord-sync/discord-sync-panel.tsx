@@ -69,7 +69,7 @@ export function DiscordSyncPanel({ onSynced }: { onSynced?: () => void }) {
         {report && (
           <div className={`${adminStyles.muted} space-y-3 pt-2 border-t border-gray-800`}>
             <p>동기화 성공: {report.usersSynced}명 · 실패: {report.usersFailed}명</p>
-            <p>선생님 학생 수 재계산: {report.teachersRecounted}명</p>
+            <p>선생님 Discord ID 연결: {report.teachersDiscordLinked}명 · 학생 수 재계산: {report.teachersRecounted}명</p>
 
             {report.studentCountMismatches.length > 0 && (
               <p className={adminStyles.warning}>

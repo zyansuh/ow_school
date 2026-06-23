@@ -11,6 +11,7 @@ import {
 } from '@/lib/discord-guild';
 import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 import { resolveTeacherEntityForUser, hasTeacherDiscordRole } from '@/lib/teacher/identity';
+import { backfillTeacherDiscordUserId } from '@/lib/teacher-discord-link';
 
 type DiscordProfile = {
   id: string;
@@ -161,12 +162,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
           }
 
-          await db((client) =>
-            client.teacher.updateMany({
-              where: { discord: p.id, discordUserId: null },
-              data: { discordUserId: p.id },
-            }),
-          );
+          await backfillTeacherDiscordUserId(p.id, username);
 
           await db((client) => ensureDefaultAdmin(p.id, username, user.id, client));
 
