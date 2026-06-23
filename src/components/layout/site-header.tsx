@@ -6,6 +6,8 @@ import { useSession, signIn, signOut } from 'next-auth/react';
 import { Gamepad2, Menu, X, Moon, Sun } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
+import { userDisplayName } from '@/lib/user-display';
+import { userHeaderSubtitle } from '@/lib/user-header';
 import { Button } from '@/components/ui/button';
 
 const NAV = [
@@ -62,10 +64,10 @@ export function SiteHeader() {
             <div className="hidden sm:flex items-center gap-3 text-right">
               <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-100 truncate">
-                  {user.discordServerNick || user.discordNickname || user.discordUsername}님
+                  {userDisplayName(user)}님
                 </p>
                 <p className="text-xs text-purple-300 truncate">
-                  현재 반 : {user.className || '미배정'}
+                  {userHeaderSubtitle(user)}
                 </p>
                 {user.discordRoleNames?.length > 0 && (
                   <p className="text-[10px] text-gray-500 truncate max-w-[140px]">
@@ -98,7 +100,7 @@ export function SiteHeader() {
           {user && (
             <div className="pt-3 border-t border-gray-800 space-y-2">
               <p className="text-sm text-gray-200">
-                {user.discordServerNick || user.discordNickname}님 · 현재 반 : {user.className || '미배정'}
+                {userDisplayName(user)}님 · {userHeaderSubtitle(user)}
               </p>
               {user.discordRoleNames?.length > 0 && (
                 <p className="text-xs text-gray-500">{user.discordRoleNames.join(' · ')}</p>
