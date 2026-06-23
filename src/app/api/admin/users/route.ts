@@ -1,7 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
+import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields } from '@/lib/user-display';
+
+function mapAdminSearchUser(u: {
+  id: string;
+  discordId: string;
+  discordUsername: string;
+  discordNickname: string | null;
+  discordServerNick: string | null;
+  displayNickname: string | null;
+  adminRole: unknown;
+}) {
+  const fields = normalizeNickFields(u);
+  return {
+    id: u.id,
+    discordId: u.discordId,
+    discordUsername: u.discordUsername,
+    discordNickname: u.discordNickname,
+    discordServerNick: u.discordServerNick,
+    serverNickname: guildNicknameOnly(fields),
+    displayName: adminUserDisplayName(fields),
+    isAdmin: !!u.adminRole,
+  };
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,17 +48,7 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json(
-      users.map((u) => ({
-        id: u.id,
-        discordId: u.discordId,
-        discordUsername: u.discordUsername,
-        discordNickname: u.discordNickname,
-        discordServerNick: u.discordServerNick,
-        displayName: adminUserDisplayName(normalizeNickFields(u)),
-        isAdmin: !!u.adminRole,
-      })),
-    );
+    return NextResponse.json(users.map(mapAdminSearchUser));
   } catch (e) {
     return apiError(e);
   }
