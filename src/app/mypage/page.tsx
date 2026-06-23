@@ -6,12 +6,17 @@ import { MainLayout } from '@/components/layout/main-layout';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input, Label } from '@/components/ui/input';
 import { LoadingPage, EmptyState } from '@/components/ui/loading';
 import { STATUS_LABELS, formatDate } from '@/lib/utils';
+import { toast } from 'sonner';
 
 type MeData = {
   discordNickname: string | null;
   discordUsername: string;
+  discordServerNick: string | null;
+  discordRoleNames: string[];
+  isInGuild: boolean;
   class: { name: string } | null;
   teacher: { name: string } | null;
   applications: Array<{ id: string; status: string; createdAt: string; teacher: { name: string } }>;
@@ -19,14 +24,48 @@ type MeData = {
 };
 
 export default function MyPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [data, setData] = useState<MeData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [nickInput, setNickInput] = useState('');
+  const [savingNick, setSavingNick] = useState(false);
+
+  const load = () =>
+    fetch('/api/me')
+      .then((r) => r.json())
+      .then((d) => {
+        setData(d);
+        setNickInput(d.discordServerNick || d.discordNickname || d.discordUsername || '');
+      });
 
   useEffect(() => {
-    if (!session) { setLoading(false); return; }
-    fetch('/api/me').then((r) => r.json()).then(setData).finally(() => setLoading(false));
+    if (!session) {
+      setLoading(false);
+      return;
+    }
+    load().finally(() => setLoading(false));
   }, [session]);
+
+  const saveNick = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingNick(true);
+    try {
+      const res = await fetch('/api/me/guild-nick', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nick: nickInput.trim() || null }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '변경 실패');
+      toast.success('서버 닉네임이 변경되었습니다');
+      await load();
+      await update();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '변경 실패');
+    } finally {
+      setSavingNick(false);
+    }
+  };
 
   if (status === 'loading' || loading) return <MainLayout><LoadingPage /></MainLayout>;
 
@@ -41,17 +80,72 @@ export default function MyPage() {
     );
   }
 
+  const displayNick = data?.discordServerNick || data?.discordNickname || data?.discordUsername;
+
   return (
     <MainLayout>
       <div className="page-container py-8 sm:py-12 section-gap max-w-3xl">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">마이페이지</h1>
 
         <Card className="bg-gray-900/80 border-gray-800">
-          <div className="card-pad space-y-3">
-            <h2 className="heading-section text-gray-200">내 정보</h2>
+          <div className="card-pad space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="heading-section text-gray-200">디스코드 서버 정보</h2>
+              {data?.isInGuild ? (
+                <Badge variant="success">서버 가입됨</Badge>
+              ) : (
+                <Badge variant="danger">서버 미가입</Badge>
+              )}
+            </div>
             <div className="grid sm:grid-cols-2 gap-4 text-sm">
-              <div><span className="text-gray-500">닉네임</span><p className="text-gray-200 mt-1">{data?.discordNickname || data?.discordUsername}</p></div>
-              <div><span className="text-gray-500">디스코드</span><p className="text-gray-200 mt-1">{data?.discordUsername}</p></div>
+              <div>
+                <span className="text-gray-500">서버 닉네임</span>
+                <p className="text-gray-200 mt-1">{displayNick}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">디스코드 유저명</span>
+                <p className="text-gray-200 mt-1">@{data?.discordUsername}</p>
+              </div>
+              <div className="sm:col-span-2">
+                <span className="text-gray-500">서버 역할</span>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {data?.discordRoleNames?.length ? (
+                    data.discordRoleNames.map((role) => (
+                      <Badge key={role} variant="outline">{role}</Badge>
+                    ))
+                  ) : (
+                    <span className="text-gray-500">역할 없음</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {data?.isInGuild && (
+              <form onSubmit={saveNick} className="pt-2 border-t border-gray-800 space-y-3">
+                <div>
+                  <Label htmlFor="server-nick">서버 닉네임 변경</Label>
+                  <Input
+                    id="server-nick"
+                    value={nickInput}
+                    onChange={(e) => setNickInput(e.target.value)}
+                    maxLength={32}
+                    placeholder="디스코드 서버에 표시될 닉네임"
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">최대 32자 · 비우면 글로벌 닉네임으로 초기화</p>
+                </div>
+                <Button type="submit" size="sm" disabled={savingNick}>
+                  {savingNick ? '변경 중...' : '닉네임 저장'}
+                </Button>
+              </form>
+            )}
+          </div>
+        </Card>
+
+        <Card className="bg-gray-900/80 border-gray-800">
+          <div className="card-pad space-y-3">
+            <h2 className="heading-section text-gray-200">수강 정보</h2>
+            <div className="grid sm:grid-cols-2 gap-4 text-sm">
               <div><span className="text-gray-500">현재 반</span><p className="text-gray-200 mt-1">{data?.class?.name || '미배정'}</p></div>
               <div><span className="text-gray-500">담당 선생님</span><p className="text-gray-200 mt-1">{data?.teacher?.name || '-'}</p></div>
             </div>

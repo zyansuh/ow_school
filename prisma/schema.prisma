@@ -13,6 +13,9 @@ model User {
   discordUsername String
   discordNickname String?
   discordAvatar   String?
+  discordServerNick String?
+  discordRoleNames  String?
+  isInGuild         Boolean       @default(false)
   status          String        @default("active")
   classId         String?
   class           Class?        @relation(fields: [classId], references: [id])

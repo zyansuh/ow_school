@@ -39,7 +39,7 @@ function ApplyForm() {
       setForm((f) => ({
         ...f,
         discord: session.user.discordUsername,
-        nickname: session.user.discordNickname || session.user.discordUsername,
+        nickname: session.user.discordServerNick || session.user.discordNickname || session.user.discordUsername,
       }));
     }
   }, [session]);

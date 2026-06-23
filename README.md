@@ -71,6 +71,8 @@ npm run dev
 | `AUTH_SECRET` | `openssl rand -base64 32` 로 생성 |
 | `DISCORD_CLIENT_ID` | Discord 앱 ID |
 | `DISCORD_CLIENT_SECRET` | Discord 시크릿 |
+| `DISCORD_GUILD_ID` | 디스코드 서버 ID |
+| `DISCORD_BOT_TOKEN` | 디스코드 봇 토큰 |
 | `NEXTAUTH_URL` | `https://ow-school.vercel.app` (Production) |
 
 **주의:** `DATABASE_URL`은 반드시 `postgresql://` 또는 `postgres://`로 시작해야 합니다.  
@@ -79,6 +81,38 @@ npm run dev
 3. 환경 변수 저장 후 **Redeploy** — 빌드 시 자동으로 `db push` + `seed` 실행됩니다.
 4. Discord Redirect URI: `https://ow-school.vercel.app/api/auth/callback/discord`
 5. 배포 확인: `https://ow-school.vercel.app/api/health`
+
+## Discord 서버 연동 (가입 확인·서버 닉·역할·닉 변경)
+
+### 1. OAuth2 스코프 (Developer Portal → OAuth2)
+
+로그인에 사용: `identify`, `guilds`, `guilds.members.read` (코드에 이미 설정됨)
+
+### 2. 봇 설정 (Developer Portal → Bot)
+
+1. **Bot** 탭에서 봇 생성 → **Token** 복사 → `DISCORD_BOT_TOKEN`
+2. **Privileged Gateway Intents** 에서 **Server Members Intent** 켜기
+3. 봇 권한: **닉네임 관리(MANAGE_NICKNAMES)** 포함해 서버에 초대
+
+봇 초대 URL (CLIENT_ID 교체):
+
+```
+https://discord.com/api/oauth2/authorize?client_id=CLIENT_ID&permissions=134217728&scope=bot
+```
+
+`134217728` = Manage Nicknames 권한
+
+### 3. 서버 ID
+
+디스코드 **설정 → 고급 → 개발자 모드** 켠 뒤, 서버 아이콘 우클릭 → **서버 ID 복사** → `DISCORD_GUILD_ID`
+
+### 4. 동작
+
+- 로그인 시 **서버 미가입**이면 로그인 거부
+- 마이페이지에서 **서버 닉네임·역할** 표시 및 **닉네임 변경**
+- 관리자 학생 목록에 **서버 역할** 표시
+
+`DISCORD_GUILD_ID` / `DISCORD_BOT_TOKEN` 이 없으면 서버 연동 기능은 비활성화되고 일반 로그인만 동작합니다.
 
 ## 기본 관리자
 

@@ -52,10 +52,17 @@ export function SiteHeader() {
           {user ? (
             <div className="hidden sm:flex items-center gap-3 text-right">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-100 truncate">{user.discordNickname || user.discordUsername}님</p>
+                <p className="text-sm font-medium text-gray-100 truncate">
+                  {user.discordServerNick || user.discordNickname || user.discordUsername}님
+                </p>
                 <p className="text-xs text-purple-300 truncate">
                   현재 반 : {user.className || '미배정'}
                 </p>
+                {user.discordRoleNames?.length > 0 && (
+                  <p className="text-[10px] text-gray-500 truncate max-w-[140px]">
+                    {user.discordRoleNames.slice(0, 2).join(' · ')}
+                  </p>
+                )}
               </div>
               {user.discordAvatar && (
                 <Image src={user.discordAvatar} alt="" width={36} height={36} className="rounded-full border border-gray-700" />
@@ -81,7 +88,12 @@ export function SiteHeader() {
           ))}
           {user && (
             <div className="pt-3 border-t border-gray-800 space-y-2">
-              <p className="text-sm text-gray-200">{user.discordNickname}님 · 현재 반 : {user.className || '미배정'}</p>
+              <p className="text-sm text-gray-200">
+                {user.discordServerNick || user.discordNickname}님 · 현재 반 : {user.className || '미배정'}
+              </p>
+              {user.discordRoleNames?.length > 0 && (
+                <p className="text-xs text-gray-500">{user.discordRoleNames.join(' · ')}</p>
+              )}
               <Button variant="outline" size="sm" onClick={() => signOut()}>로그아웃</Button>
             </div>
           )}

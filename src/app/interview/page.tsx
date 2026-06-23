@@ -35,7 +35,7 @@ export default function InterviewPage() {
       setTeachers(teacherList);
       setForm((f) => ({
         ...f,
-        nickname: f.nickname || session.user.discordNickname || session.user.discordUsername || '',
+        nickname: f.nickname || session.user.discordServerNick || session.user.discordNickname || session.user.discordUsername || '',
         teacherId: me?.teacherId || f.teacherId,
       }));
     });

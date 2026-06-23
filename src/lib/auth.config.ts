@@ -1,11 +1,14 @@
 import type { NextAuthConfig } from 'next-auth';
 import Discord from 'next-auth/providers/discord';
 
+export const DISCORD_OAUTH_SCOPES = 'identify guilds guilds.members.read';
+
 export const authConfig = {
   providers: [
     Discord({
       clientId: process.env.DISCORD_CLIENT_ID!,
       clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+      authorization: { params: { scope: DISCORD_OAUTH_SCOPES } },
     }),
   ],
   pages: { signIn: '/login' },

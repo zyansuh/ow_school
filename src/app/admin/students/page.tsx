@@ -12,7 +12,16 @@ const FILTERS = ['전체', '수달반', '사자반', '여우반'];
 
 export default function AdminStudentsPage() {
   const [users, setUsers] = useState<Array<{
-    id: string; nickname: string; discord: string; className: string; teacherName: string; status: string; createdAt: string;
+    id: string;
+    nickname: string;
+    discord: string;
+    serverNick: string | null;
+    roleNames: string[];
+    isInGuild: boolean;
+    className: string;
+    teacherName: string;
+    status: string;
+    createdAt: string;
   }>>([]);
   const [filter, setFilter] = useState('전체');
   const [loading, setLoading] = useState(true);
@@ -40,14 +49,26 @@ export default function AdminStudentsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-800 text-gray-400 text-left">
-                <th className="p-4">닉네임</th><th className="p-4">디스코드</th><th className="p-4">반</th><th className="p-4">담당 선생님</th><th className="p-4">상태</th><th className="p-4">가입일</th>
+                <th className="p-4">서버 닉네임</th>
+                <th className="p-4">디스코드</th>
+                <th className="p-4">서버 역할</th>
+                <th className="p-4">반</th>
+                <th className="p-4">담당 선생님</th>
+                <th className="p-4">상태</th>
+                <th className="p-4">가입일</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((u) => (
                 <tr key={u.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
-                  <td className="p-4">{u.nickname}</td>
-                  <td className="p-4 text-gray-400">{u.discord}</td>
+                  <td className="p-4">
+                    <div className="font-medium">{u.nickname}</div>
+                    {!u.isInGuild && <span className="text-xs text-amber-500">서버 미가입</span>}
+                  </td>
+                  <td className="p-4 text-gray-400">@{u.discord}</td>
+                  <td className="p-4 text-gray-400 max-w-[200px]">
+                    {u.roleNames?.length ? u.roleNames.join(', ') : '-'}
+                  </td>
                   <td className="p-4">{u.className}</td>
                   <td className="p-4">{u.teacherName}</td>
                   <td className="p-4"><Badge variant="outline">{STATUS_LABELS[u.status] || u.status}</Badge></td>

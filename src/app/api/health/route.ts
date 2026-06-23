@@ -8,6 +8,8 @@ export async function GET() {
     DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'missing',
     AUTH_SECRET: process.env.AUTH_SECRET ? 'set' : 'missing',
     DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID ? 'set' : 'missing',
+    DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID ? 'set' : 'missing',
+    DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN ? 'set' : 'missing',
     NEXTAUTH_URL: process.env.NEXTAUTH_URL ? 'set' : 'missing',
   };
 
