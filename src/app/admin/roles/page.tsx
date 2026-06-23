@@ -9,14 +9,31 @@ import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
 
 type Role = { id: string; userId: string; user: { discordUsername: string; discordNickname: string | null }; createdAt: string };
+type SearchUser = { id: string; discordUsername: string; discordNickname: string | null; isAdmin: boolean };
 
 export default function AdminRolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
-  const [userId, setUserId] = useState('');
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
 
   const load = () => fetch('/api/admin/roles').then((r) => r.json()).then((d) => { setRoles(d); setLoading(false); });
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      setSearching(true);
+      fetch(`/api/admin/users?q=${encodeURIComponent(query.trim())}`)
+        .then((r) => r.json())
+        .then((d) => { setResults(d); setSearching(false); });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
 
   const action = async (action: 'grant' | 'revoke', targetId: string) => {
     const res = await fetch('/api/admin/roles', {
@@ -25,6 +42,8 @@ export default function AdminRolesPage() {
     });
     if (!res.ok) { toast.error('실패'); return; }
     toast.success(action === 'grant' ? '권한 부여됨' : '권한 해제됨');
+    setQuery('');
+    setResults([]);
     load();
   };
 
@@ -34,9 +53,33 @@ export default function AdminRolesPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">관리자 권한</h1>
       <Card className="bg-gray-900/80 border-gray-800">
-        <div className="card-pad flex flex-col sm:flex-row gap-3">
-          <Input placeholder="User ID (cuid)" value={userId} onChange={(e) => setUserId(e.target.value)} />
-          <Button onClick={() => userId && action('grant', userId)}>권한 부여</Button>
+        <div className="card-pad space-y-3">
+          <Input
+            placeholder="Discord 닉네임 또는 유저명 검색 (2자 이상)"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {searching && <p className="text-sm text-gray-500">검색 중...</p>}
+          {results.length > 0 && (
+            <ul className="divide-y divide-gray-800 border border-gray-800 rounded-lg overflow-hidden">
+              {results.map((u) => (
+                <li key={u.id} className="flex items-center justify-between gap-3 p-3 bg-gray-950/50">
+                  <div>
+                    <p className="font-medium">{u.discordNickname || u.discordUsername}</p>
+                    <p className="text-xs text-gray-500">@{u.discordUsername}</p>
+                  </div>
+                  {u.isAdmin ? (
+                    <span className="text-xs text-purple-400">이미 관리자</span>
+                  ) : (
+                    <Button size="sm" onClick={() => action('grant', u.id)}>권한 부여</Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {query.trim().length >= 2 && !searching && results.length === 0 && (
+            <p className="text-sm text-gray-500">검색 결과가 없습니다</p>
+          )}
         </div>
       </Card>
       <Card className="bg-gray-900/80 border-gray-800 overflow-x-auto">
