@@ -20,10 +20,10 @@ export function TeacherActivityFields({ activityDays, activityTimeSlot, onChange
   };
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('space-y-5', className)}>
       <div>
         <Label>활동 요일</Label>
-        <div className="flex flex-wrap gap-2 mt-2">
+        <div className="flex flex-wrap gap-2 mt-1">
           {ACTIVITY_DAYS.map((day) => (
             <button
               key={day}
@@ -32,8 +32,8 @@ export function TeacherActivityFields({ activityDays, activityTimeSlot, onChange
               className={cn(
                 'px-3 py-1.5 rounded-lg text-sm border transition-colors',
                 activityDays.includes(day)
-                  ? 'border-purple-500/50 bg-purple-600/20 text-purple-200'
-                  : 'border-gray-700 text-gray-400 hover:border-gray-600',
+                  ? 'border-primary/50 bg-primary/15 text-primary'
+                  : 'border-border text-muted-foreground hover:border-primary/40 hover:bg-accent',
               )}
             >
               {day}
@@ -51,7 +51,7 @@ export function TeacherActivityFields({ activityDays, activityTimeSlot, onChange
           className="mt-2"
           maxLength={64}
         />
-        <p className="text-xs text-gray-500 mt-1">자유 입력 (최대 64자)</p>
+        <p className="text-xs text-muted-foreground mt-1.5">자유 입력 (최대 64자)</p>
       </div>
     </div>
   );

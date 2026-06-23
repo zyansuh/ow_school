@@ -16,7 +16,10 @@ export default async function TeachersPage() {
     [teachers, liveCounts] = await Promise.all([
       prisma.teacher.findMany({
         where: { isActive: true },
-        include: { class: true },
+        include: {
+          class: true,
+          teacherClasses: { include: { class: true } },
+        },
         orderBy: [{ class: { slug: 'asc' } }, { name: 'asc' }],
       }),
       getActiveStudentCountsByTeacher(),

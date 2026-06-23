@@ -15,12 +15,21 @@ type TeacherCardData = {
   activityDays?: string | null;
   activityTimeSlot?: string | null;
   class: { name: string; gameKr: string };
+  teacherClasses?: Array<{ class: { name: string; gameKr: string } }>;
 };
 
 type Props = {
   teacher: TeacherCardData;
   activeCount: number;
 };
+
+function classLine(teacher: TeacherCardData) {
+  const fromJoin = teacher.teacherClasses?.map((tc) => tc.class) ?? [];
+  if (fromJoin.length > 0) {
+    return fromJoin.map((c) => `${c.name} · ${c.gameKr}`).join(' / ');
+  }
+  return `${teacher.class.name} · ${teacher.class.gameKr}`;
+}
 
 export function TeacherCard({ teacher, activeCount }: Props) {
   const full = activeCount >= teacher.maxStudents;
@@ -44,7 +53,7 @@ export function TeacherCard({ teacher, activeCount }: Props) {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h3 className="font-semibold text-lg text-foreground truncate">{teacher.name}</h3>
-                <p className="text-sm text-muted-foreground">{teacher.class.name} · {teacher.class.gameKr}</p>
+                <p className="text-sm text-muted-foreground line-clamp-2">{classLine(teacher)}</p>
               </div>
               <Badge variant={full ? 'danger' : 'success'}>{full ? '마감' : '모집중'}</Badge>
             </div>

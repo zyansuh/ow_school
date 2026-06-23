@@ -17,14 +17,21 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
   const clsInfo = getClassBySlug(slug);
   if (!clsInfo) notFound();
 
-  const dbClass = await prisma.class.findUnique({
-    where: { slug },
-    include: { teachers: { orderBy: { name: 'asc' } } },
-  });
+  const dbClass = await prisma.class.findUnique({ where: { slug } });
   if (!dbClass) notFound();
 
+  const classTeachers = await prisma.teacher.findMany({
+    where: {
+      OR: [
+        { classId: dbClass.id },
+        { teacherClasses: { some: { classId: dbClass.id } } },
+      ],
+    },
+    orderBy: { name: 'asc' },
+  });
+
   const liveCounts = await getActiveStudentCountsByTeacher();
-  const teachers = dbClass.teachers.map((t) => ({
+  const teachers = classTeachers.map((t) => ({
     ...t,
     activeStudents: liveCounts[t.id] ?? 0,
   }));
