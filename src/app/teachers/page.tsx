@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/loading';
 import { prisma } from '@/lib/prisma';
 
+export { dynamic } from '@/lib/segment';
+
 export default async function TeachersPage() {
   const teachers = await prisma.teacher.findMany({
     where: { isActive: true },

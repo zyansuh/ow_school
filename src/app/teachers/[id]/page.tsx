@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 
+export { dynamic } from '@/lib/segment';
+
 export default async function TeacherDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const teacher = await prisma.teacher.findUnique({ where: { id }, include: { class: true } });

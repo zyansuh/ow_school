@@ -9,6 +9,8 @@ import { Users, ArrowLeft } from 'lucide-react';
 import { getClassBySlug } from '@/lib/constants';
 import { prisma } from '@/lib/prisma';
 
+export { dynamic } from '@/lib/segment';
+
 export default async function ClassPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const clsInfo = getClassBySlug(slug);
