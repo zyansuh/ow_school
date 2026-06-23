@@ -8,8 +8,15 @@ import { LoadingPage } from '@/components/ui/loading';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
 
-type Role = { id: string; userId: string; user: { discordUsername: string; discordNickname: string | null }; createdAt: string };
-type SearchUser = { id: string; discordUsername: string; discordNickname: string | null; isAdmin: boolean };
+type RoleUser = {
+  discordUsername: string;
+  discordNickname: string | null;
+  discordServerNick: string | null;
+  displayName: string;
+};
+
+type Role = { id: string; userId: string; user: RoleUser; createdAt: string };
+type SearchUser = RoleUser & { id: string; isAdmin: boolean };
 
 export default function AdminRolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -55,7 +62,7 @@ export default function AdminRolesPage() {
       <Card className="bg-gray-900/80 border-gray-800">
         <div className="card-pad space-y-3">
           <Input
-            placeholder="Discord 닉네임 또는 유저명 검색 (2자 이상)"
+            placeholder="서버 닉네임·디스코드 이름 검색 (2자 이상)"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -65,7 +72,7 @@ export default function AdminRolesPage() {
               {results.map((u) => (
                 <li key={u.id} className="flex items-center justify-between gap-3 p-3 bg-gray-950/50">
                   <div>
-                    <p className="font-medium">{u.discordNickname || u.discordUsername}</p>
+                    <p className="font-medium">{u.displayName}</p>
                     <p className="text-xs text-gray-500">@{u.discordUsername}</p>
                   </div>
                   {u.isAdmin ? (
@@ -84,11 +91,14 @@ export default function AdminRolesPage() {
       </Card>
       <Card className="bg-gray-900/80 border-gray-800 overflow-x-auto">
         <table className="w-full text-sm">
-          <thead><tr className="border-b border-gray-800 text-gray-400 text-left"><th className="p-4">유저</th><th className="p-4">User ID</th><th className="p-4">부여일</th><th className="p-4">관리</th></tr></thead>
+          <thead><tr className="border-b border-gray-800 text-gray-400 text-left"><th className="p-4">서버 닉네임</th><th className="p-4">User ID</th><th className="p-4">부여일</th><th className="p-4">관리</th></tr></thead>
           <tbody>
             {roles.map((r) => (
               <tr key={r.id} className="border-b border-gray-800/50">
-                <td className="p-4">{r.user.discordNickname || r.user.discordUsername}</td>
+                <td className="p-4">
+                  <div className="font-medium">{r.user.displayName}</div>
+                  <div className="text-xs text-gray-500">@{r.user.discordUsername}</div>
+                </td>
                 <td className="p-4 text-gray-500 font-mono text-xs">{r.userId}</td>
                 <td className="p-4 text-gray-500">{formatDate(r.createdAt)}</td>
                 <td className="p-4"><Button size="sm" variant="outline" onClick={() => action('revoke', r.userId)}>해제</Button></td>

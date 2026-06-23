@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
+import { userDisplayName } from '@/lib/user-display';
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,6 +16,7 @@ export async function GET(req: NextRequest) {
         OR: [
           { discordUsername: { contains: q, mode: 'insensitive' } },
           { discordNickname: { contains: q, mode: 'insensitive' } },
+          { discordServerNick: { contains: q, mode: 'insensitive' } },
         ],
       },
       take: 10,
@@ -27,6 +29,8 @@ export async function GET(req: NextRequest) {
         id: u.id,
         discordUsername: u.discordUsername,
         discordNickname: u.discordNickname,
+        discordServerNick: u.discordServerNick,
+        displayName: userDisplayName(u),
         isAdmin: !!u.adminRole,
       })),
     );

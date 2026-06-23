@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
+import { userDisplayName } from '@/lib/user-display';
 
 export async function GET() {
   try {
@@ -9,7 +10,12 @@ export async function GET() {
       include: { teacher: true, user: true },
       orderBy: { createdAt: 'desc' },
     });
-    return NextResponse.json(interviews);
+    return NextResponse.json(
+      interviews.map((iv) => ({
+        ...iv,
+        nickname: iv.user ? userDisplayName(iv.user) : iv.nickname,
+      })),
+    );
   } catch (e) {
     return apiError(e);
   }

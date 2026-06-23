@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { grantAdmin, revokeAdmin } from '@/lib/rbac';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { prisma } from '@/lib/prisma';
+import { userDisplayName } from '@/lib/user-display';
 import { z } from 'zod';
 
 export async function GET() {
@@ -11,7 +12,15 @@ export async function GET() {
       include: { user: true },
       orderBy: { createdAt: 'desc' },
     });
-    return NextResponse.json(roles);
+    return NextResponse.json(
+      roles.map((r) => ({
+        ...r,
+        user: {
+          ...r.user,
+          displayName: userDisplayName(r.user),
+        },
+      })),
+    );
   } catch (e) {
     return apiError(e);
   }

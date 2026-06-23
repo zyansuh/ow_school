@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { parseRoleNames } from '@/lib/discord-guild';
+import { userDisplayName } from '@/lib/user-display';
 
 function monthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -59,7 +60,7 @@ export async function GET() {
       },
       users: users.map((u) => ({
         id: u.id,
-        nickname: u.discordServerNick || u.discordNickname || u.discordUsername,
+        nickname: userDisplayName(u),
         discord: u.discordUsername,
         serverNick: u.discordServerNick,
         roleNames: parseRoleNames(u.discordRoleNames),
