@@ -27,14 +27,3 @@ export async function assertDiscordUserIdAvailable(discordUserId: string, exclud
     throw new Error(`DISCORD_USER_ID_TAKEN:${existing.name}`);
   }
 }
-
-/** @deprecated resolveTeacherEntityForUser 사용 */
-export async function resolveTeacherForUser(user: {
-  id: string;
-  discordId: string;
-  discordUsername: string;
-  discordRoleNames?: string | null;
-}) {
-  const { resolveTeacherEntityForUser } = await import('@/lib/teacher/identity');
-  return resolveTeacherEntityForUser(user);
-}
