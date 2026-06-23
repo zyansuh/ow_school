@@ -50,6 +50,9 @@ async function main() {
         currentStudents: t.current,
         isActive: t.active !== false,
         profileImage: `/images/mascots/${t.slug === 'overwatch' ? 'otter' : t.slug === 'pubg' ? 'lion' : 'fox'}.png`,
+        teacherClasses: {
+          create: { classId: cls.id },
+        },
       },
     });
   }

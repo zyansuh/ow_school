@@ -31,7 +31,11 @@ run('npx prisma generate');
 if (hasValidDb && !isCi) {
   process.env.DATABASE_URL = databaseUrl;
   run('npx prisma db push --skip-generate');
-  run('npx prisma db seed');
+  if (process.env.RUN_DB_SEED === 'true') {
+    run('npx prisma db seed');
+  } else {
+    console.warn('[build] RUN_DB_SEED is not true — skipping seed (등록 데이터 보존)');
+  }
 } else if (!databaseUrl) {
   console.warn('[build] DATABASE_URL not set — skipping db push/seed');
 } else if (isCi) {
