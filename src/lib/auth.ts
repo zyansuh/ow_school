@@ -11,10 +11,14 @@ import {
 
 type DiscordProfile = {
   id: string;
-  username: string;
+  username?: string;
   global_name?: string | null;
   avatar?: string | null;
 };
+
+function discordUsernameFromProfile(p: DiscordProfile): string {
+  return (p.username ?? p.global_name ?? '').trim();
+}
 
 declare module 'next-auth' {
   interface Session {
@@ -62,7 +66,7 @@ async function syncTokenFromUser(userId: string, token: Record<string, unknown>)
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  debug: process.env.AUTH_DEBUG === 'true',
+  debug: process.env.NODE_ENV === 'development' || process.env.AUTH_DEBUG === 'true',
   logger: {
     error(error) {
       console.error('[auth]', error);
@@ -81,7 +85,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ profile }) {
       try {
         const p = profile as DiscordProfile | undefined;
-        if (!p?.id || !p.username) return false;
+        const username = p ? discordUsernameFromProfile(p) : '';
+        if (!p?.id || !username) {
+          console.warn('[auth] signIn rejected: missing discord id/username', profile);
+          return false;
+        }
 
         if (getGuildConfig()) {
           const member = await fetchGuildMember(p.id);
@@ -99,18 +107,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { discordId: p.id },
           create: {
             discordId: p.id,
-            discordUsername: p.username,
-            discordNickname: p.global_name || p.username,
+            discordUsername: username,
+            discordNickname: p.global_name || username,
             discordAvatar,
           },
           update: {
-            discordUsername: p.username,
-            discordNickname: p.global_name || p.username,
+            discordUsername: username,
+            discordNickname: p.global_name || username,
             discordAvatar,
           },
         });
 
-        await ensureDefaultAdmin(p.username, user.id);
+        await ensureDefaultAdmin(username, user.id);
 
         if (getGuildConfig()) {
           await syncUserGuildData(p.id);

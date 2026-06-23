@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AUTH_ERROR_MESSAGES, clearAuthJsCookies } from '@/lib/auth-errors';
+import { AUTH_ERROR_MESSAGES, resetAuthCookies } from '@/lib/auth-errors';
 
 function AuthErrorRedirect() {
   const router = useRouter();
@@ -10,9 +10,10 @@ function AuthErrorRedirect() {
   const error = searchParams.get('error') ?? 'Configuration';
 
   useEffect(() => {
-    clearAuthJsCookies();
-    const params = new URLSearchParams({ error });
-    router.replace(`/login?${params.toString()}`);
+    void resetAuthCookies().finally(() => {
+      const params = new URLSearchParams({ error });
+      router.replace(`/login?${params.toString()}`);
+    });
   }, [error, router]);
 
   const message = AUTH_ERROR_MESSAGES[error] ?? AUTH_ERROR_MESSAGES.Configuration;

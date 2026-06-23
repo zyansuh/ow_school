@@ -1,12 +1,12 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { MainLayout } from '@/components/layout/main-layout';
-import { AUTH_ERROR_MESSAGES, clearAuthJsCookies } from '@/lib/auth-errors';
+import { AUTH_ERROR_MESSAGES, resetAuthCookies } from '@/lib/auth-errors';
 
 const RETRY_ERRORS = new Set(['Configuration', 'InvalidCheck', 'OAuthCallbackError', 'OAuthSignin']);
 
@@ -15,12 +15,23 @@ function LoginContent() {
   const error = searchParams.get('error');
   const callbackUrl = error ? '/' : searchParams.get('callbackUrl') || '/';
   const message = error ? (AUTH_ERROR_MESSAGES[error] ?? `로그인 오류 (${error})`) : null;
+  const [pending, setPending] = useState(false);
 
   useEffect(() => {
     if (error && RETRY_ERRORS.has(error)) {
-      clearAuthJsCookies();
+      void resetAuthCookies();
     }
   }, [error]);
+
+  async function handleDiscordSignIn() {
+    setPending(true);
+    try {
+      await resetAuthCookies();
+      await signIn('discord', { callbackUrl, redirect: true });
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <MainLayout>
@@ -39,9 +50,10 @@ function LoginContent() {
             <Button
               className="w-full"
               size="lg"
-              onClick={() => signIn('discord', { callbackUrl, redirect: true })}
+              disabled={pending}
+              onClick={() => void handleDiscordSignIn()}
             >
-              Discord로 계속하기
+              {pending ? '연결 중…' : 'Discord로 계속하기'}
             </Button>
           </div>
         </Card>
