@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireUser } from '@/lib/api-helpers';
-import { getGuildConfig, parseRoleNames, syncUserGuildData } from '@/lib/discord-guild';
+import { getGuildConfig, parseRoleNames, syncUserGuildDataBestEffort } from '@/lib/discord-guild';
+import { userDisplayName } from '@/lib/user-display';
 
 export async function GET() {
   try {
     const user = await requireUser();
 
     if (getGuildConfig()) {
-      await syncUserGuildData(user.discordId);
+      await syncUserGuildDataBestEffort(user.discordId);
     }
 
     const dbUser = await prisma.user.findUnique({
@@ -18,6 +19,7 @@ export async function GET() {
         teacher: true,
         applications: { include: { teacher: true, class: true }, orderBy: { createdAt: 'desc' } },
         interviews: { orderBy: { createdAt: 'desc' } },
+        graduationReview: true,
       },
     });
 
@@ -26,6 +28,7 @@ export async function GET() {
     return NextResponse.json({
       ...dbUser,
       discordRoleNames: parseRoleNames(dbUser.discordRoleNames),
+      displayName: userDisplayName(dbUser),
     });
   } catch (e) {
     return apiError(e);

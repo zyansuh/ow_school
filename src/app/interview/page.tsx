@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input, Label, Textarea, Select } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { toast } from 'sonner';
+import { resolveDisplayName } from '@/lib/user-display';
+import { GraduationReviewFab } from '@/components/interview/graduation-review-fab';
 
 type TeacherOption = { id: string; name: string; class: { name: string } };
 
@@ -26,6 +28,8 @@ export default function InterviewPage() {
     review: '',
   });
 
+  const [meReady, setMeReady] = useState(false);
+
   useEffect(() => {
     if (!session) return;
     Promise.all([
@@ -33,15 +37,18 @@ export default function InterviewPage() {
       fetch('/api/me').then((r) => r.json()),
     ]).then(([teacherList, me]) => {
       setTeachers(teacherList);
-      setForm((f) => ({
-        ...f,
-        nickname: f.nickname || session.user.discordServerNick || session.user.discordNickname || session.user.discordUsername || '',
-        teacherId: me?.teacherId || f.teacherId,
-      }));
+      if (me && !me.error) {
+        setForm((f) => ({
+          ...f,
+          nickname: resolveDisplayName(me),
+          teacherId: me.teacherId || f.teacherId,
+        }));
+      }
+      setMeReady(true);
     });
   }, [session]);
 
-  if (status === 'loading') return <MainLayout><LoadingPage /></MainLayout>;
+  if (status === 'loading' || (session && !meReady)) return <MainLayout><LoadingPage /></MainLayout>;
 
   if (!session) {
     return (
@@ -80,12 +87,13 @@ export default function InterviewPage() {
 
   return (
     <MainLayout>
+      <GraduationReviewFab />
       <div className="page-container py-8 sm:py-12 section-gap">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">졸업면담</h1>
         <Card className="bg-gray-900/80 border-gray-800 max-w-lg mx-auto">
           <form onSubmit={handleSubmit} className="card-pad space-y-5">
             <div>
-              <Label>닉네임 *</Label>
+              <Label>서버 닉네임 *</Label>
               <Input required value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} className="mt-2" />
             </div>
             <div>
