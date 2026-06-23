@@ -6,10 +6,14 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/input';
 import { LoadingPage, EmptyState } from '@/components/ui/loading';
+import { StatCard } from '@/components/ui/stat-card';
+import { DataTable } from '@/components/ui/data-table';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { MonthlyStatsEditor } from '@/components/admin/monthly-stats-editor';
 import { DiscordSyncPanel } from '@/components/admin/discord-sync/discord-sync-panel';
-import { adminStyles } from '@/styles/admin';
+import { ds } from '@/styles/design-system';
 import { toast } from 'sonner';
+import { Users, GraduationCap, FileText, Layers } from 'lucide-react';
 
 type MonthlyPoint = { month: string; count: number };
 type GraduationReview = { id: string; authorName: string; className: string; content: string; createdAt: string };
@@ -17,12 +21,15 @@ type GraduationReview = { id: string; authorName: string; className: string; con
 function MonthlyChart({ data, color }: { data: MonthlyPoint[]; color: string }) {
   const max = Math.max(...data.map((d) => d.count), 1);
   return (
-    <div className="flex items-end gap-2 h-32">
+    <div className="flex items-end gap-2 h-32 mt-4">
       {data.map((d) => (
         <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
-          <span className="text-xs text-gray-500">{d.count}</span>
-          <div className={`w-full rounded-t ${color}`} style={{ height: `${Math.max((d.count / max) * 100, d.count > 0 ? 8 : 0)}%` }} />
-          <span className="text-[10px] text-gray-600">{d.month.slice(5)}</span>
+          <span className="text-xs text-muted-foreground">{d.count}</span>
+          <div
+            className={`w-full rounded-t ${color}`}
+            style={{ height: `${Math.max((d.count / max) * 100, d.count > 0 ? 8 : 0)}%` }}
+          />
+          <span className="text-[10px] text-subtle">{d.month.slice(5)}</span>
         </div>
       ))}
     </div>
@@ -64,91 +71,68 @@ export default function AdminDashboard() {
   if (!stats) return <LoadingPage />;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">대시보드</h1>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: '총 학생 수', value: stats.totalStudents },
-          { label: '총 선생님 수', value: stats.totalTeachers },
-          { label: '이번 달 신청', value: stats.monthlyApplicationCount },
-          { label: '반 수', value: Object.keys(stats.byClass).length },
-        ].map((s) => (
-          <Card key={s.label} className={adminStyles.card}>
-            <div className={adminStyles.cardPad}>
-              <p className="text-sm text-gray-400 mb-2">{s.label}</p>
-              <p className="text-3xl font-bold text-purple-400">{s.value}</p>
-            </div>
-          </Card>
-        ))}
+    <div className={ds.pageGap}>
+      <AdminPageHeader title="대시보드" description="정착지원국 운영 현황을 한눈에 확인합니다." />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="총 학생 수" value={stats.totalStudents} suffix="명" icon={Users} />
+        <StatCard label="총 선생님 수" value={stats.totalTeachers} suffix="명" icon={GraduationCap} />
+        <StatCard label="이번 달 신청" value={stats.monthlyApplicationCount} suffix="건" icon={FileText} />
+        <StatCard label="반 수" value={Object.keys(stats.byClass).length} suffix="개" icon={Layers} />
       </div>
 
       <DiscordSyncPanel onSynced={loadStats} />
 
       <div className="grid lg:grid-cols-2 gap-4">
-        <Card className={adminStyles.card}>
-          <div className={adminStyles.cardPad}>
-            <MonthlyStatsEditor title="월별 신청 수 (최근 6개월)" type="applications" data={stats.monthlyApplications} onSaved={loadStats} />
-            <MonthlyChart data={stats.monthlyApplications} color="bg-purple-500/80" />
-          </div>
+        <Card className={`${ds.card} ${ds.cardPad}`}>
+          <MonthlyStatsEditor title="월별 신청 수 (최근 6개월)" type="applications" data={stats.monthlyApplications} onSaved={loadStats} />
+          <MonthlyChart data={stats.monthlyApplications} color="bg-primary/80" />
         </Card>
-        <Card className={adminStyles.card}>
-          <div className={adminStyles.cardPad}>
-            <MonthlyStatsEditor title="월별 졸업면담 수 (최근 6개월)" type="interviews" data={stats.monthlyInterviews} onSaved={loadStats} />
-            <MonthlyChart data={stats.monthlyInterviews} color="bg-cyan-500/80" />
-          </div>
+        <Card className={`${ds.card} ${ds.cardPad}`}>
+          <MonthlyStatsEditor title="월별 졸업면담 수 (최근 6개월)" type="interviews" data={stats.monthlyInterviews} onSaved={loadStats} />
+          <MonthlyChart data={stats.monthlyInterviews} color="bg-secondary/80" />
         </Card>
       </div>
 
-      <Card className={adminStyles.card}>
-        <div className={adminStyles.cardPad}>
-          <h2 className="font-semibold mb-4">반별 학생 수</h2>
-          <div className="space-y-2">
-            {Object.entries(stats.byClass).map(([name, count]) => (
-              <div key={name} className="flex justify-between text-sm">
-                <span className="text-gray-300">{name}</span>
-                <span className="text-purple-400">{count}명</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      <Card className={adminStyles.card}>
-        <div className={adminStyles.cardPad}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">졸업후기</h2>
-            <Link href="/admin/graduation-reviews" className="text-sm text-purple-400 hover:text-purple-300">전체 보기 →</Link>
-          </div>
-          {reviews.length === 0 ? <EmptyState title="등록된 졸업후기가 없습니다" /> : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className={adminStyles.tableHead}>
-                    <th className="p-3 w-28">작성자</th>
-                    <th className="p-3 w-24">반</th>
-                    <th className="p-3">내용</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reviews.map((r) => (
-                    <tr key={r.id} className={adminStyles.tableRow}>
-                      <td className="p-3 text-gray-200">{r.authorName}</td>
-                      <td className="p-3 text-purple-300">{r.className}</td>
-                      <td className="p-3 text-gray-300"><p className="line-clamp-2">{r.content}</p></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      <Card className={`${ds.card} ${ds.cardPad}`}>
+        <h2 className={ds.sectionTitle}>반별 학생 수</h2>
+        <div className="mt-4 space-y-2">
+          {Object.entries(stats.byClass).map(([name, count]) => (
+            <div key={name} className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{name}</span>
+              <span className="text-primary font-medium">{count}명</span>
             </div>
-          )}
+          ))}
         </div>
       </Card>
 
-      <Card className={adminStyles.card}>
-        <div className={`${adminStyles.cardPad} space-y-3`}>
-          <h2 className="font-semibold">메인 공지사항</h2>
-          <Textarea value={noticesText} onChange={(e) => setNoticesText(e.target.value)} className="min-h-[120px] font-mono text-sm" />
-          <Button onClick={saveNotices} disabled={savingNotices}>{savingNotices ? '저장 중...' : '공지사항 저장'}</Button>
+      <Card className={`${ds.card} ${ds.cardPad}`}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className={ds.sectionTitle}>졸업후기</h2>
+          <Link href="/admin/graduation-reviews" className="text-sm text-primary hover:underline">전체 보기 →</Link>
+        </div>
+        {reviews.length === 0 ? (
+          <EmptyState title="등록된 졸업후기가 없습니다" />
+        ) : (
+          <DataTable
+            data={reviews.slice(0, 5)}
+            keyExtractor={(r) => r.id}
+            columns={[
+              { key: 'author', header: '작성자', cell: (r) => r.authorName },
+              { key: 'class', header: '반', cell: (r) => <span className="text-primary">{r.className}</span> },
+              { key: 'content', header: '내용', cell: (r) => <p className="line-clamp-2 text-muted-foreground">{r.content}</p> },
+            ]}
+          />
+        )}
+      </Card>
+
+      <Card className={`${ds.card} ${ds.cardPad}`}>
+        <div className="space-y-3">
+          <h2 className={ds.sectionTitle}>메인 공지사항</h2>
+          <Textarea value={noticesText} onChange={(e) => setNoticesText(e.target.value)} className="font-mono text-sm" />
+          <Button onClick={() => void saveNotices()} disabled={savingNotices}>
+            {savingNotices ? '저장 중...' : '공지사항 저장'}
+          </Button>
         </div>
       </Card>
     </div>
