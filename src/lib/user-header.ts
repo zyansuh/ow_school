@@ -11,8 +11,5 @@ export function userHeaderSubtitle(user: UserHeaderFields): string {
   return `현재 반 : ${user.className || '미배정'}`;
 }
 
-const TEACHER_ROLE_PATTERN = /선생님|teacher|멘토/i;
-
-export function isTeacherFromDiscordRoles(roleNames: string[]): boolean {
-  return roleNames.some((r) => TEACHER_ROLE_PATTERN.test(r));
-}
+/** @deprecated user-role.ts 의 hasNewTeacherDiscordRole 사용 */
+export { hasNewTeacherDiscordRole as isTeacherFromDiscordRoles } from '@/lib/user-role';
