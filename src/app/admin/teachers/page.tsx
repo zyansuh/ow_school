@@ -10,14 +10,14 @@ import { toast } from 'sonner';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 
 type Teacher = {
-  id: string; name: string; mbti?: string; intro?: string; discord?: string;
+  id: string; name: string; profileImage?: string; mbti?: string; intro?: string; discord?: string;
   isActive: boolean; maxStudents: number; currentStudents: number; classId: string;
   class: { name: string; slug: string };
 };
 
 type ClassItem = { id: string; name: string };
 
-const empty = { name: '', mbti: '', intro: '', discord: '', classId: '', maxStudents: 5, isActive: true };
+const empty = { name: '', profileImage: '', mbti: '', intro: '', discord: '', classId: '', maxStudents: 5, isActive: true };
 
 export default function AdminTeachersPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -79,6 +79,7 @@ export default function AdminTeachersPage() {
               <div><Label>반 *</Label><Select required value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })} className="mt-2"><option value="">선택</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></div>
               <div><Label>MBTI</Label><Input value={form.mbti} onChange={(e) => setForm({ ...form, mbti: e.target.value })} className="mt-2" /></div>
               <div><Label>디스코드</Label><Input value={form.discord} onChange={(e) => setForm({ ...form, discord: e.target.value })} className="mt-2" /></div>
+              <div><Label>프로필 이미지 URL</Label><Input value={form.profileImage} onChange={(e) => setForm({ ...form, profileImage: e.target.value })} placeholder="/images/..." className="mt-2" /></div>
               <div><Label>최대 인원</Label><Input type="number" value={form.maxStudents} onChange={(e) => setForm({ ...form, maxStudents: Number(e.target.value) })} className="mt-2" /></div>
             </div>
             <div><Label>소개</Label><Textarea value={form.intro} onChange={(e) => setForm({ ...form, intro: e.target.value })} className="mt-2" /></div>
@@ -99,7 +100,7 @@ export default function AdminTeachersPage() {
                   <td className="p-4">{t.currentStudents}/{t.maxStudents}</td>
                   <td className="p-4"><Badge variant={t.isActive ? 'success' : 'danger'}>{t.isActive ? '활동' : '비활성'}</Badge></td>
                   <td className="p-4 flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => { setEditing(t.id); setForm({ name: t.name, mbti: t.mbti || '', intro: t.intro || '', discord: t.discord || '', classId: t.classId, maxStudents: t.maxStudents, isActive: t.isActive }); setShowForm(true); }}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditing(t.id); setForm({ name: t.name, profileImage: t.profileImage || '', mbti: t.mbti || '', intro: t.intro || '', discord: t.discord || '', classId: t.classId, maxStudents: t.maxStudents, isActive: t.isActive }); setShowForm(true); }}><Pencil className="h-4 w-4" /></Button>
                     <Button size="sm" variant="ghost" onClick={() => toggleActive(t)}>{t.isActive ? '비활성' : '활성'}</Button>
                     <Button size="sm" variant="ghost" onClick={() => remove(t.id)}><Trash2 className="h-4 w-4 text-red-400" /></Button>
                   </td>
