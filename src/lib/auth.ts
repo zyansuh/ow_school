@@ -11,8 +11,8 @@ import {
   syncUserGuildDataIfStale,
 } from '@/lib/discord-guild';
 import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
-import { isTeacherFromDiscordRoles } from '@/lib/user-header';
 import { resolveTeacherForUser } from '@/lib/teacher-auth';
+import { resolveIsTeacherForUser } from '@/lib/teacher/identity';
 
 type DiscordProfile = {
   id: string;
@@ -64,6 +64,12 @@ async function syncTokenFromUser(userId: string, token: Record<string, unknown>)
     discordUsername: user.discordUsername,
     discordRoleNames: user.discordRoleNames,
   });
+  const isTeacher = await resolveIsTeacherForUser({
+    id: user.id,
+    discordId: user.discordId,
+    discordUsername: user.discordUsername,
+    discordRoleNames: user.discordRoleNames,
+  });
 
   token.userId = user.id;
   token.discordId = user.discordId;
@@ -74,7 +80,7 @@ async function syncTokenFromUser(userId: string, token: Record<string, unknown>)
   token.discordRoleNames = roleNames;
   token.isInGuild = user.isInGuild;
   token.isAdmin = !!user.adminRole;
-  token.isTeacher = !!teacherRecord || isTeacherFromDiscordRoles(roleNames);
+  token.isTeacher = isTeacher;
   token.className = user.class?.name ?? null;
   token.teacherName = user.teacher?.name ?? null;
   token.status = user.status;
@@ -155,6 +161,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           );
 
           await db((client) => ensureDefaultAdmin(username, user.id, client));
+
+          const { resolveTeacherEntityForUser } = await import('@/lib/teacher/identity');
+          await resolveTeacherEntityForUser({
+            id: user.id,
+            discordId: user.discordId,
+            discordUsername: user.discordUsername,
+            discordRoleNames: user.discordRoleNames,
+          });
 
           const guildSync = getGuildConfig()
             ? syncUserGuildDataBestEffort(p.id, account?.access_token)

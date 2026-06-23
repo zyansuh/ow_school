@@ -20,7 +20,6 @@ export async function GET() {
         nickname: userDisplayName(normalizeNickFields(u)),
         discord: u.discordUsername,
         serverNick: u.discordServerNick,
-        siteDisplayName: u.siteDisplayName,
         roleNames: parseRoleNames(u.discordRoleNames),
         isInGuild: u.isInGuild,
         className: u.class?.name ?? '미배정',

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { grantAdmin, revokeAdmin } from '@/lib/rbac';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
+import { grantAdminWithAudit, revokeAdminWithAudit } from '@/lib/admin/role-requests';
 import { prisma } from '@/lib/prisma';
 import { userDisplayName } from '@/lib/user-display';
 import { z } from 'zod';
@@ -15,10 +15,7 @@ export async function GET() {
     return NextResponse.json(
       roles.map((r) => ({
         ...r,
-        user: {
-          ...r.user,
-          displayName: userDisplayName(r.user),
-        },
+        user: { ...r.user, displayName: userDisplayName(r.user) },
       })),
     );
   } catch (e) {
@@ -37,9 +34,9 @@ export async function POST(req: NextRequest) {
     const { action, userId } = actionSchema.parse(await req.json());
 
     if (action === 'grant') {
-      await grantAdmin(userId, admin.id);
+      await grantAdminWithAudit(userId, admin.id);
     } else {
-      await revokeAdmin(userId, admin.id);
+      await revokeAdminWithAudit(userId, admin.id);
     }
     return NextResponse.json({ ok: true });
   } catch (e) {

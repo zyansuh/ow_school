@@ -5,7 +5,6 @@ import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { graduateUser } from '@/lib/graduation';
 
 const patchSchema = z.object({
-  siteDisplayName: z.string().max(32).nullable().optional(),
   action: z.enum(['graduate']).optional(),
 });
 
@@ -23,14 +22,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (body.action === 'graduate') {
       await graduateUser(id);
       const updated = await prisma.user.findUnique({ where: { id } });
-      return NextResponse.json(updated);
-    }
-
-    if (body.siteDisplayName !== undefined) {
-      const updated = await prisma.user.update({
-        where: { id },
-        data: { siteDisplayName: body.siteDisplayName?.trim() || null },
-      });
       return NextResponse.json(updated);
     }
 

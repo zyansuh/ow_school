@@ -10,6 +10,8 @@ export type UserNickFields = {
   siteDisplayName?: string | null;
 };
 
+/** @deprecated siteDisplayName은 더 이상 표시에 사용하지 않음 */
+
 function guildNick(user: UserNickFields): string | null {
   const nick = user.discordServerNickname ?? user.discordServerNick;
   return nick?.trim() || null;

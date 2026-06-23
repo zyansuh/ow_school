@@ -1,47 +1,16 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useSession, signIn } from 'next-auth/react';
-import { useSearchParams, useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
-import { toast } from 'sonner';
-import { userDisplayName } from '@/lib/user-display';
 import { PLAY_TIME_SLOTS } from '@/lib/form-options';
-
-type Teacher = { id: string; name: string; class: { name: string } };
+import { useApplyForm } from '@/hooks/apply/use-apply-form';
 
 function ApplyForm() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const params = useSearchParams();
-  const preTeacher = params.get('teacher');
-
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    nickname: '',
-    discord: '',
-    playTimeSlot: PLAY_TIME_SLOTS[0] as string,
-    teacherId: preTeacher || '',
-  });
-
-  useEffect(() => {
-    fetch('/api/teachers').then((r) => r.json()).then(setTeachers);
-  }, []);
-
-  useEffect(() => {
-    if (session?.user) {
-      setForm((f) => ({
-        ...f,
-        discord: session.user.discordUsername,
-        nickname: userDisplayName(session.user),
-      }));
-    }
-  }, [session]);
+  const { session, status, teachers, form, setForm, loading, submit, signIn } = useApplyForm();
 
   if (status === 'loading') return <LoadingPage />;
 
@@ -54,29 +23,9 @@ function ApplyForm() {
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await fetch('/api/applications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast.success('수강 신청이 완료되었습니다');
-      router.push('/mypage');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : '신청 실패');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <Card className="bg-gray-900/80 border-gray-800 max-w-lg mx-auto">
-      <form onSubmit={handleSubmit} className="card-pad space-y-5">
+      <form onSubmit={submit} className="card-pad space-y-5">
         <div>
           <Label htmlFor="nickname">평겜마 닉네임(오픈카톡 닉네임) *</Label>
           <Input id="nickname" required value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} className="mt-2" />

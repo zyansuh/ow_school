@@ -1,0 +1,77 @@
+import { prisma } from '@/lib/prisma';
+import { applyApplicationStatusChange } from '@/lib/applications';
+import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
+import { initialApplicationStatus } from '@/lib/applications/policy';
+
+export type CreateApplicationInput = {
+  userId: string;
+  nickname: string;
+  discord: string;
+  playTimeSlot: string;
+  teacherId: string;
+};
+
+export async function assertCanApply(userId: string, teacherId: string) {
+  const [teacher, dbUser] = await Promise.all([
+    prisma.teacher.findUnique({ where: { id: teacherId }, include: { class: true } }),
+    prisma.user.findUnique({ where: { id: userId } }),
+  ]);
+
+  if (!teacher || !teacher.isActive) {
+    throw new Error('TEACHER_NOT_FOUND');
+  }
+
+  const activeCount = await countActiveStudentsForTeacher(teacher.id);
+  if (activeCount >= teacher.maxStudents) {
+    throw new Error('TEACHER_FULL');
+  }
+
+  if (dbUser?.status === 'graduated') {
+    throw new Error('GRADUATED');
+  }
+
+  if (dbUser?.teacherId && dbUser.status === 'active') {
+    throw new Error('ALREADY_ASSIGNED');
+  }
+
+  return { teacher, dbUser };
+}
+
+export async function createApplication(input: CreateApplicationInput) {
+  const { teacher } = await assertCanApply(input.userId, input.teacherId);
+  const status = initialApplicationStatus();
+
+  const app = await prisma.application.create({
+    data: {
+      userId: input.userId,
+      nickname: input.nickname,
+      discord: input.discord,
+      playTimeSlot: input.playTimeSlot,
+      teacherId: teacher.id,
+      classId: teacher.classId,
+      status,
+    },
+    include: { teacher: true, class: true },
+  });
+
+  if (status === 'approved') {
+    await applyApplicationStatusChange(
+      await prisma.application.findUniqueOrThrow({
+        where: { id: app.id },
+        include: { teacher: true },
+      }),
+      'pending',
+      'approved',
+    );
+  }
+
+  return app;
+}
+
+export async function listApplicationsByUserId(userId: string) {
+  return prisma.application.findMany({
+    where: { userId },
+    include: { teacher: true, class: true },
+    orderBy: { createdAt: 'desc' },
+  });
+}

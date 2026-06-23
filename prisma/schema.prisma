@@ -28,6 +28,7 @@ model User {
   graduationReview  GraduationReview?
   pointHistories    PointHistory[]
   adminRole         AdminRole?
+  adminRoleRequests AdminRoleRequest[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 }
@@ -145,6 +146,35 @@ model AdminRole {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   grantedById String?
   createdAt   DateTime @default(now())
+}
+
+model AdminRoleRequest {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       String    @default("pending")
+  message      String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([status])
+}
+
+model AdminRoleAuditLog {
+  id           String   @id @default(cuid())
+  action       String
+  targetUserId String
+  actorUserId  String
+  requestId    String?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@index([targetUserId])
+  @@index([actorUserId])
+  @@index([action])
 }
 
 model SiteSetting {

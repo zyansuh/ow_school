@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useSession, signIn } from 'next-auth/react';
+import { signIn } from 'next-auth/react';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,69 +9,23 @@ import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { LoadingPage, EmptyState } from '@/components/ui/loading';
 import { STATUS_LABELS, formatDate } from '@/lib/utils';
-import { toast } from 'sonner';
 import { userDisplayName } from '@/lib/user-display';
-
-type MeData = {
-  displayName: string;
-  serverNickname?: string | null;
-  globalDisplayName?: string | null;
-  discordNickname: string | null;
-  discordUsername: string;
-  discordServerNick: string | null;
-  discordRoleNames: string[];
-  isInGuild: boolean;
-  class: { name: string } | null;
-  teacher: { name: string } | null;
-  applications: Array<{ id: string; status: string; createdAt: string; teacher: { name: string } }>;
-  interviews: Array<{ id: string; createdAt: string }>;
-};
+import { useMyPageData } from '@/hooks/mypage/use-mypage';
 
 export default function MyPage() {
-  const { data: session, status, update } = useSession();
-  const [data, setData] = useState<MeData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [nickInput, setNickInput] = useState('');
-  const [savingNick, setSavingNick] = useState(false);
+  const {
+    session,
+    data,
+    loading,
+    nickInput,
+    setNickInput,
+    savingNick,
+    saveNick,
+    requestingAdmin,
+    requestAdminRole,
+  } = useMyPageData();
 
-  const load = () =>
-    fetch('/api/me?refresh=1')
-      .then((r) => r.json())
-      .then((d) => {
-        setData(d);
-        setNickInput(d.discordServerNick ?? d.serverNickname ?? '');
-      });
-
-  useEffect(() => {
-    if (!session) {
-      setLoading(false);
-      return;
-    }
-    load().finally(() => setLoading(false));
-  }, [session]);
-
-  const saveNick = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingNick(true);
-    try {
-      const res = await fetch('/api/me/guild-nick', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nick: nickInput.trim() || null }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '변경 실패');
-      toast.success('서버 닉네임이 변경되었습니다');
-      await load();
-      await update();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : '변경 실패');
-    } finally {
-      setSavingNick(false);
-    }
-  };
-
-  if (status === 'loading' || loading) return <MainLayout><LoadingPage /></MainLayout>;
+  if (loading) return <MainLayout><LoadingPage /></MainLayout>;
 
   if (!session) {
     return (
@@ -86,7 +39,6 @@ export default function MyPage() {
   }
 
   const displayNick = data ? userDisplayName(data) : '';
-
   const isTeacherOnly = session.user.isTeacher && !session.user.isAdmin;
 
   return (
@@ -94,11 +46,18 @@ export default function MyPage() {
       <div className="page-container py-8 sm:py-12 section-gap max-w-3xl">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">마이페이지</h1>
-          {isTeacherOnly && (
-            <Button asChild variant="outline" size="sm">
-              <Link href="/teacher/students">학생 관리</Link>
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {isTeacherOnly && (
+              <Button asChild variant="outline" size="sm">
+                <Link href="/teacher/students">학생 관리</Link>
+              </Button>
+            )}
+            {!session.user.isAdmin && (
+              <Button variant="outline" size="sm" disabled={requestingAdmin} onClick={() => void requestAdminRole()}>
+                {requestingAdmin ? '요청 중...' : '관리자 권한 요청'}
+              </Button>
+            )}
+          </div>
         </div>
 
         <Card className="bg-gray-900/80 border-gray-800">

@@ -4,6 +4,7 @@ import { apiError, requireAdminUser, requireUser } from '@/lib/api-helpers';
 import { graduateUser } from '@/lib/graduation';
 import { interviewAuthorName } from '@/lib/interview-access';
 import { CLUB_POINT, GRADUATION_POINT } from '@/lib/points';
+import { notifyInterviewSubmitted } from '@/lib/notifications/interview-submitted';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -122,6 +123,13 @@ export async function POST(req: NextRequest) {
     });
 
     await graduateUser(user.id);
+
+    notifyInterviewSubmitted({
+      interviewId: interview.id,
+      userId: user.id,
+      className,
+      teacherId,
+    }).catch((err) => console.error('[interview-notify]', err));
 
     return NextResponse.json({
       interview,

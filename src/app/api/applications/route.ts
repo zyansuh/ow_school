@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { apiError, requireUser } from '@/lib/api-helpers';
-import { applyApplicationStatusChange } from '@/lib/applications';
-import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
+import { createApplication, listApplicationsByUserId } from '@/lib/applications/service';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -13,15 +11,20 @@ const schema = z.object({
 });
 
 export async function GET(req: NextRequest) {
-  const discord = req.nextUrl.searchParams.get('discord');
-  const userId = req.nextUrl.searchParams.get('userId');
-  const where = userId ? { userId } : discord ? { discord } : {};
-  const apps = await prisma.application.findMany({
-    where,
-    include: { teacher: true, class: true },
-    orderBy: { createdAt: 'desc' },
-  });
-  return NextResponse.json(apps);
+  try {
+    const userId = req.nextUrl.searchParams.get('userId');
+    if (!userId) {
+      return NextResponse.json({ error: 'userId가 필요합니다' }, { status: 400 });
+    }
+    const user = await requireUser();
+    if (user.id !== userId && !user.isAdmin) {
+      return NextResponse.json({ error: '권한이 없습니다' }, { status: 403 });
+    }
+    const apps = await listApplicationsByUserId(userId);
+    return NextResponse.json(apps);
+  } catch (e) {
+    return apiError(e);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -29,50 +32,24 @@ export async function POST(req: NextRequest) {
     const user = await requireUser();
     const body = schema.parse(await req.json());
 
-    const teacher = await prisma.teacher.findUnique({ where: { id: body.teacherId }, include: { class: true } });
-    if (!teacher || !teacher.isActive) {
-      return NextResponse.json({ error: '선생님을 찾을 수 없습니다' }, { status: 404 });
-    }
-    const activeCount = await countActiveStudentsForTeacher(teacher.id);
-    if (activeCount >= teacher.maxStudents) {
-      return NextResponse.json({ error: '모집이 마감되었습니다' }, { status: 400 });
-    }
-
-    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-    if (dbUser?.status === 'graduated') {
-      return NextResponse.json({ error: '졸업생은 수강 신청할 수 없습니다' }, { status: 400 });
-    }
-    if (dbUser?.teacherId && dbUser.status === 'active') {
-      return NextResponse.json({ error: '이미 담당 선생님이 배정되어 있습니다' }, { status: 400 });
-    }
-
-    const app = await prisma.application.create({
-      data: {
-        userId: user.id,
-        nickname: body.nickname,
-        discord: body.discord,
-        playTimeSlot: body.playTimeSlot,
-        teacherId: teacher.id,
-        classId: teacher.classId,
-        status: 'approved',
-      },
-      include: { teacher: true, class: true },
+    const app = await createApplication({
+      userId: user.id,
+      nickname: body.nickname,
+      discord: body.discord,
+      playTimeSlot: body.playTimeSlot,
+      teacherId: body.teacherId,
     });
-
-    await applyApplicationStatusChange(
-      await prisma.application.findUniqueOrThrow({
-        where: { id: app.id },
-        include: { teacher: true },
-      }),
-      'pending',
-      'approved',
-    );
 
     return NextResponse.json(app);
   } catch (e) {
     if (e instanceof z.ZodError) {
       return NextResponse.json({ error: e.errors[0]?.message ?? '입력값 오류' }, { status: 400 });
     }
+    const msg = e instanceof Error ? e.message : '';
+    if (msg === 'TEACHER_NOT_FOUND') return NextResponse.json({ error: '선생님을 찾을 수 없습니다' }, { status: 404 });
+    if (msg === 'TEACHER_FULL') return NextResponse.json({ error: '모집이 마감되었습니다' }, { status: 400 });
+    if (msg === 'GRADUATED') return NextResponse.json({ error: '졸업생은 수강 신청할 수 없습니다' }, { status: 400 });
+    if (msg === 'ALREADY_ASSIGNED') return NextResponse.json({ error: '이미 담당 선생님이 배정되어 있습니다' }, { status: 400 });
     return apiError(e);
   }
 }
