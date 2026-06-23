@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     formats: ['image/webp', 'image/avif'],
     remotePatterns: [
       { protocol: 'https', hostname: 'cdn.discordapp.com' },
-      { protocol: 'https', hostname: '*.public.blob.vercel-storage.com' },
+      { protocol: 'https', hostname: '**.public.blob.vercel-storage.com' },
     ],
   },
   experimental: {
