@@ -28,13 +28,19 @@ export function useMyPageData() {
   const [requestingAdmin, setRequestingAdmin] = useState(false);
   const [refreshingDiscord, setRefreshingDiscord] = useState(false);
 
-  const load = useCallback((refresh = false) =>
-    fetch(refresh ? '/api/me?refresh=1' : '/api/me')
-      .then((r) => r.json())
-      .then((d) => {
-        setData(d);
-        setNickInput(d.discordServerNick ?? d.serverNickname ?? '');
-      }), []);
+  const load = useCallback(
+    (refresh = false) =>
+      fetch(refresh ? '/api/me?refresh=1' : '/api/me')
+        .then((r) => r.json())
+        .then(async (d) => {
+          setData(d);
+          setNickInput(d.discordServerNick ?? d.serverNickname ?? '');
+          if (d?.displayName && d.displayName !== session?.user?.name) {
+            await update();
+          }
+        }),
+    [session?.user?.name, update],
+  );
 
   useEffect(() => {
     if (!session) {
