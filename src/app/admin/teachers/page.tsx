@@ -8,16 +8,26 @@ import { Badge } from '@/components/ui/badge';
 import { LoadingPage, EmptyState } from '@/components/ui/loading';
 import { toast } from 'sonner';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { TeacherActivityFields } from '@/components/teacher/teacher-activity-fields';
 
 type Teacher = {
   id: string; name: string; profileImage?: string; mbti?: string; intro?: string; discord?: string;
+  activityDays?: string | null; activityTimeSlot?: string | null;
   isActive: boolean; maxStudents: number; currentStudents: number; classId: string;
   class: { name: string; slug: string };
 };
 
 type ClassItem = { id: string; name: string };
 
-const empty = { name: '', profileImage: '', mbti: '', intro: '', discord: '', classId: '', maxStudents: 5, isActive: true };
+const empty = {
+  name: '', profileImage: '', mbti: '', intro: '', discord: '', classId: '', maxStudents: 5, isActive: true,
+  activityDays: [] as string[], activityTimeSlot: '',
+};
+
+function parseDays(json?: string | null) {
+  if (!json) return [];
+  try { const v = JSON.parse(json); return Array.isArray(v) ? v : []; } catch { return []; }
+}
 
 export default function AdminTeachersPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -83,6 +93,11 @@ export default function AdminTeachersPage() {
               <div><Label>최대 인원</Label><Input type="number" value={form.maxStudents} onChange={(e) => setForm({ ...form, maxStudents: Number(e.target.value) })} className="mt-2" /></div>
             </div>
             <div><Label>소개</Label><Textarea value={form.intro} onChange={(e) => setForm({ ...form, intro: e.target.value })} className="mt-2" /></div>
+            <TeacherActivityFields
+              activityDays={form.activityDays}
+              activityTimeSlot={form.activityTimeSlot}
+              onChange={({ activityDays, activityTimeSlot }) => setForm({ ...form, activityDays, activityTimeSlot })}
+            />
             <div className="flex gap-2"><Button type="submit">저장</Button><Button type="button" variant="outline" onClick={() => setShowForm(false)}>취소</Button></div>
           </form>
         </Card>
@@ -100,7 +115,7 @@ export default function AdminTeachersPage() {
                   <td className="p-4">{t.currentStudents}/{t.maxStudents}</td>
                   <td className="p-4"><Badge variant={t.isActive ? 'success' : 'danger'}>{t.isActive ? '활동' : '비활성'}</Badge></td>
                   <td className="p-4 flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => { setEditing(t.id); setForm({ name: t.name, profileImage: t.profileImage || '', mbti: t.mbti || '', intro: t.intro || '', discord: t.discord || '', classId: t.classId, maxStudents: t.maxStudents, isActive: t.isActive }); setShowForm(true); }}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditing(t.id); setForm({ name: t.name, profileImage: t.profileImage || '', mbti: t.mbti || '', intro: t.intro || '', discord: t.discord || '', classId: t.classId, maxStudents: t.maxStudents, isActive: t.isActive, activityDays: parseDays(t.activityDays), activityTimeSlot: t.activityTimeSlot || '' }); setShowForm(true); }}><Pencil className="h-4 w-4" /></Button>
                     <Button size="sm" variant="ghost" onClick={() => toggleActive(t)}>{t.isActive ? '비활성' : '활성'}</Button>
                     <Button size="sm" variant="ghost" onClick={() => remove(t.id)}><Trash2 className="h-4 w-4 text-red-400" /></Button>
                   </td>

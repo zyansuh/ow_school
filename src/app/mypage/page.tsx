@@ -33,7 +33,7 @@ export default function MyPage() {
   const [savingNick, setSavingNick] = useState(false);
 
   const load = () =>
-    fetch('/api/me')
+    fetch('/api/me?refresh=1')
       .then((r) => r.json())
       .then((d) => {
         setData(d);

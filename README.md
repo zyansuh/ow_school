@@ -1,4 +1,4 @@
-# OW School | 평화로운 게임마을
+# 정착지원국 | 평화로운 게임마을
 
 Next.js(App Router) 기반 게임 멘토링 클래스 플랫폼
 
@@ -133,6 +133,15 @@ https://discord.com/api/oauth2/authorize?client_id=CLIENT_ID&permissions=1342177
 | `/apply` | 수강 신청 |
 | `/interview` | 졸업면담 |
 | `/mypage` | 마이페이지 |
+| `/teacher` | 선생님 마이페이지 (선생님 계정) |
 | `/admin` | 관리자 대시보드 |
+| `/admin/graduated` | 졸업생 목록 |
 
 관리자 버튼은 우측 하단에 표시됩니다 (관리자만 보임).
+
+## 향후 설계: 홈페이지 관리자 권한 부여 (우선순위 낮음)
+
+1. 홈 푸터 또는 관리자 전용 숨김 UI에서 Discord 로그인 후 권한 요청
+2. `AdminRoleRequest` 테이블에 요청자·요청 시각·상태(`pending/approved/rejected`) 저장
+3. 기존 관리자가 `/admin/roles`(관리자 리스트)에서 승인 시 `AdminRole` 생성
+4. 승인·거절 시 Discord DM 또는 서버 채널 웹훅 알림 (선택)

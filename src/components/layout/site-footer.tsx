@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SITE_NAME, SITE_TAGLINE } from '@/lib/site-brand';
 
 export function SiteFooter() {
   return (
@@ -10,7 +11,7 @@ export function SiteFooter() {
         >
           관리자 페이지
         </Link>
-        <p className="text-[11px] text-gray-600">© OW School · 평화로운 게임마을</p>
+        <p className="text-[11px] text-gray-600">© {SITE_NAME} · {SITE_TAGLINE}</p>
       </div>
     </footer>
   );

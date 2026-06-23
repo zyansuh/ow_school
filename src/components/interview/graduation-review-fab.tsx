@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { SITE_NAME } from '@/lib/site-brand';
 import { resolveDisplayName, type UserNickFields } from '@/lib/user-display';
 
 type MeData = UserNickFields & {
@@ -112,7 +113,7 @@ export function GraduationReviewFab() {
           <DialogHeader>
             <DialogTitle>졸업후기 작성</DialogTitle>
             <DialogDescription>
-              OW School에서의 경험을 후배들과 공유해주세요.
+              {SITE_NAME}에서의 경험을 후배들과 공유해주세요.
             </DialogDescription>
           </DialogHeader>
 

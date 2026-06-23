@@ -8,16 +8,20 @@ import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { userDisplayName } from '@/lib/user-display';
 import { userHeaderSubtitle } from '@/lib/user-header';
+import { SITE_NAME } from '@/lib/site-brand';
+
 import { Button } from '@/components/ui/button';
 
-const NAV = [
-  { href: '/', label: '홈' },
-  { href: '/#classes', label: '클래스 소개' },
-  { href: '/teachers', label: '선생님' },
-  { href: '/apply', label: '수강 신청' },
-  { href: '/interview', label: '졸업면담' },
-  { href: '/mypage', label: '마이페이지' },
-];
+function buildNav(isTeacher?: boolean) {
+  const items = [
+    { href: '/', label: '홈' },
+    { href: '/#classes', label: '클래스 소개' },
+    { href: '/interview', label: '졸업면담' },
+    { href: '/mypage', label: '마이페이지' },
+  ];
+  if (isTeacher) items.push({ href: '/teacher', label: '선생님 페이지' });
+  return items;
+}
 
 export function SiteHeader() {
   const { data: session } = useSession();
@@ -25,6 +29,7 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const user = session?.user;
+  const NAV = buildNav(user?.isTeacher);
 
   useEffect(() => {
     setMounted(true);
@@ -35,7 +40,7 @@ export function SiteHeader() {
       <div className="page-container flex h-16 items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2 font-bold text-white hover:text-purple-300 transition-colors shrink-0">
           <Gamepad2 className="h-5 w-5 text-purple-400" />
-          <span className="text-sm sm:text-base hidden xs:inline">OW School</span>
+          <span className="text-sm sm:text-base hidden xs:inline">{SITE_NAME}</span>
         </Link>
 
         <nav className="hidden lg:flex items-center gap-1">

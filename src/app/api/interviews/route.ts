@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireUser } from '@/lib/api-helpers';
+import { graduateUser } from '@/lib/graduation';
+import { CLUB_POINT, GRADUATION_POINT } from '@/lib/points';
+import { userDisplayName } from '@/lib/user-display';
 import { z } from 'zod';
 
 const schema = z.object({
-  nickname: z.string().min(1),
-  teacherId: z.string().optional(),
-  satisfaction: z.number().min(1).max(5),
-  memorable: z.string().min(1),
-  improvements: z.string().optional(),
-  review: z.string().min(1),
+  contentExperience: z.string().min(1, '질문 1을 입력해주세요'),
+  memorablePerson: z.string().min(1, '질문 2를 입력해주세요'),
+  joinedClub: z.boolean(),
+  clubNames: z.array(z.string().min(1)).max(3).optional(),
 });
+
+function resolveClassName(user: {
+  class?: { name: string } | null;
+  applications?: Array<{ class?: { name: string } | null; status: string }>;
+}) {
+  if (user.class?.name) return user.class.name;
+  const approved = user.applications?.find((a) => a.status === 'approved');
+  return approved?.class?.name ?? '미배정';
+}
 
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get('userId');
@@ -27,47 +37,86 @@ export async function POST(req: NextRequest) {
     const user = await requireUser();
     const body = schema.parse(await req.json());
 
+    const existing = await prisma.interview.findFirst({ where: { userId: user.id } });
+    if (existing) {
+      return NextResponse.json({ error: '이미 졸업면담을 제출하셨습니다' }, { status: 409 });
+    }
+
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
-      include: { teacher: true },
+      include: {
+        class: true,
+        teacher: true,
+        applications: {
+          where: { status: 'approved' },
+          include: { class: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
     });
     if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    const teacherId = body.teacherId || dbUser.teacherId;
+    const nickname = userDisplayName(dbUser);
+    const className = resolveClassName(dbUser);
+    const teacherId = dbUser.teacherId;
+    const clubNames =
+      body.joinedClub && body.clubNames?.length
+        ? body.clubNames.map((n) => n.trim()).filter(Boolean)
+        : [];
 
-    const interview = await prisma.interview.create({
-      data: {
-        userId: user.id,
-        nickname: body.nickname,
-        teacherId: teacherId ?? undefined,
-        satisfaction: body.satisfaction,
-        memorable: body.memorable,
-        improvements: body.improvements,
-        review: body.review,
-      },
-    });
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        status: 'graduated',
-        teacherId: null,
-        classId: null,
-      },
-    });
-
-    if (teacherId) {
-      const teacher = await prisma.teacher.findUnique({ where: { id: teacherId } });
-      if (teacher && teacher.currentStudents > 0) {
-        await prisma.teacher.update({
-          where: { id: teacherId },
-          data: { currentStudents: teacher.currentStudents - 1 },
-        });
-      }
+    if (body.joinedClub && clubNames.length === 0) {
+      return NextResponse.json({ error: '동호회명을 1개 이상 입력해주세요' }, { status: 400 });
     }
 
-    return NextResponse.json(interview);
+    const interview = await prisma.$transaction(async (tx) => {
+      const created = await tx.interview.create({
+        data: {
+          userId: user.id,
+          nickname,
+          className,
+          teacherId: teacherId ?? undefined,
+          contentExperience: body.contentExperience,
+          memorablePerson: body.memorablePerson,
+          joinedClub: body.joinedClub,
+          clubNames: clubNames.length ? JSON.stringify(clubNames) : null,
+        },
+      });
+
+      await tx.pointHistory.create({
+        data: {
+          userId: user.id,
+          pointType: 'graduation',
+          pointAmount: GRADUATION_POINT,
+        },
+      });
+
+      if (body.joinedClub) {
+        await tx.pointHistory.create({
+          data: {
+            userId: user.id,
+            pointType: 'club',
+            pointAmount: CLUB_POINT,
+          },
+        });
+      }
+
+      return created;
+    });
+
+    await graduateUser(user.id);
+
+    return NextResponse.json({
+      interview,
+      pointsAwarded: {
+        graduation: GRADUATION_POINT,
+        club: body.joinedClub ? CLUB_POINT : 0,
+      },
+    });
   } catch (e) {
+    if (e instanceof z.ZodError) {
+      return NextResponse.json({ error: e.errors[0]?.message ?? '입력값 오류' }, { status: 400 });
+    }
     return apiError(e);
   }
 }

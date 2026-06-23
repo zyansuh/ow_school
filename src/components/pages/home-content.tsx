@@ -1,16 +1,19 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ClipboardList, Megaphone, Gamepad2, Users } from 'lucide-react';
 import { GAME_CLASSES } from '@/lib/constants';
 import { prisma } from '@/lib/prisma';
 import { DEFAULT_NOTICES, defaultClassStats } from '@/lib/db-fallbacks';
+import { SITE_NAME } from '@/lib/site-brand';
+import type { ClassWithTeachers } from '@/types/db';
 
-async function getClassStats() {
+type ClassStats = Record<string, { recruiting: boolean; current: number; max: number }>;
+
+async function getClassStats(): Promise<ClassStats> {
   try {
-    const classes = await prisma.class.findMany({
+    const classes: ClassWithTeachers[] = await prisma.class.findMany({
       include: { teachers: { where: { isActive: true } } },
     });
     return Object.fromEntries(
@@ -18,8 +21,8 @@ async function getClassStats() {
         c.slug,
         {
           recruiting: c.teachers.some((t) => t.currentStudents < t.maxStudents),
-          current: c.teachers.reduce((s, t) => s + t.currentStudents, 0),
-          max: c.teachers.reduce((s, t) => s + t.maxStudents, 0),
+          current: c.teachers.reduce((sum, t) => sum + t.currentStudents, 0),
+          max: c.teachers.reduce((sum, t) => sum + t.maxStudents, 0),
         },
       ]),
     );
@@ -48,10 +51,10 @@ export async function HomeContent() {
       <section className="relative overflow-hidden py-12 sm:py-20 md:py-28">
         <div className="page-container relative z-10 text-center">
           <div className="flex justify-center mb-6">
-            <Image src="/images/logo/logo-peaceful-gaming-village.png" alt="OW School" width={80} height={80} className="rounded-2xl" />
+            <Image src="/images/logo/logo-peaceful-gaming-village.png" alt={SITE_NAME} width={80} height={80} className="rounded-2xl" />
           </div>
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-black mb-4 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
-            OW School
+            {SITE_NAME}
           </h1>
           <p className="text-base sm:text-xl text-gray-300 mb-2 flex items-center justify-center gap-2">
             <Gamepad2 className="h-5 w-5 text-purple-400" />
@@ -60,10 +63,6 @@ export async function HomeContent() {
           <p className="text-sm text-gray-400 max-w-xl mx-auto mb-8">
             수달반 · 사자반 · 여우반과 함께 게임 실력을 키워보세요
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg"><Link href="/apply">수강 신청</Link></Button>
-            <Button asChild variant="outline" size="lg"><Link href="/teachers">선생님 둘러보기</Link></Button>
-          </div>
         </div>
       </section>
 

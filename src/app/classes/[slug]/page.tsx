@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Users, ArrowLeft } from 'lucide-react';
 import { getClassBySlug } from '@/lib/constants';
 import { prisma } from '@/lib/prisma';
+import type { TeacherRow } from '@/types/db';
 
 export { dynamic } from '@/lib/segment';
 
@@ -22,11 +23,12 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
   });
   if (!dbClass) notFound();
 
-  const available = dbClass.teachers
+  const teachers = dbClass.teachers as TeacherRow[];
+  const available = teachers
     .filter((t) => t.isActive && t.currentStudents < t.maxStudents)
-    .reduce((s, t) => s + (t.maxStudents - t.currentStudents), 0);
+    .reduce((sum, t) => sum + (t.maxStudents - t.currentStudents), 0);
 
-  const totalStudents = dbClass.teachers.reduce((s, t) => s + t.currentStudents, 0);
+  const totalStudents = teachers.reduce((sum, t) => sum + t.currentStudents, 0);
 
   return (
     <MainLayout>
@@ -58,7 +60,7 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
         <div>
           <h2 className="heading-section text-gray-100 mb-6">담당 선생님</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {dbClass.teachers.map((teacher) => {
+            {teachers.map((teacher) => {
               const full = !teacher.isActive || teacher.currentStudents >= teacher.maxStudents;
               return (
                 <Link key={teacher.id} href={`/teachers/${teacher.id}`}>

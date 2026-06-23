@@ -10,6 +10,8 @@ const teacherSchema = z.object({
   intro: z.string().optional(),
   classId: z.string().min(1),
   discord: z.string().optional(),
+  activityDays: z.array(z.string()).optional(),
+  activityTimeSlot: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
   maxStudents: z.number().optional(),
 });
@@ -28,7 +30,14 @@ export async function POST(req: NextRequest) {
   try {
     await requireAdminUser();
     const body = teacherSchema.parse(await req.json());
-    const teacher = await prisma.teacher.create({ data: body, include: { class: true } });
+    const { activityDays, ...rest } = body;
+    const teacher = await prisma.teacher.create({
+      data: {
+        ...rest,
+        activityDays: activityDays ? JSON.stringify(activityDays) : undefined,
+      },
+      include: { class: true },
+    });
     return NextResponse.json(teacher);
   } catch (e) {
     return apiError(e);

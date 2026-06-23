@@ -1,0 +1,1 @@
+-- Baseline: database was previously managed with prisma db push

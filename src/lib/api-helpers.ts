@@ -1,6 +1,8 @@
+import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { requireAdmin } from '@/lib/rbac';
-import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { resolveTeacherForUser } from '@/lib/teacher-auth';
 
 export async function getSessionUser() {
   const session = await auth();
@@ -18,6 +20,15 @@ export async function requireAdminUser() {
   const user = await requireUser();
   await requireAdmin(user.id);
   return user;
+}
+
+export async function requireTeacherUser() {
+  const user = await requireUser();
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+  if (!dbUser) throw new Error('UNAUTHORIZED');
+  const teacher = await resolveTeacherForUser(dbUser);
+  if (!teacher) throw new Error('FORBIDDEN');
+  return { user, teacher };
 }
 
 export function apiError(error: unknown) {

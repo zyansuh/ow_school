@@ -18,5 +18,5 @@ export const STATUS_LABELS: Record<string, string> = {
   approved: '승인',
   rejected: '거절',
   active: '재학',
-  graduated: '졸업',
+  graduated: '졸업생',
 };

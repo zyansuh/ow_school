@@ -10,17 +10,30 @@ const updateSchema = z.object({
   intro: z.string().optional(),
   classId: z.string().optional(),
   discord: z.string().optional(),
+  activityDays: z.array(z.string()).optional(),
+  activityTimeSlot: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
   maxStudents: z.number().optional(),
   currentStudents: z.number().optional(),
 });
+
+function serializeTeacherData(body: z.infer<typeof updateSchema>) {
+  const { activityDays, ...rest } = body;
+  const data: Record<string, unknown> = { ...rest };
+  if (activityDays) data.activityDays = JSON.stringify(activityDays);
+  return data;
+}
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdminUser();
     const { id } = await params;
     const body = updateSchema.parse(await req.json());
-    const teacher = await prisma.teacher.update({ where: { id }, data: body, include: { class: true } });
+    const teacher = await prisma.teacher.update({
+      where: { id },
+      data: serializeTeacherData(body),
+      include: { class: true },
+    });
     return NextResponse.json(teacher);
   } catch (e) {
     return apiError(e);

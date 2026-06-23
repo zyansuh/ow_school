@@ -8,6 +8,7 @@ import {
   parseRoleNames,
   syncUserGuildData,
   syncUserGuildDataBestEffort,
+  syncUserGuildDataIfStale,
 } from '@/lib/discord-guild';
 import { userDisplayName } from '@/lib/user-display';
 import { isTeacherFromDiscordRoles } from '@/lib/user-header';
@@ -154,14 +155,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           await db((client) => ensureDefaultAdmin(username, user.id, client));
 
-          if (getGuildConfig()) {
-            await syncUserGuildDataBestEffort(p.id, account?.access_token);
-          }
+          const guildSync = getGuildConfig()
+            ? syncUserGuildDataBestEffort(p.id, account?.access_token)
+            : Promise.resolve();
 
-          await syncTokenFromUser(user.id, token);
+          await Promise.all([syncTokenFromUser(user.id, token), guildSync]);
         } else if (token.userId) {
           if (trigger === 'update' && token.discordId) {
             await syncUserGuildData(token.discordId as string);
+          } else if (token.discordId) {
+            await syncUserGuildDataIfStale(token.discordId as string);
           }
           await syncTokenFromUser(token.userId as string, token);
           token.isAdmin = await db((client) => isAdmin(token.userId as string, client));

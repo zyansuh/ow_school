@@ -6,10 +6,11 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input, Label, Textarea, Select } from '@/components/ui/input';
+import { Input, Label, Select } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { toast } from 'sonner';
 import { userDisplayName } from '@/lib/user-display';
+import { PLAY_TIME_SLOTS } from '@/lib/form-options';
 
 type Teacher = { id: string; name: string; class: { name: string } };
 
@@ -24,10 +25,7 @@ function ApplyForm() {
   const [form, setForm] = useState({
     nickname: '',
     discord: '',
-    experience: '',
-    tier: '',
-    goal: '',
-    selfIntro: '',
+    playTimeSlot: PLAY_TIME_SLOTS[0] as string,
     teacherId: preTeacher || '',
   });
 
@@ -67,7 +65,7 @@ function ApplyForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success('신청이 완료되었습니다');
+      toast.success('수강 신청이 완료되었습니다');
       router.push('/mypage');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '신청 실패');
@@ -79,12 +77,22 @@ function ApplyForm() {
   return (
     <Card className="bg-gray-900/80 border-gray-800 max-w-lg mx-auto">
       <form onSubmit={handleSubmit} className="card-pad space-y-5">
-        <div><Label htmlFor="nickname">닉네임 *</Label><Input id="nickname" required value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} className="mt-2" /></div>
-        <div><Label htmlFor="discord">디스코드 *</Label><Input id="discord" required value={form.discord} onChange={(e) => setForm({ ...form, discord: e.target.value })} className="mt-2" /></div>
-        <div><Label htmlFor="experience">게임 경력</Label><Textarea id="experience" value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} className="mt-2" /></div>
-        <div><Label htmlFor="tier">현재 티어</Label><Input id="tier" value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value })} className="mt-2" /></div>
-        <div><Label htmlFor="goal">목표</Label><Input id="goal" value={form.goal} onChange={(e) => setForm({ ...form, goal: e.target.value })} className="mt-2" /></div>
-        <div><Label htmlFor="selfIntro">자기소개</Label><Textarea id="selfIntro" value={form.selfIntro} onChange={(e) => setForm({ ...form, selfIntro: e.target.value })} className="mt-2" /></div>
+        <div>
+          <Label htmlFor="nickname">평겜마 닉네임(오픈카톡 닉네임) *</Label>
+          <Input id="nickname" required value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} className="mt-2" />
+        </div>
+        <div>
+          <Label htmlFor="discord">디스코드 *</Label>
+          <Input id="discord" required value={form.discord} onChange={(e) => setForm({ ...form, discord: e.target.value })} className="mt-2" />
+        </div>
+        <div>
+          <Label htmlFor="playTimeSlot">평소 게임하는 시간대 *</Label>
+          <Select id="playTimeSlot" required value={form.playTimeSlot} onChange={(e) => setForm({ ...form, playTimeSlot: e.target.value })} className="mt-2">
+            {PLAY_TIME_SLOTS.map((slot) => (
+              <option key={slot} value={slot}>{slot}</option>
+            ))}
+          </Select>
+        </div>
         <div>
           <Label htmlFor="teacherId">희망 선생님 *</Label>
           <Select id="teacherId" required value={form.teacherId} onChange={(e) => setForm({ ...form, teacherId: e.target.value })} className="mt-2">

@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/input';
 import { LoadingPage, EmptyState } from '@/components/ui/loading';
+import { MonthlyStatsEditor } from '@/components/admin/monthly-stats-editor';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
 
@@ -19,23 +20,20 @@ type GraduationReview = {
   createdAt: string;
 };
 
-function MonthlyChart({ title, data, color }: { title: string; data: MonthlyPoint[]; color: string }) {
+function MonthlyChart({ data, color }: { data: MonthlyPoint[]; color: string }) {
   const max = Math.max(...data.map((d) => d.count), 1);
   return (
-    <div>
-      <h3 className="text-sm font-medium text-gray-400 mb-3">{title}</h3>
-      <div className="flex items-end gap-2 h-32">
-        {data.map((d) => (
-          <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
-            <span className="text-xs text-gray-500">{d.count}</span>
-            <div
-              className={`w-full rounded-t ${color}`}
-              style={{ height: `${Math.max((d.count / max) * 100, d.count > 0 ? 8 : 0)}%` }}
-            />
-            <span className="text-[10px] text-gray-600">{d.month.slice(5)}</span>
-          </div>
-        ))}
-      </div>
+    <div className="flex items-end gap-2 h-32">
+      {data.map((d) => (
+        <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
+          <span className="text-xs text-gray-500">{d.count}</span>
+          <div
+            className={`w-full rounded-t ${color}`}
+            style={{ height: `${Math.max((d.count / max) * 100, d.count > 0 ? 8 : 0)}%` }}
+          />
+          <span className="text-[10px] text-gray-600">{d.month.slice(5)}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -44,7 +42,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<{
     totalStudents: number;
     totalTeachers: number;
-    pendingApplications: number;
+    monthlyApplicationCount: number;
     byClass: Record<string, number>;
     monthlyApplications: MonthlyPoint[];
     monthlyInterviews: MonthlyPoint[];
@@ -53,8 +51,10 @@ export default function AdminDashboard() {
   const [savingNotices, setSavingNotices] = useState(false);
   const [reviews, setReviews] = useState<GraduationReview[]>([]);
 
+  const loadStats = () => fetch('/api/admin/stats').then((r) => r.json()).then((d) => setStats(d.stats));
+
   useEffect(() => {
-    fetch('/api/admin/stats').then((r) => r.json()).then((d) => setStats(d.stats));
+    loadStats();
     fetch('/api/notices').then((r) => r.json()).then((d) => setNoticesText((d.items as string[]).join('\n')));
     fetch('/api/admin/graduation-reviews').then((r) => r.json()).then((d) => {
       if (Array.isArray(d)) setReviews(d);
@@ -92,7 +92,7 @@ export default function AdminDashboard() {
         {[
           { label: '총 학생 수', value: stats.totalStudents },
           { label: '총 선생님 수', value: stats.totalTeachers },
-          { label: '승인 대기', value: stats.pendingApplications },
+          { label: '이번 달 신청', value: stats.monthlyApplicationCount },
           { label: '반 수', value: Object.keys(stats.byClass).length },
         ].map((s) => (
           <Card key={s.label} className="bg-gray-900/80 border-gray-800">
@@ -107,12 +107,24 @@ export default function AdminDashboard() {
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className="bg-gray-900/80 border-gray-800">
           <div className="card-pad">
-            <MonthlyChart title="월별 신청 수 (최근 6개월)" data={stats.monthlyApplications} color="bg-purple-500/80" />
+            <MonthlyStatsEditor
+              title="월별 신청 수 (최근 6개월)"
+              type="applications"
+              data={stats.monthlyApplications}
+              onSaved={loadStats}
+            />
+            <MonthlyChart data={stats.monthlyApplications} color="bg-purple-500/80" />
           </div>
         </Card>
         <Card className="bg-gray-900/80 border-gray-800">
           <div className="card-pad">
-            <MonthlyChart title="월별 졸업면담 수 (최근 6개월)" data={stats.monthlyInterviews} color="bg-cyan-500/80" />
+            <MonthlyStatsEditor
+              title="월별 졸업면담 수 (최근 6개월)"
+              type="interviews"
+              data={stats.monthlyInterviews}
+              onSaved={loadStats}
+            />
+            <MonthlyChart data={stats.monthlyInterviews} color="bg-cyan-500/80" />
           </div>
         </Card>
       </div>
@@ -149,20 +161,14 @@ export default function AdminDashboard() {
                     <th className="p-3 w-28">작성자</th>
                     <th className="p-3 w-24">반</th>
                     <th className="p-3">내용</th>
-                    <th className="p-3 w-28 hidden sm:table-cell">작성일</th>
                   </tr>
                 </thead>
                 <tbody>
                   {reviews.map((r) => (
-                    <tr key={r.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
-                      <td className="p-3 text-gray-200 whitespace-nowrap">{r.authorName}</td>
-                      <td className="p-3 text-purple-300 whitespace-nowrap">{r.className}</td>
-                      <td className="p-3 text-gray-300 max-w-md">
-                        <p className="line-clamp-2 sm:line-clamp-3">{r.content}</p>
-                      </td>
-                      <td className="p-3 text-gray-500 text-xs hidden sm:table-cell whitespace-nowrap">
-                        {formatDate(r.createdAt)}
-                      </td>
+                    <tr key={r.id} className="border-b border-gray-800/50">
+                      <td className="p-3 text-gray-200">{r.authorName}</td>
+                      <td className="p-3 text-purple-300">{r.className}</td>
+                      <td className="p-3 text-gray-300"><p className="line-clamp-2">{r.content}</p></td>
                     </tr>
                   ))}
                 </tbody>
@@ -175,15 +181,8 @@ export default function AdminDashboard() {
       <Card className="bg-gray-900/80 border-gray-800">
         <div className="card-pad space-y-3">
           <h2 className="font-semibold">메인 공지사항</h2>
-          <p className="text-xs text-gray-500">한 줄에 하나씩 입력하세요</p>
-          <Textarea
-            value={noticesText}
-            onChange={(e) => setNoticesText(e.target.value)}
-            className="min-h-[120px] font-mono text-sm"
-          />
-          <Button onClick={saveNotices} disabled={savingNotices}>
-            {savingNotices ? '저장 중...' : '공지사항 저장'}
-          </Button>
+          <Textarea value={noticesText} onChange={(e) => setNoticesText(e.target.value)} className="min-h-[120px] font-mono text-sm" />
+          <Button onClick={saveNotices} disabled={savingNotices}>{savingNotices ? '저장 중...' : '공지사항 저장'}</Button>
         </div>
       </Card>
     </div>

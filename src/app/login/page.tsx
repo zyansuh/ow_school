@@ -7,8 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { MainLayout } from '@/components/layout/main-layout';
 import { AUTH_ERROR_MESSAGES, resetAuthCookies } from '@/lib/auth-errors';
+import { SITE_NAME } from '@/lib/site-brand';
 
 const RETRY_ERRORS = new Set(['Configuration', 'InvalidCheck', 'OAuthCallbackError', 'OAuthSignin']);
+
+function isMobileDevice() {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -16,6 +22,11 @@ function LoginContent() {
   const callbackUrl = error ? '/' : searchParams.get('callbackUrl') || '/';
   const message = error ? (AUTH_ERROR_MESSAGES[error] ?? `로그인 오류 (${error})`) : null;
   const [pending, setPending] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   useEffect(() => {
     if (error && RETRY_ERRORS.has(error)) {
@@ -26,7 +37,9 @@ function LoginContent() {
   async function handleDiscordSignIn() {
     setPending(true);
     try {
-      await resetAuthCookies();
+      if (error && RETRY_ERRORS.has(error)) {
+        await resetAuthCookies();
+      }
       await signIn('discord', { callbackUrl, redirect: true });
     } finally {
       setPending(false);
@@ -40,7 +53,7 @@ function LoginContent() {
           <div className="card-pad text-center space-y-6">
             <h1 className="text-2xl font-bold text-gray-100">Discord 로그인</h1>
             <p className="text-gray-400 text-sm">
-              OW School은 Discord 계정으로만 로그인할 수 있습니다.
+              {SITE_NAME}은 Discord 계정으로만 로그인할 수 있습니다.
             </p>
             {message && (
               <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-left">
@@ -53,8 +66,13 @@ function LoginContent() {
               disabled={pending}
               onClick={() => void handleDiscordSignIn()}
             >
-              {pending ? '연결 중…' : 'Discord로 계속하기'}
+              {pending ? '연결 중…' : isMobile ? 'Discord 앱으로 로그인' : 'Discord로 계속하기'}
             </Button>
+            {isMobile && (
+              <p className="text-xs text-gray-500">
+                Discord 앱이 설치되어 있으면 앱으로 자동 연결됩니다.
+              </p>
+            )}
           </div>
         </Card>
       </div>

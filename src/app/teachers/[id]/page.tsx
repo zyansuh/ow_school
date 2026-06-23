@@ -7,15 +7,38 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { userDisplayName } from '@/lib/user-display';
+import type { AssignedStudent } from '@/types/db';
 
 export { dynamic } from '@/lib/segment';
 
+function parseDays(json: string | null) {
+  if (!json) return [] as string[];
+  try {
+    const v = JSON.parse(json);
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function TeacherDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const teacher = await prisma.teacher.findUnique({ where: { id }, include: { class: true } });
+  const teacher = await prisma.teacher.findUnique({
+    where: { id },
+    include: {
+      class: true,
+      assignedUsers: {
+        where: { status: 'active', adminRole: null },
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  });
   if (!teacher) notFound();
 
-  const full = !teacher.isActive || teacher.currentStudents >= teacher.maxStudents;
+  const activeCount = teacher.assignedUsers.length;
+  const full = !teacher.isActive || activeCount >= teacher.maxStudents;
+  const activityDays = parseDays(teacher.activityDays);
 
   return (
     <MainLayout>
@@ -36,11 +59,18 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                 <div className="flex flex-wrap gap-2">
                   {teacher.mbti && <Badge variant="outline">MBTI: {teacher.mbti}</Badge>}
                   <Badge variant={full ? 'danger' : 'success'}>
-                    {full ? '모집 마감' : '모집중'} ({teacher.currentStudents}/{teacher.maxStudents})
+                    {full ? '모집 마감' : '모집중'} ({activeCount}/{teacher.maxStudents})
                   </Badge>
                 </div>
               </div>
             </div>
+
+            {(activityDays.length > 0 || teacher.activityTimeSlot) && (
+              <div className="text-sm text-gray-400 space-y-1">
+                {activityDays.length > 0 && <p>활동 요일: {activityDays.join(', ')}</p>}
+                {teacher.activityTimeSlot && <p>활동 시간: {teacher.activityTimeSlot}</p>}
+              </div>
+            )}
 
             {teacher.intro && (
               <div>
@@ -50,6 +80,21 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
             )}
 
             {teacher.discord && <p className="text-sm text-gray-500">Discord: {teacher.discord}</p>}
+
+            <div>
+              <h3 className="text-sm font-medium text-gray-300 mb-3">담당 학생 ({activeCount}명)</h3>
+              {teacher.assignedUsers.length === 0 ? (
+                <p className="text-sm text-gray-500">배정된 학생이 없습니다</p>
+              ) : (
+                <ul className="space-y-2">
+                  {teacher.assignedUsers.map((u: AssignedStudent) => (
+                    <li key={u.id} className="text-sm text-gray-300 border border-gray-800 rounded-lg px-3 py-2">
+                      {userDisplayName(u)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             {full ? (
               <Button disabled className="w-full sm:w-auto">모집이 마감되었습니다</Button>

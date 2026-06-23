@@ -1,16 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireUser } from '@/lib/api-helpers';
-import { getGuildConfig, parseRoleNames, syncUserGuildDataBestEffort } from '@/lib/discord-guild';
+import { syncUserGuildDataIfStale } from '@/lib/discord-guild';
 import { userDisplayName } from '@/lib/user-display';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const user = await requireUser();
+    const refresh = req.nextUrl.searchParams.get('refresh') === '1';
 
-    if (getGuildConfig()) {
-      await syncUserGuildDataBestEffort(user.discordId);
-    }
+    await syncUserGuildDataIfStale(user.discordId, null, refresh);
 
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
@@ -24,6 +23,8 @@ export async function GET() {
     });
 
     if (!dbUser) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    const { parseRoleNames } = await import('@/lib/discord-guild');
 
     return NextResponse.json({
       ...dbUser,

@@ -58,7 +58,8 @@ export default function AdminRolesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">관리자 권한</h1>
+      <h1 className="text-2xl font-bold">관리자 리스트</h1>
+      <p className="text-sm text-gray-500">사용자 검색 후 관리자 권한을 부여하거나, 아래 목록에서 해제할 수 있습니다.</p>
       <Card className="bg-gray-900/80 border-gray-800">
         <div className="card-pad space-y-3">
           <Input
@@ -90,6 +91,9 @@ export default function AdminRolesPage() {
         </div>
       </Card>
       <Card className="bg-gray-900/80 border-gray-800 overflow-x-auto">
+        <div className="card-pad border-b border-gray-800">
+          <h2 className="font-semibold text-sm text-gray-300">권한 해제</h2>
+        </div>
         <table className="w-full text-sm">
           <thead><tr className="border-b border-gray-800 text-gray-400 text-left"><th className="p-4">서버 닉네임</th><th className="p-4">User ID</th><th className="p-4">부여일</th><th className="p-4">관리</th></tr></thead>
           <tbody>

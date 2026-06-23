@@ -7,11 +7,14 @@ import { cn } from '@/lib/utils';
 const links = [
   { href: '/admin', label: '대시보드' },
   { href: '/admin/students', label: '학생 관리' },
+  { href: '/admin/graduated', label: '졸업생' },
+  { href: '/admin/admins', label: '관리자 목록' },
   { href: '/admin/teachers', label: '선생님 관리' },
   { href: '/admin/applications', label: '신청 관리' },
   { href: '/admin/interviews', label: '졸업면담' },
+  { href: '/admin/points', label: '포인트 관리' },
   { href: '/admin/graduation-reviews', label: '졸업후기' },
-  { href: '/admin/roles', label: '관리자 권한' },
+  { href: '/admin/roles', label: '관리자 리스트' },
 ];
 
 export function AdminNav() {

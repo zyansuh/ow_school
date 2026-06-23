@@ -8,25 +8,28 @@ datasource db {
 }
 
 model User {
-  id              String        @id @default(cuid())
-  discordId       String        @unique
-  discordUsername String
-  discordNickname String?
-  discordAvatar   String?
+  id                String            @id @default(cuid())
+  discordId         String            @unique
+  discordUsername   String
+  discordNickname   String?
+  discordAvatar     String?
   discordServerNick String?
   discordRoleNames  String?
-  isInGuild         Boolean       @default(false)
-  status          String        @default("active")
-  classId         String?
-  class           Class?        @relation(fields: [classId], references: [id])
-  teacherId       String?
-  teacher         Teacher?      @relation("AssignedTeacher", fields: [teacherId], references: [id])
-  applications       Application[]
-  interviews         Interview[]
-  graduationReview   GraduationReview?
-  adminRole          AdminRole?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  siteDisplayName   String?
+  isInGuild         Boolean           @default(false)
+  guildSyncedAt     DateTime?
+  status            String            @default("active")
+  classId           String?
+  class             Class?            @relation(fields: [classId], references: [id])
+  teacherId         String?
+  teacher           Teacher?          @relation("AssignedTeacher", fields: [teacherId], references: [id])
+  applications      Application[]
+  interviews        Interview[]
+  graduationReview  GraduationReview?
+  pointHistories    PointHistory[]
+  adminRole         AdminRole?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 model Class {
@@ -42,55 +45,67 @@ model Class {
 }
 
 model Teacher {
-  id              String        @id @default(cuid())
-  name            String
-  profileImage    String?
-  mbti            String?
-  intro           String?
-  discord         String?
-  isActive        Boolean       @default(true)
-  maxStudents     Int           @default(5)
-  currentStudents Int           @default(0)
-  classId         String
-  class           Class         @relation(fields: [classId], references: [id])
-  assignedUsers   User[]        @relation("AssignedTeacher")
-  applications    Application[]
-  interviews      Interview[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id               String        @id @default(cuid())
+  name             String
+  profileImage     String?
+  mbti             String?
+  intro            String?
+  discord          String?
+  activityDays     String?
+  activityTimeSlot String?
+  isActive         Boolean       @default(true)
+  maxStudents      Int           @default(5)
+  currentStudents  Int           @default(0)
+  classId          String
+  class            Class         @relation(fields: [classId], references: [id])
+  assignedUsers    User[]        @relation("AssignedTeacher")
+  applications     Application[]
+  interviews       Interview[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 }
 
 model Application {
-  id         String   @id @default(cuid())
-  userId     String?
-  user       User?    @relation(fields: [userId], references: [id])
-  nickname   String
-  discord    String
-  experience String?
-  tier       String?
-  goal       String?
-  selfIntro  String?
-  teacherId  String
-  teacher    Teacher  @relation(fields: [teacherId], references: [id])
-  classId    String
-  class      Class    @relation(fields: [classId], references: [id])
-  status     String   @default("pending")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String   @id @default(cuid())
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id])
+  nickname     String
+  discord      String
+  playTimeSlot String?
+  teacherId    String
+  teacher      Teacher  @relation(fields: [teacherId], references: [id])
+  classId      String
+  class        Class    @relation(fields: [classId], references: [id])
+  status       String   @default("approved")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Interview {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
-  nickname     String
-  teacherId    String?
-  teacher      Teacher? @relation(fields: [teacherId], references: [id])
-  satisfaction Int
-  memorable    String
-  improvements String?
-  review       String
-  createdAt    DateTime @default(now())
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  nickname          String
+  className         String?
+  teacherId         String?
+  teacher           Teacher? @relation(fields: [teacherId], references: [id])
+  contentExperience String
+  memorablePerson   String
+  joinedClub        Boolean  @default(false)
+  clubNames         String?
+  createdAt         DateTime @default(now())
+}
+
+model PointHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointType   String
+  pointAmount Int
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([pointType])
 }
 
 model GraduationReview {
