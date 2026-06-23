@@ -30,6 +30,11 @@ export function getGuildConfig() {
   return { guildId, botToken };
 }
 
+/** 로그인 게이트를 통과한 사용자는 길드 가입으로 간주 */
+export function resolveMembershipForSession(dbIsInGuild: boolean): boolean {
+  return getGuildConfig() ? true : dbIsInGuild;
+}
+
 export async function isUserInGuildViaOAuth(
   accessToken: string,
   guildId: string,
@@ -194,16 +199,22 @@ export async function getGuildMemberInfo(discordUserId: string): Promise<GuildMe
   const member = await fetchGuildMember(discordUserId);
   if (member === 'api_error') {
     const existing = await prisma.user.findUnique({ where: { discordId: discordUserId } });
-    if (existing?.isInGuild) {
+    if (existing) {
       return {
-        isInGuild: true,
+        isInGuild: resolveMembershipForSession(existing.isInGuild),
         guildNickname: existing.discordServerNick,
         globalDisplayName: existing.discordNickname,
         username: existing.discordUsername,
         roleNames: parseRoleNames(existing.discordRoleNames),
       };
     }
-    return { isInGuild: false, guildNickname: null, globalDisplayName: null, username: '', roleNames: [] };
+    return {
+      isInGuild: resolveMembershipForSession(false),
+      guildNickname: null,
+      globalDisplayName: null,
+      username: '',
+      roleNames: [],
+    };
   }
   if (!member) {
     return { isInGuild: false, guildNickname: null, globalDisplayName: null, username: '', roleNames: [] };
@@ -215,16 +226,29 @@ export async function getGuildMemberInfo(discordUserId: string): Promise<GuildMe
 }
 
 async function persistGuildInfo(discordUserId: string, info: GuildMemberInfo) {
+  const existing = await prisma.user.findUnique({ where: { discordId: discordUserId } });
   await prisma.user.update({
     where: { discordId: discordUserId },
     data: {
       isInGuild: info.isInGuild,
       discordServerNick: info.guildNickname,
-      discordNickname: info.globalDisplayName,
-      discordRoleNames: JSON.stringify(info.roleNames),
+      discordNickname: info.globalDisplayName ?? existing?.discordNickname ?? null,
+      discordRoleNames: info.roleNames.length
+        ? JSON.stringify(info.roleNames)
+        : existing?.discordRoleNames ?? '[]',
       guildSyncedAt: new Date(),
     },
   });
+}
+
+export async function syncUserGuildData(discordUserId: string) {
+  const member = await fetchGuildMember(discordUserId);
+  if (member === 'api_error') {
+    return getGuildMemberInfo(discordUserId);
+  }
+  const info = await getGuildMemberInfo(discordUserId);
+  await persistGuildInfo(discordUserId, info);
+  return info;
 }
 
 export async function syncUserGuildDataBestEffort(
@@ -240,15 +264,18 @@ export async function syncUserGuildDataBestEffort(
       const roles = await fetchGuildRoles();
       const roleNames = roles.length > 0 ? resolveRoleNames(member.roles, roles) : [];
       const info = memberToGuildInfo(member, roleNames);
+      const existing = await prisma.user.findUnique({ where: { discordId: discordUserId } });
 
       await prisma.user.update({
         where: { discordId: discordUserId },
         data: {
           isInGuild: true,
           discordServerNick: info.guildNickname,
-          discordNickname: info.globalDisplayName,
+          discordNickname: info.globalDisplayName ?? existing?.discordNickname ?? null,
           discordUsername: member.user.username,
-          discordRoleNames: JSON.stringify(roleNames),
+          discordRoleNames: roleNames.length
+            ? JSON.stringify(roleNames)
+            : existing?.discordRoleNames ?? '[]',
           guildSyncedAt: new Date(),
         },
       });
@@ -257,12 +284,6 @@ export async function syncUserGuildDataBestEffort(
   }
 
   return syncUserGuildData(discordUserId);
-}
-
-export async function syncUserGuildData(discordUserId: string) {
-  const info = await getGuildMemberInfo(discordUserId);
-  await persistGuildInfo(discordUserId, info);
-  return info;
 }
 
 const GUILD_SYNC_TTL_MS = 5 * 60 * 1000;

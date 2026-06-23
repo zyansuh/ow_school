@@ -15,7 +15,7 @@ export async function PATCH(req: NextRequest) {
     const body = schema.parse(await req.json());
 
     const data: { activityDays?: string; activityTimeSlot?: string | null } = {};
-    if (body.activityDays) {
+    if (body.activityDays !== undefined) {
       const days = body.activityDays.filter((d) =>
         (ACTIVITY_DAYS as readonly string[]).includes(d),
       );
@@ -27,6 +27,10 @@ export async function PATCH(req: NextRequest) {
         (ACTIVITY_TIME_SLOTS as readonly string[]).includes(body.activityTimeSlot)
           ? body.activityTimeSlot
           : body.activityTimeSlot;
+    }
+
+    if (!Object.keys(data).length) {
+      return NextResponse.json({ error: '변경할 항목이 없습니다' }, { status: 400 });
     }
 
     const updated = await prisma.teacher.update({

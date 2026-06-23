@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireUser } from '@/lib/api-helpers';
-import { syncUserGuildDataIfStale } from '@/lib/discord-guild';
+import { syncUserGuildDataIfStale, resolveMembershipForSession } from '@/lib/discord-guild';
 import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 
 export async function GET(req: NextRequest) {
@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
       displayName: userDisplayName(normalizeNickFields(dbUser)),
       serverNickname: dbUser.discordServerNick,
       globalDisplayName: dbUser.discordNickname,
+      isInGuild: resolveMembershipForSession(dbUser.isInGuild),
     });
   } catch (e) {
     return apiError(e);

@@ -96,7 +96,12 @@ export default function TeacherDashboardPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">선생님 마이페이지</h1>
           <p className="text-gray-400 text-sm mt-1">{data.teacher.name} · {data.teacher.className}</p>
         </div>
-        <Link href="/mypage" className="text-sm text-purple-400">일반 마이페이지</Link>
+        <div className="flex gap-3">
+          <Link href="/teacher/students" className="text-sm text-purple-400 hover:text-purple-300">
+            학생 관리
+          </Link>
+          <Link href="/mypage" className="text-sm text-purple-400">일반 마이페이지</Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
