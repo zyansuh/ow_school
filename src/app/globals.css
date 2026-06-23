@@ -51,4 +51,12 @@
   .laser-border-blue { color: rgb(96 165 250); }
   .laser-border-orange { color: rgb(251 146 60); }
   .laser-border-purple { color: rgb(192 132 252); }
+
+  @keyframes float-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .animate-float-bob {
+    animation: float-bob 2.5s ease-in-out infinite;
+  }
 }
