@@ -18,6 +18,8 @@ export type AdminTeacher = {
   currentStudents: number;
   classId: string;
   class: { name: string; slug: string };
+  classes?: { id: string; name: string; slug: string }[];
+  classIds?: string[];
 };
 
 export type ClassItem = { id: string; name: string };
@@ -30,6 +32,7 @@ export type TeacherFormState = {
   discord: string;
   discordUserId: string;
   classId: string;
+  classIds: string[];
   maxStudents: number;
   isActive: boolean;
   activityDays: string[];
@@ -44,6 +47,7 @@ export const emptyTeacherForm: TeacherFormState = {
   discord: '',
   discordUserId: '',
   classId: '',
+  classIds: [],
   maxStudents: 5,
   isActive: true,
   activityDays: [],
@@ -64,42 +68,75 @@ export function useAdminTeachers() {
   const [teachers, setTeachers] = useState<AdminTeacher[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
+    setLoading(true);
     return Promise.all([
       fetch('/api/admin/teachers').then((r) => r.json()),
       fetch('/api/classes').then((r) => r.json()),
-    ]).then(([t, c]) => {
-      setTeachers(t);
-      setClasses(c.map((item: { id: string; name: string }) => ({ id: item.id, name: item.name })));
-      setLoading(false);
-    });
+    ])
+      .then(([t, c]) => {
+        setTeachers(Array.isArray(t) ? t : []);
+        setClasses(
+          Array.isArray(c)
+            ? c.map((item: { id: string; name: string }) => ({ id: item.id, name: item.name }))
+            : [],
+        );
+      })
+      .catch(() => {
+        toast.error('선생님 목록을 불러오지 못했습니다');
+        setTeachers([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const save = async (editingId: string | null, form: TeacherFormState) => {
-    const url = editingId ? `/api/admin/teachers/${editingId}` : '/api/admin/teachers';
-    const method = editingId ? 'PATCH' : 'POST';
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...form,
-        discordUserId: form.discordUserId.trim() || null,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      toast.error(data.error || '저장 실패');
+    if (form.classIds.length === 0) {
+      toast.error('담당 반을 1개 이상 선택하세요');
       return false;
     }
-    toast.success('저장되었습니다');
-    await load();
-    return true;
+
+    setSaving(true);
+    try {
+      const url = editingId ? `/api/admin/teachers/${editingId}` : '/api/admin/teachers';
+      const method = editingId ? 'PATCH' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          profileImage: form.profileImage.trim() || undefined,
+          mbti: form.mbti || undefined,
+          intro: form.intro.trim() || undefined,
+          discord: form.discord.trim() || undefined,
+          discordUserId: form.discordUserId.trim() || null,
+          classIds: form.classIds,
+          maxStudents: form.maxStudents,
+          isActive: form.isActive,
+          activityDays: form.activityDays,
+          activityTimeSlot: form.activityTimeSlot.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || '저장 실패');
+        return false;
+      }
+      toast.success('저장되었습니다');
+      await load();
+      return true;
+    } catch {
+      toast.error('저장 실패');
+      return false;
+    } finally {
+      setSaving(false);
+    }
   };
 
   const remove = async (id: string) => {
@@ -123,13 +160,18 @@ export function useAdminTeachers() {
   };
 
   const toggleActive = async (teacher: AdminTeacher) => {
-    await fetch(`/api/admin/teachers/${teacher.id}`, {
+    const res = await fetch(`/api/admin/teachers/${teacher.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive: !teacher.isActive }),
     });
+    if (!res.ok) {
+      toast.error('상태 변경 실패');
+      return;
+    }
+    toast.success(teacher.isActive ? '비활성화되었습니다' : '활성화되었습니다');
     await load();
   };
 
-  return { teachers, classes, loading, deletingId, load, save, remove, toggleActive };
+  return { teachers, classes, loading, saving, deletingId, load, save, remove, toggleActive };
 }
