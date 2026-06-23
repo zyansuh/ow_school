@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resolveAuthUrl } from '@/lib/auth-url';
+import { isBotInGuild } from '@/lib/discord-guild';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,16 @@ export async function GET() {
     db = `ok (${classCount} classes)`;
   } catch (e) {
     db = e instanceof Error ? e.message : 'error';
+  }
+
+  if (process.env.DISCORD_GUILD_ID && process.env.DISCORD_BOT_TOKEN) {
+    const botOk = await isBotInGuild();
+    checks.DISCORD_BOT_IN_GUILD = botOk ? 'yes' : 'no';
+    if (!botOk) {
+      warnings.push(
+        '봇이 DISCORD_GUILD_ID 서버에 없거나 서버 ID가 틀렸습니다. 디스코드 서버에 OW_School 봇을 초대하세요.'
+      );
+    }
   }
 
   return NextResponse.json({ ok: db.startsWith('ok'), db, env: checks, warnings });
