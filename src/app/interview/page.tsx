@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/layout/main-layout';
@@ -10,10 +10,13 @@ import { Input, Label, Textarea, Select } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { toast } from 'sonner';
 
+type TeacherOption = { id: string; name: string; class: { name: string } };
+
 export default function InterviewPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
   const [form, setForm] = useState({
     nickname: '',
     teacherId: '',
@@ -22,6 +25,21 @@ export default function InterviewPage() {
     improvements: '',
     review: '',
   });
+
+  useEffect(() => {
+    if (!session) return;
+    Promise.all([
+      fetch('/api/teachers').then((r) => r.json()),
+      fetch('/api/me').then((r) => r.json()),
+    ]).then(([teacherList, me]) => {
+      setTeachers(teacherList);
+      setForm((f) => ({
+        ...f,
+        nickname: f.nickname || session.user.discordNickname || session.user.discordUsername || '',
+        teacherId: me?.teacherId || f.teacherId,
+      }));
+    });
+  }, [session]);
 
   if (status === 'loading') return <MainLayout><LoadingPage /></MainLayout>;
 
@@ -66,8 +84,25 @@ export default function InterviewPage() {
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">졸업면담</h1>
         <Card className="bg-gray-900/80 border-gray-800 max-w-lg mx-auto">
           <form onSubmit={handleSubmit} className="card-pad space-y-5">
-            <div><Label>닉네임 *</Label><Input required value={form.nickname || session.user.discordNickname || ''} onChange={(e) => setForm({ ...form, nickname: e.target.value })} className="mt-2" /></div>
-            <div><Label>담당 선생님 ID (선택)</Label><Input value={form.teacherId} onChange={(e) => setForm({ ...form, teacherId: e.target.value })} placeholder="자동 해제됩니다" className="mt-2" /></div>
+            <div>
+              <Label>닉네임 *</Label>
+              <Input required value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} className="mt-2" />
+            </div>
+            <div>
+              <Label>담당 선생님 (선택)</Label>
+              <Select
+                value={form.teacherId}
+                onChange={(e) => setForm({ ...form, teacherId: e.target.value })}
+                className="mt-2"
+              >
+                <option value="">선택 안 함</option>
+                {teachers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.class.name})
+                  </option>
+                ))}
+              </Select>
+            </div>
             <div>
               <Label>수업 만족도 *</Label>
               <Select required value={form.satisfaction} onChange={(e) => setForm({ ...form, satisfaction: e.target.value })} className="mt-2">
