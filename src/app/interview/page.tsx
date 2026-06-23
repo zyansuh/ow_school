@@ -16,6 +16,7 @@ import { CLUB_POINT, CLUB_RECOMMENDATION_URL, formatPoint, GRADUATION_POINT } fr
 import { Plus } from 'lucide-react';
 
 type MeData = {
+  discordId?: string;
   displayName?: string;
   discordUsername?: string;
   discordServerNick?: string | null;
@@ -122,6 +123,8 @@ export default function InterviewPage() {
       })
     : '—';
 
+  const authorDiscordId = me?.discordId ?? session.user.discordId ?? '—';
+
   const addClubField = () => {
     if (form.clubNames.length >= 3) return;
     setForm({ ...form, clubNames: [...form.clubNames, ''] });
@@ -180,8 +183,9 @@ export default function InterviewPage() {
         </h1>
 
         <Card className={`${ds.card} max-w-lg mx-auto`}>
-          <div className={`${ds.cardPad} grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-border`}>
+          <div className={`${ds.cardPad} grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-border`}>
             <ReadOnlyField label="작성자" value={authorName} />
+            <ReadOnlyField label="Discord User ID" value={authorDiscordId} />
             <ReadOnlyField label="담당 선생님" value={resolveTeacherName(me)} />
             <ReadOnlyField label="반" value={resolveClassName(me)} />
           </div>

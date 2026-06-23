@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 
 type MeData = {
+  discordId?: string;
   displayName: string;
   serverNickname?: string | null;
   globalDisplayName?: string | null;

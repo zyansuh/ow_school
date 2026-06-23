@@ -95,6 +95,10 @@ export default function MyPage() {
                 <span className="text-gray-500">디스코드 유저명</span>
                 <p className="text-gray-200 mt-1">@{data?.discordUsername}</p>
               </div>
+              <div>
+                <span className="text-gray-500">Discord User ID</span>
+                <p className="text-gray-200 mt-1 font-mono text-xs">{data?.discordId ?? session.user.discordId}</p>
+              </div>
               <div className="sm:col-span-2">
                 <span className="text-gray-500">서버 역할</span>
                 <div className="flex flex-wrap gap-2 mt-2">

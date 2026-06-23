@@ -18,6 +18,7 @@ import { SITE_NAME } from '@/lib/site-brand';
 import { resolveDisplayName, type UserNickFields } from '@/lib/user-display';
 
 type MeData = UserNickFields & {
+  discordId?: string;
   displayName?: string;
   class?: { name: string } | null;
   graduationReview?: { id: string } | null;
@@ -91,6 +92,7 @@ export function GraduationReviewFab() {
   };
 
   const authorName = resolveAuthorName(me, session?.user);
+  const authorDiscordId = me?.discordId ?? session?.user?.discordId ?? '—';
 
   return (
     <>
@@ -121,10 +123,14 @@ export function GraduationReviewFab() {
             <p className="text-sm text-gray-400 py-4">이미 졸업후기를 작성하셨습니다. 감사합니다!</p>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-gray-500 text-xs mb-1">작성자</p>
                   <p className="text-gray-200">{authorName}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-xs mb-1">Discord User ID</p>
+                  <p className="text-gray-200 font-mono text-xs">{authorDiscordId}</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-xs mb-1">반</p>
