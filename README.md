@@ -2,32 +2,31 @@
 
 Next.js(App Router) 기반 게임 멘토링 클래스 플랫폼
 
+**배포 URL**: https://ow-school.vercel.app
+
 ## 기술 스택
 
 - **Frontend/Backend**: Next.js 15 · TypeScript · App Router
 - **Auth**: NextAuth.js · Discord OAuth2
-- **DB**: Prisma · SQLite
+- **DB**: Prisma · PostgreSQL (Vercel/Neon 권장)
 - **UI**: Tailwind CSS · 다크모드
 
 ## 폴더 구조
 
 ```
 peaceful_game/
-├── assets/
-│   ├── 2026-05-25/          # 원본 에셋 (배너, 마스코트, 로고)
-│   ├── 2026-05-26/
-│   └── images/              # 정리된 이미지
+├── assets/                  # 원본 에셋
 ├── prisma/
-│   ├── schema.prisma        # DB 스키마
-│   └── seed.ts              # 시드 데이터
-├── public/images/           # 웹 서빙 이미지
+│   ├── schema.prisma
+│   └── seed.ts
+├── public/images/
 └── src/
     ├── app/                 # 페이지 · API Routes
-    ├── components/          # UI · 레이아웃 · 관리자
-    └── lib/                   # auth, prisma, rbac, constants
+    ├── components/
+    └── lib/
 ```
 
-## 시작하기
+## 로컬 개발
 
 ### 1. 환경 변수
 
@@ -35,13 +34,18 @@ peaceful_game/
 cp .env.example .env
 ```
 
-Discord Developer Portal에서 OAuth2 앱 생성 후:
+| 변수 | 설명 |
+|------|------|
+| `DATABASE_URL` | PostgreSQL 연결 문자열 |
+| `AUTH_SECRET` | NextAuth JWT 암호화용 랜덤 문자열 |
+| `DISCORD_CLIENT_ID` | Discord OAuth 앱 ID |
+| `DISCORD_CLIENT_SECRET` | Discord OAuth 시크릿 |
+| `NEXTAUTH_URL` | `http://localhost:3000` |
 
-- `DISCORD_CLIENT_ID`
-- `DISCORD_CLIENT_SECRET`
-- `NEXTAUTH_SECRET` (랜덤 문자열)
+Discord Developer Portal Redirect URI:
 
-Redirect URI: `http://localhost:3000/api/auth/callback/discord`
+- 로컬: `http://localhost:3000/api/auth/callback/discord`
+- 프로덕션: `https://ow-school.vercel.app/api/auth/callback/discord`
 
 ### 2. 설치 및 DB
 
@@ -56,7 +60,22 @@ npm run db:setup
 npm run dev
 ```
 
-http://localhost:3000
+## Vercel 배포
+
+1. [Neon](https://neon.tech) 또는 Vercel Postgres로 DB 생성
+2. Vercel 프로젝트 환경 변수 설정:
+   - `DATABASE_URL`
+   - `AUTH_SECRET`
+   - `DISCORD_CLIENT_ID`
+   - `DISCORD_CLIENT_SECRET`
+   - `NEXTAUTH_URL` = `https://ow-school.vercel.app`
+3. 배포 후 한 번 실행 (Vercel Shell 또는 로컬에서 프로덕션 URL로):
+
+```bash
+npm run db:setup
+```
+
+4. Discord 개발자 포털에 프로덕션 Redirect URI 등록
 
 ## 기본 관리자
 
@@ -71,13 +90,12 @@ http://localhost:3000
 
 | 경로 | 설명 |
 |------|------|
-| `/` | 메인 (Hero, 클래스 소개) |
+| `/` | 메인 (Hero, 클래스 소개, 공지) |
 | `/classes/[slug]` | 반별 페이지 |
 | `/teachers` | 선생님 목록 |
-| `/teachers/[id]` | 선생님 상세 |
 | `/apply` | 수강 신청 |
 | `/interview` | 졸업면담 |
 | `/mypage` | 마이페이지 |
 | `/admin` | 관리자 대시보드 |
 
-관리자 버튼은 우측 하단에 작게 표시됩니다 (관리자만 보임).
+관리자 버튼은 우측 하단에 표시됩니다 (관리자만 보임).
