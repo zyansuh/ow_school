@@ -4,44 +4,15 @@ import { unstable_cache } from 'next/cache';
 import { ClipboardList, Megaphone, Users, GraduationCap, UserCheck } from 'lucide-react';
 import { GAME_CLASSES } from '@/lib/constants';
 import { prisma } from '@/lib/prisma';
-import { DEFAULT_NOTICES, defaultClassStats } from '@/lib/db-fallbacks';
-import { getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
+import { DEFAULT_NOTICES } from '@/lib/db-fallbacks';
+import { getHomeClassStats } from '@/lib/home-class-stats';
 import { getHomeSiteStats } from '@/lib/home-stats';
 import { SITE_NAME } from '@/lib/site-brand';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, PageCardBody } from '@/components/ui/card';
 import { StatCard } from '@/components/ui/stat-card';
-import { ClassCard } from '@/components/cards/class-card';
-import type { ClassWithTeachers } from '@/types/db';
-
-type ClassStats = Record<string, { recruiting: boolean; current: number; max: number }>;
-
-const getClassStats = unstable_cache(
-  async (): Promise<ClassStats> => {
-    try {
-      const classes: ClassWithTeachers[] = await prisma.class.findMany({
-        include: { teachers: { where: { isActive: true } } },
-      });
-      const liveCounts = await getActiveStudentCountsByTeacher();
-      return Object.fromEntries(
-        classes.map((c) => [
-          c.slug,
-          {
-            recruiting: c.teachers.some((t) => (liveCounts[t.id] ?? 0) < t.maxStudents),
-            current: c.teachers.reduce((sum, t) => sum + (liveCounts[t.id] ?? 0), 0),
-            max: c.teachers.reduce((sum, t) => sum + t.maxStudents, 0),
-          },
-        ]),
-      );
-    } catch (e) {
-      console.error('[home] getClassStats failed:', e);
-      return defaultClassStats();
-    }
-  },
-  ['home-class-stats'],
-  { revalidate: 60 },
-);
+import { ClassCard } from '@/components/cards';
 
 const getNotices = unstable_cache(
   async (): Promise<string[]> => {
@@ -59,7 +30,11 @@ const getNotices = unstable_cache(
 );
 
 export async function HomeContent() {
-  const [stats, notices, siteStats] = await Promise.all([getClassStats(), getNotices(), getHomeSiteStats()]);
+  const [stats, notices, siteStats] = await Promise.all([
+    getHomeClassStats(),
+    getNotices(),
+    getHomeSiteStats(),
+  ]);
 
   return (
     <div className="section-gap pb-16 page-enter">
