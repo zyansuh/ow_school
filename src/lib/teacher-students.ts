@@ -124,7 +124,7 @@ export async function getTeacherStudents(teacherId: string) {
       id: u.id,
       serverNickname: userDisplayName(normalizeNickFields(u)),
       className,
-      applicationDate: app?.createdAt.toISOString() ?? null,
+      applicationDate: app?.createdAt.toISOString() ?? u.createdAt.toISOString(),
       status: u.status,
       isGraduated: u.status === 'graduated',
       hasInterview: !!interview,

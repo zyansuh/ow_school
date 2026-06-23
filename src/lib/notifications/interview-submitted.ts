@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
-import { userDisplayName, normalizeNickFields } from '@/lib/user-display';
+import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
 import { sendDiscordDirectMessage, sendDiscordWebhook } from '@/lib/discord/notify';
+import { formatDateTime } from '@/lib/utils';
 import { SITE_NAME } from '@/lib/site-brand';
 
 type InterviewNotifyPayload = {
@@ -11,37 +12,47 @@ type InterviewNotifyPayload = {
 };
 
 export async function notifyInterviewSubmitted(payload: InterviewNotifyPayload) {
-  const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    include: { teacher: true },
-  });
-  if (!user) return;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      include: { teacher: true },
+    });
+    if (!user) return;
 
-  const displayName = userDisplayName(normalizeNickFields(user));
-  const teacherName = user.teacher?.name ?? '미배정';
+    const studentName = adminUserDisplayName(normalizeNickFields(user));
+    const submittedAt = formatDateTime(new Date());
 
-  const summary = [
-    `**[${SITE_NAME}] 졸업면담 제출**`,
-    `학생: ${displayName}`,
-    `반: ${payload.className}`,
-    `담당 선생님: ${teacherName}`,
-    `면담 ID: \`${payload.interviewId}\``,
-  ].join('\n');
+    const dmBody = [
+      '졸업면담이 제출되었습니다.',
+      '',
+      `학생 : ${studentName}`,
+      `반 : ${payload.className}`,
+      `제출일 : ${submittedAt}`,
+      '',
+      '관리자 페이지에서 확인해주세요.',
+    ].join('\n');
 
-  await Promise.allSettled([
-    sendDiscordWebhook(summary),
-    payload.teacherId
-      ? (async () => {
-          const teacher = await prisma.teacher.findUnique({
-            where: { id: payload.teacherId! },
-            select: { discordUserId: true, name: true },
-          });
-          if (!teacher?.discordUserId) return false;
-          return sendDiscordDirectMessage(
-            teacher.discordUserId,
-            `담당 학생 **${displayName}**님이 졸업면담을 제출했습니다.\n반: ${payload.className}`,
-          );
-        })()
-      : Promise.resolve(false),
-  ]);
+    const webhookSummary = [
+      `**[${SITE_NAME}] 졸업면담 제출**`,
+      `학생: ${studentName}`,
+      `반: ${payload.className}`,
+      `담당 선생님: ${user.teacher?.name ?? '미배정'}`,
+    ].join('\n');
+
+    await Promise.allSettled([
+      sendDiscordWebhook(webhookSummary),
+      payload.teacherId
+        ? (async () => {
+            const teacher = await prisma.teacher.findUnique({
+              where: { id: payload.teacherId! },
+              select: { discordUserId: true },
+            });
+            if (!teacher?.discordUserId) return false;
+            return sendDiscordDirectMessage(teacher.discordUserId, dmBody);
+          })()
+        : Promise.resolve(false),
+    ]);
+  } catch (e) {
+    console.warn('[notify-interview] failed:', e);
+  }
 }

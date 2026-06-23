@@ -38,7 +38,7 @@ export async function getTeacherAssignedStudentRows(teacherId: string): Promise<
       id: u.id,
       serverNickname: userDisplayName(normalizeNickFields(u)),
       className: u.class?.name ?? app?.class?.name ?? interview?.className ?? '미배정',
-      applicationDate: app?.createdAt.toISOString() ?? null,
+      applicationDate: app?.createdAt.toISOString() ?? u.createdAt.toISOString(),
       isGraduated: u.status === 'graduated',
       hasInterview: !!interview,
     };

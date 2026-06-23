@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingPage, EmptyState } from '@/components/ui/loading';
-import { formatDate, STATUS_LABELS } from '@/lib/utils';
+import { formatDate, formatDateTime, STATUS_LABELS } from '@/lib/utils';
 import { formatPoint, POINT_TYPE_LABELS } from '@/lib/points';
 import {
   Dialog,
@@ -126,7 +126,7 @@ export default function TeacherStudentsPage() {
                       <td className="px-3 py-2 text-gray-200 whitespace-nowrap">{s.serverNickname}</td>
                       <td className="px-3 py-2 text-gray-400">{s.className}</td>
                       <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
-                        {s.applicationDate ? formatDate(s.applicationDate) : '-'}
+                        {s.applicationDate ? formatDateTime(s.applicationDate) : '-'}
                       </td>
                       <td className="px-3 py-2">
                         <Badge variant="outline">{STATUS_LABELS[s.status] ?? s.status}</Badge>
@@ -173,7 +173,7 @@ export default function TeacherStudentsPage() {
                   <h3 className="font-medium text-gray-300 mb-2">수강 신청</h3>
                   {detail.application ? (
                     <div className="space-y-1 text-gray-400">
-                      <p>신청일: {formatDate(detail.application.createdAt)}</p>
+                      <p>신청일: {formatDateTime(detail.application.createdAt)}</p>
                       <p>상태: {STATUS_LABELS[detail.application.status]}</p>
                       <p>활동 시간대: {detail.application.playTimeSlot ?? '-'}</p>
                     </div>

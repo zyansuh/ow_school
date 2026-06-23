@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { applyApplicationStatusChange } from '@/lib/applications';
 import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
 import { initialApplicationStatus } from '@/lib/applications/policy';
+import { notifyApplicationSubmitted } from '@/lib/notifications/application-submitted';
+import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
 
 export type CreateApplicationInput = {
   userId: string;
@@ -38,14 +40,18 @@ export async function assertCanApply(userId: string, teacherId: string) {
 }
 
 export async function createApplication(input: CreateApplicationInput) {
-  const { teacher } = await assertCanApply(input.userId, input.teacherId);
+  const { teacher, dbUser } = await assertCanApply(input.userId, input.teacherId);
   const status = initialApplicationStatus();
+
+  const displayName = dbUser
+    ? adminUserDisplayName(normalizeNickFields(dbUser))
+    : input.nickname;
 
   const app = await prisma.application.create({
     data: {
       userId: input.userId,
-      nickname: input.nickname,
-      discord: input.discord,
+      nickname: displayName,
+      discord: dbUser?.discordId ?? input.discord,
       playTimeSlot: input.playTimeSlot,
       teacherId: teacher.id,
       classId: teacher.classId,
@@ -64,6 +70,13 @@ export async function createApplication(input: CreateApplicationInput) {
       'approved',
     );
   }
+
+  void notifyApplicationSubmitted({
+    applicationId: app.id,
+    userId: input.userId,
+    teacherId: teacher.id,
+    className: teacher.class.name,
+  });
 
   return app;
 }
