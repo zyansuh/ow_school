@@ -4,35 +4,108 @@
 
 @layer base {
   :root {
-    --background: 222 47% 5%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 8%;
+    /* Discord-inspired dark palette */
+    --background: 222 20% 7%;       /* #0F1117 */
+    --foreground: 210 40% 98%;      /* #F8FAFC */
+    --card: 216 24% 11%;            /* #161B22 */
+    --card-hover: 220 26% 15%;      /* #1C2333 */
     --card-foreground: 210 40% 98%;
-    --primary: 263 70% 58%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
+    --surface: 216 22% 9%;
+    --primary: 235 86% 65%;         /* #5865F2 */
+    --primary-hover: 235 54% 55%;   /* #4752C4 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 227 58% 65%;       /* #7289DA */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 216 20% 14%;
+    --muted-foreground: 215 16% 65%; /* #94A3B8 */
+    --subtle: 215 14% 55%;
+    --accent: 220 26% 15%;
     --accent-foreground: 210 40% 98%;
-    --border: 217 33% 20%;
-    --input: 217 33% 20%;
-    --ring: 263 70% 58%;
-    --radius: 0.75rem;
+    --border: 218 25% 22%;          /* #2D3748 */
+    --input: 218 25% 22%;
+    --ring: 235 86% 65%;
+    --success: 142 71% 45%;         /* #22C55E */
+    --warning: 38 92% 50%;          /* #F59E0B */
+    --danger: 0 84% 60%;            /* #EF4444 */
+    --radius: 0.75rem;              /* 12px */
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.03);
+    --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(88, 101, 242, 0.15);
   }
 
-  * { @apply border-border; }
-  body { @apply bg-background text-foreground antialiased; font-family: 'Pretendard', system-ui, sans-serif; }
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Pretendard', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
 }
 
 @layer components {
-  .page-container { @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8; }
-  .heading-section { @apply text-xl sm:text-2xl font-bold; }
-  .card-pad { @apply p-5 sm:p-6; }
-  .btn-pad { @apply px-5 py-3 sm:px-6 sm:py-3.5; }
-  .section-gap { @apply space-y-6 sm:space-y-8; }
-  .laser-border { position: relative; }
+  .page-container {
+    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .admin-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6;
+  }
+
+  .heading-section {
+    @apply text-lg sm:text-xl font-semibold tracking-tight text-foreground;
+  }
+
+  .card-pad {
+    @apply p-4 sm:p-6;
+  }
+
+  .btn-pad {
+    @apply px-5 py-2.5 sm:px-6 sm:py-3;
+  }
+
+  .section-gap {
+    @apply space-y-6 sm:space-y-8;
+  }
+
+  .page-enter {
+    animation: page-enter 0.35s ease-out both;
+  }
+
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .skeleton-shimmer {
+    @apply relative overflow-hidden bg-muted rounded-lg;
+  }
+
+  .skeleton-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Class cards — laser border accent */
+  .laser-border {
+    position: relative;
+  }
+
   .laser-border::before {
     content: '';
     position: absolute;
@@ -47,16 +120,12 @@
     transition: opacity 0.3s;
     pointer-events: none;
   }
-  .laser-border:hover::before { opacity: 0.5; }
-  .laser-border-blue { color: rgb(96 165 250); }
-  .laser-border-orange { color: rgb(251 146 60); }
-  .laser-border-purple { color: rgb(192 132 252); }
 
-  @keyframes float-bob {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
+  .laser-border:hover::before {
+    opacity: 0.45;
   }
-  .animate-float-bob {
-    animation: float-bob 2.5s ease-in-out infinite;
-  }
+
+  .laser-border-blue { color: rgb(88 101 242); }
+  .laser-border-orange { color: rgb(245 158 11); }
+  .laser-border-purple { color: rgb(114 137 218); }
 }

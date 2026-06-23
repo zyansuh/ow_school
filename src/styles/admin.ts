@@ -1,9 +1,9 @@
-/** 관리자·대시보드 공용 스타일 클래스 */
+/** @deprecated design-system.ts (ds) 사용 권장 */
 export const adminStyles = {
-  card: 'bg-gray-900/80 border-gray-800',
+  card: 'bg-card border-border shadow-card',
   cardPad: 'card-pad',
-  tableHead: 'border-b border-gray-800 text-gray-400 text-left',
-  tableRow: 'border-b border-gray-800/50',
-  muted: 'text-sm text-gray-400',
-  warning: 'text-amber-400',
+  tableHead: 'border-b border-border text-muted-foreground text-xs font-medium uppercase tracking-wider text-left',
+  tableRow: 'border-b border-border/50 hover:bg-card-hover/50 transition-colors',
+  muted: 'text-sm text-muted-foreground',
+  warning: 'text-warning',
 } as const;
