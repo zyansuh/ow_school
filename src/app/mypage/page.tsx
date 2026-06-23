@@ -10,8 +10,10 @@ import { Input, Label } from '@/components/ui/input';
 import { LoadingPage, EmptyState } from '@/components/ui/loading';
 import { STATUS_LABELS, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
+import { userDisplayName } from '@/lib/user-display';
 
 type MeData = {
+  displayName: string;
   discordNickname: string | null;
   discordUsername: string;
   discordServerNick: string | null;
@@ -35,7 +37,7 @@ export default function MyPage() {
       .then((r) => r.json())
       .then((d) => {
         setData(d);
-        setNickInput(d.discordServerNick || d.discordNickname || d.discordUsername || '');
+        setNickInput(d.displayName || userDisplayName(d));
       });
 
   useEffect(() => {
@@ -80,7 +82,7 @@ export default function MyPage() {
     );
   }
 
-  const displayNick = data?.discordServerNick || data?.discordNickname || data?.discordUsername;
+  const displayNick = data?.displayName ?? (data ? userDisplayName(data) : '');
 
   return (
     <MainLayout>

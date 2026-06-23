@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input, Label, Textarea, Select } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { toast } from 'sonner';
+import { userDisplayName } from '@/lib/user-display';
 
 type Teacher = { id: string; name: string; class: { name: string } };
 
@@ -39,7 +40,7 @@ function ApplyForm() {
       setForm((f) => ({
         ...f,
         discord: session.user.discordUsername,
-        nickname: session.user.discordServerNick || session.user.discordNickname || session.user.discordUsername,
+        nickname: userDisplayName(session.user),
       }));
     }
   }, [session]);
