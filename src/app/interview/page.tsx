@@ -11,6 +11,7 @@ import { LoadingPage } from '@/components/ui/loading';
 import { toast } from 'sonner';
 import { resolveDisplayName } from '@/lib/user-display';
 import { GraduationReviewFab } from '@/components/interview/graduation-review-fab';
+import { ds } from '@/styles/design-system';
 import { CLUB_POINT, CLUB_RECOMMENDATION_URL, formatPoint, GRADUATION_POINT } from '@/lib/points';
 import { Plus } from 'lucide-react';
 
@@ -59,8 +60,8 @@ function resolveTeacherName(me: MeData | null): string {
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-gray-500 text-xs mb-1">{label}</p>
-      <p className="text-gray-200 text-sm font-medium">{value}</p>
+      <p className="text-subtle text-xs mb-1">{label}</p>
+      <p className="text-foreground text-sm font-medium">{value}</p>
     </div>
   );
 }
@@ -174,18 +175,18 @@ export default function InterviewPage() {
     <MainLayout>
       <GraduationReviewFab />
       <div className="page-container py-8 sm:py-12 section-gap">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">
+        <h1 className={ds.title}>
           {editId ? '졸업면담 수정' : '졸업면담'}
         </h1>
 
-        <Card className="bg-gray-900/80 border-gray-800 max-w-lg mx-auto">
-          <div className="card-pad grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-gray-800">
+        <Card className={`${ds.card} max-w-lg mx-auto`}>
+          <div className={`${ds.cardPad} grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-border`}>
             <ReadOnlyField label="작성자" value={authorName} />
             <ReadOnlyField label="담당 선생님" value={resolveTeacherName(me)} />
             <ReadOnlyField label="반" value={resolveClassName(me)} />
           </div>
 
-          <form onSubmit={handleSubmit} className="card-pad space-y-6">
+          <form onSubmit={handleSubmit} className={`${ds.cardPad} space-y-6`}>
             <div>
               <Label>질문 1</Label>
               <p className="text-sm text-gray-300 mt-2 mb-1">

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { PLAY_TIME_SLOTS } from '@/lib/form-options';
+import { ds } from '@/styles/design-system';
 import { useApplyForm } from '@/hooks/apply/use-apply-form';
 
 function ApplyForm() {
@@ -17,14 +18,14 @@ function ApplyForm() {
   if (!session) {
     return (
       <div className="text-center py-16 space-y-4">
-        <p className="text-gray-400">수강 신청은 로그인 후 가능합니다</p>
+        <p className={ds.textMuted}>수강 신청은 로그인 후 가능합니다</p>
         <Button onClick={() => signIn('discord')}>Discord 로그인</Button>
       </div>
     );
   }
 
   return (
-    <Card className="bg-gray-900/80 border-gray-800 max-w-lg mx-auto">
+    <Card className={`${ds.card} max-w-lg mx-auto`}>
       <form onSubmit={submit} className="card-pad space-y-5">
         <div>
           <Label htmlFor="nickname">평겜마 닉네임(오픈카톡 닉네임) *</Label>
@@ -61,7 +62,7 @@ export default function ApplyPage() {
   return (
     <MainLayout>
       <div className="page-container py-8 sm:py-12 section-gap">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">수강 신청</h1>
+        <h1 className={ds.title}>수강 신청</h1>
         <Suspense fallback={<LoadingPage />}><ApplyForm /></Suspense>
       </div>
     </MainLayout>

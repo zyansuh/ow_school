@@ -10,6 +10,7 @@ import { Input, Label } from '@/components/ui/input';
 import { LoadingPage, EmptyState } from '@/components/ui/loading';
 import { STATUS_LABELS, formatDate } from '@/lib/utils';
 import { userDisplayName } from '@/lib/user-display';
+import { ds } from '@/styles/design-system';
 import { useMyPageData } from '@/hooks/mypage/use-mypage';
 
 export default function MyPage() {
@@ -33,7 +34,7 @@ export default function MyPage() {
     return (
       <MainLayout>
         <div className="page-container py-20 text-center space-y-4">
-          <p className="text-gray-400">마이페이지는 로그인 후 이용 가능합니다</p>
+          <p className={ds.textMuted}>마이페이지는 로그인 후 이용 가능합니다</p>
           <Button onClick={() => signIn('discord')}>Discord 로그인</Button>
         </div>
       </MainLayout>
@@ -47,7 +48,7 @@ export default function MyPage() {
     <MainLayout>
       <div className="page-container py-8 sm:py-12 section-gap max-w-3xl">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">마이페이지</h1>
+          <h1 className={ds.title}>마이페이지</h1>
           <div className="flex flex-wrap gap-2">
             {isTeacherOnly && (
               <Button asChild variant="outline" size="sm">
@@ -62,10 +63,10 @@ export default function MyPage() {
           </div>
         </div>
 
-        <Card className="bg-gray-900/80 border-gray-800">
-          <div className="card-pad space-y-4">
+        <Card className={ds.card}>
+          <div className={`${ds.cardPad} space-y-4`}>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="heading-section text-gray-200">디스코드 서버 정보</h2>
+              <h2 className={ds.sectionTitle}>디스코드 서버 정보</h2>
               <Badge variant="success">서버 가입</Badge>
               <Button
                 type="button"
@@ -130,7 +131,7 @@ export default function MyPage() {
           </div>
         </Card>
 
-        <Card className="bg-gray-900/80 border-gray-800">
+        <Card className={ds.card}>
           <div className="card-pad space-y-3">
             <h2 className="heading-section text-gray-200">수강 정보</h2>
             <div className="grid sm:grid-cols-2 gap-4 text-sm">
@@ -146,7 +147,7 @@ export default function MyPage() {
             <EmptyState title="신청 내역이 없습니다" description="수강 신청 페이지에서 신청해보세요" />
           ) : (
             data.applications.map((app) => (
-              <Card key={app.id} className="bg-gray-900/80 border-gray-800">
+              <Card key={app.id} className={ds.card}>
                 <div className="card-pad flex justify-between gap-4">
                   <div>
                     <p className="font-medium">{app.teacher.name} 선생님</p>
@@ -167,7 +168,7 @@ export default function MyPage() {
             <EmptyState title="제출한 졸업면담이 없습니다" />
           ) : (
             data.interviews.map((iv) => (
-              <Card key={iv.id} className="bg-gray-900/80 border-gray-800">
+              <Card key={iv.id} className={ds.card}>
                 <div className="card-pad flex flex-wrap justify-between items-center gap-3">
                   <div>
                     <span className="text-gray-300">제출 완료</span>
