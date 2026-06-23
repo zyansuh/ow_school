@@ -13,7 +13,7 @@ const teacherSchema = z.object({
   discord: z.string().optional(),
   discordUserId: z.string().min(1).optional().nullable(),
   activityDays: z.array(z.string()).optional(),
-  activityTimeSlot: z.string().nullable().optional(),
+  activityTimeSlot: z.string().max(64).nullable().optional(),
   isActive: z.boolean().optional(),
   maxStudents: z.number().optional(),
 });

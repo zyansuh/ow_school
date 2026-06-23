@@ -1,7 +1,7 @@
 'use client';
 
-import { ACTIVITY_DAYS, ACTIVITY_TIME_SLOTS } from '@/lib/form-options';
-import { Label, Select } from '@/components/ui/input';
+import { ACTIVITY_DAYS } from '@/lib/form-options';
+import { Label, Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -42,17 +42,16 @@ export function TeacherActivityFields({ activityDays, activityTimeSlot, onChange
         </div>
       </div>
       <div>
-        <Label>활동 시간대</Label>
-        <Select
+        <Label htmlFor="activity-time">활동 시간</Label>
+        <Input
+          id="activity-time"
           value={activityTimeSlot}
           onChange={(e) => onChange({ activityDays, activityTimeSlot: e.target.value })}
+          placeholder="예: 20:00 ~ 23:00, 주말 오후"
           className="mt-2"
-        >
-          <option value="">선택 안 함</option>
-          {ACTIVITY_TIME_SLOTS.map((slot) => (
-            <option key={slot} value={slot}>{slot}</option>
-          ))}
-        </Select>
+          maxLength={64}
+        />
+        <p className="text-xs text-gray-500 mt-1">자유 입력 (최대 64자)</p>
       </div>
     </div>
   );

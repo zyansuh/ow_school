@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 
 const links = [
   { href: '/admin', label: '대시보드' },
+  { href: '/admin/discord-sync', label: 'Discord 동기화' },
   { href: '/admin/students', label: '학생 관리' },
   { href: '/admin/graduated', label: '졸업생' },
   { href: '/admin/admins', label: '관리자 목록' },

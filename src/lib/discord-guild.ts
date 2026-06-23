@@ -286,7 +286,7 @@ export async function syncUserGuildDataBestEffort(
   return syncUserGuildData(discordUserId);
 }
 
-const GUILD_SYNC_TTL_MS = 5 * 60 * 1000;
+const GUILD_SYNC_TTL_MS = 2 * 60 * 1000;
 
 export async function syncUserGuildDataIfStale(
   discordUserId: string,

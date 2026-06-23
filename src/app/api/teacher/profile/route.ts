@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireTeacherUser } from '@/lib/api-helpers';
-import { ACTIVITY_DAYS, ACTIVITY_TIME_SLOTS } from '@/lib/form-options';
+import { ACTIVITY_DAYS } from '@/lib/form-options';
 
 const schema = z.object({
   activityDays: z.array(z.string()).optional(),
-  activityTimeSlot: z.string().nullable().optional(),
+  activityTimeSlot: z.string().max(64).nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest) {
@@ -22,11 +22,7 @@ export async function PATCH(req: NextRequest) {
       data.activityDays = JSON.stringify(days);
     }
     if (body.activityTimeSlot !== undefined) {
-      data.activityTimeSlot =
-        body.activityTimeSlot &&
-        (ACTIVITY_TIME_SLOTS as readonly string[]).includes(body.activityTimeSlot)
-          ? body.activityTimeSlot
-          : body.activityTimeSlot;
+      data.activityTimeSlot = body.activityTimeSlot?.trim() || null;
     }
 
     if (!Object.keys(data).length) {

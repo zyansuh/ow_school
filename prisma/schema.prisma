@@ -15,7 +15,6 @@ model User {
   discordAvatar     String?
   discordServerNick String?
   discordRoleNames  String?
-  siteDisplayName   String?
   isInGuild         Boolean           @default(false)
   guildSyncedAt     DateTime?
   status            String            @default("active")
