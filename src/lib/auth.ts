@@ -153,9 +153,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }),
           );
 
-          await db((client) => ensureDefaultAdmin(username, user.id, client));
+          if (getGuildConfig()) {
+            try {
+              await syncUserGuildDataBestEffort(p.id, account?.access_token);
+            } catch (e) {
+              console.warn('[auth] guild sync on sign-in failed:', e);
+            }
+          }
 
-          const { resolveTeacherEntityForUser } = await import('@/lib/teacher/identity');
+          await db((client) =>
+            client.teacher.updateMany({
+              where: { discord: p.id, discordUserId: null },
+              data: { discordUserId: p.id },
+            }),
+          );
+
+          await db((client) => ensureDefaultAdmin(p.id, username, user.id, client));
+
           await resolveTeacherEntityForUser({
             id: user.id,
             discordId: user.discordId,
@@ -164,12 +178,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
 
           await syncTokenFromUser(user.id, token);
-
-          if (getGuildConfig()) {
-            void syncUserGuildDataBestEffort(p.id, account?.access_token).catch((e) =>
-              console.warn('[auth] guild sync on sign-in failed:', e),
-            );
-          }
         } else if (token.userId) {
           if (trigger === 'update' && token.discordId) {
             await syncUserGuildData(token.discordId as string);

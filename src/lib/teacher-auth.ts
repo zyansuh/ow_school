@@ -1,16 +1,9 @@
 import { prisma } from '@/lib/prisma';
 
-/** Discord User ID(discordId) 우선, 레거시 discord 필드(유저네임) 폴백 */
+/** Discord User ID(discordId)로만 Teacher 조회 */
 export async function findTeacherByDiscordUserId(discordUserId: string) {
   return prisma.teacher.findFirst({
     where: { discordUserId },
-    include: { class: true },
-  });
-}
-
-export async function findTeacherForDiscordUsername(discordUsername: string) {
-  return prisma.teacher.findFirst({
-    where: { discord: { equals: discordUsername, mode: 'insensitive' } },
     include: { class: true },
   });
 }

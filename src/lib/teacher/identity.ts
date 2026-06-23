@@ -1,7 +1,6 @@
 import { isTeacherFromDiscordRoles } from '@/lib/user-header';
 import { parseRoleNames } from '@/lib/discord-guild';
-import { findTeacherByDiscordUserId, findTeacherForDiscordUsername } from '@/lib/teacher-auth';
-import { prisma } from '@/lib/prisma';
+import { findTeacherByDiscordUserId } from '@/lib/teacher-auth';
 
 export type TeacherUserRef = {
   id: string;
@@ -16,26 +15,11 @@ export function hasTeacherDiscordRole(discordRoleNames?: string | null): boolean
 }
 
 /**
- * 실제 Teacher 엔티티 연결 — discordUserId 또는 username 백필만 허용.
- * 역할만으로는 null 반환.
+ * Teacher 엔티티 연결 — 오직 discordUserId(User.discordId)만 허용.
+ * 닉네임·username으로는 연결하지 않습니다.
  */
 export async function resolveTeacherEntityForUser(user: TeacherUserRef) {
-  const byDiscordId = await findTeacherByDiscordUserId(user.discordId);
-  if (byDiscordId) return byDiscordId;
-
-  const byUsername = await findTeacherForDiscordUsername(user.discordUsername);
-  if (byUsername) {
-    if (!byUsername.discordUserId) {
-      await prisma.teacher.update({
-        where: { id: byUsername.id },
-        data: { discordUserId: user.discordId },
-      });
-      return { ...byUsername, discordUserId: user.discordId };
-    }
-    return byUsername;
-  }
-
-  return null;
+  return findTeacherByDiscordUserId(user.discordId);
 }
 
 /** 세션 isTeacher: Teacher 레코드 연결 또는 Discord 선생님 역할 */

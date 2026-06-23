@@ -14,7 +14,7 @@ export type GuildMemberInfo = {
 type DiscordMember = {
   nick?: string | null;
   roles: string[];
-  user: { id: string; username: string; global_name?: string | null };
+  user: { id: string; username: string; global_name?: string | null; avatar?: string | null };
 };
 
 type DiscordRole = {
@@ -240,14 +240,25 @@ export async function getGuildMemberInfo(discordUserId: string): Promise<GuildMe
   return guildInfoFromMember(member);
 }
 
-async function persistGuildInfo(discordUserId: string, info: GuildMemberInfo) {
+async function persistGuildInfo(
+  discordUserId: string,
+  info: GuildMemberInfo,
+  member?: DiscordMember,
+) {
   const existing = await prisma.user.findUnique({ where: { discordId: discordUserId } });
+  const avatar =
+    member?.user.avatar != null
+      ? `https://cdn.discordapp.com/avatars/${discordUserId}/${member.user.avatar}.png`
+      : existing?.discordAvatar ?? null;
+
   await prisma.user.update({
     where: { discordId: discordUserId },
     data: {
       isInGuild: info.isInGuild,
       discordServerNick: info.guildNickname,
       discordNickname: info.globalDisplayName ?? existing?.discordNickname ?? null,
+      discordUsername: member?.user.username ?? existing?.discordUsername,
+      discordAvatar: avatar,
       discordRoleNames: info.roleNames.length
         ? JSON.stringify(info.roleNames)
         : existing?.discordRoleNames ?? '[]',
@@ -273,7 +284,7 @@ export async function syncUserGuildData(discordUserId: string) {
   }
 
   const info = await guildInfoFromMember(member);
-  await persistGuildInfo(discordUserId, info);
+  await persistGuildInfo(discordUserId, info, member);
   return info;
 }
 
@@ -290,21 +301,7 @@ export async function syncUserGuildDataBestEffort(
       const roles = await fetchGuildRoles();
       const roleNames = roles.length > 0 ? resolveRoleNames(member.roles, roles) : [];
       const info = memberToGuildInfo(member, roleNames);
-      const existing = await prisma.user.findUnique({ where: { discordId: discordUserId } });
-
-      await prisma.user.update({
-        where: { discordId: discordUserId },
-        data: {
-          isInGuild: true,
-          discordServerNick: info.guildNickname,
-          discordNickname: info.globalDisplayName ?? existing?.discordNickname ?? null,
-          discordUsername: member.user.username,
-          discordRoleNames: roleNames.length
-            ? JSON.stringify(roleNames)
-            : existing?.discordRoleNames ?? '[]',
-          guildSyncedAt: new Date(),
-        },
-      });
+      await persistGuildInfo(discordUserId, info, member);
       return info;
     }
   }

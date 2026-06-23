@@ -3,7 +3,7 @@ import { syncUserGuildDataBestEffort } from '@/lib/discord-guild';
 import { syncAllTeacherStudentCounts, getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
 import { mapWithConcurrency } from '@/lib/async-utils';
 import { resolveTeacherEntityForUser } from '@/lib/teacher/identity';
-import { userDisplayName, normalizeNickFields } from '@/lib/user-display';
+import { userDisplayName, adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
 
 export type TeacherLinkMismatch = {
   userId: string;
@@ -59,25 +59,6 @@ export async function runAdminDiscordSync(): Promise<DiscordSyncReport> {
 
   const teacherCounts = await syncAllTeacherStudentCounts();
 
-  const teachersWithoutUserId = await prisma.teacher.findMany({
-    where: { discordUserId: null },
-    select: { id: true, name: true, discord: true },
-  });
-
-  for (const t of teachersWithoutUserId) {
-    if (!t.discord) continue;
-    const match = await prisma.user.findFirst({
-      where: { discordUsername: { equals: t.discord, mode: 'insensitive' } },
-      select: { discordId: true },
-    });
-    if (match) {
-      await prisma.teacher.update({
-        where: { id: t.id },
-        data: { discordUserId: match.discordId },
-      });
-    }
-  }
-
   const teacherLinkMismatches: TeacherLinkMismatch[] = [];
   const teacherUsers = await prisma.user.findMany({
     where: { adminRole: null },
@@ -104,7 +85,7 @@ export async function runAdminDiscordSync(): Promise<DiscordSyncReport> {
       teacherLinkMismatches.push({
         userId: u.id,
         discordId: u.discordId,
-        displayName: userDisplayName(normalizeNickFields(u)),
+        displayName: adminUserDisplayName(normalizeNickFields(u)),
         expectedTeacherId: resolved?.id ?? null,
         expectedTeacherName: resolved?.name ?? null,
         actualTeacherId: u.teacherId,

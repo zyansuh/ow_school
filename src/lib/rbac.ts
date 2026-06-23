@@ -2,6 +2,12 @@ import type { PrismaClient } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { DEFAULT_ADMIN_USERNAMES } from '@/lib/constants';
 
+function defaultAdminDiscordIds(): string[] {
+  const raw = process.env.DEFAULT_ADMIN_DISCORD_IDS?.trim();
+  if (!raw) return [];
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
 export async function isAdmin(userId: string, client: PrismaClient = prisma): Promise<boolean> {
   const role = await client.adminRole.findUnique({ where: { userId } });
   return !!role;
@@ -14,13 +20,15 @@ export async function requireAdmin(userId: string) {
 }
 
 export async function ensureDefaultAdmin(
+  discordId: string,
   discordUsername: string,
   userId: string,
   client: PrismaClient = prisma,
 ) {
+  const byDiscordId = defaultAdminDiscordIds().includes(discordId);
   const normalized = discordUsername.toLowerCase();
-  const isDefault = DEFAULT_ADMIN_USERNAMES.some((u) => u.toLowerCase() === normalized);
-  if (!isDefault) return;
+  const byUsername = DEFAULT_ADMIN_USERNAMES.some((u) => u.toLowerCase() === normalized);
+  if (!byDiscordId && !byUsername) return;
 
   await client.adminRole.upsert({
     where: { userId },
