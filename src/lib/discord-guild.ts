@@ -269,7 +269,16 @@ async function persistGuildInfo(
 
 export async function syncUserGuildData(discordUserId: string) {
   const member = await fetchGuildMember(discordUserId);
-  if (member === 'api_error') return guildInfoFromDb(discordUserId);
+  if (member === 'api_error') {
+    // API 실패 시에도 백오프 타임스탬프를 남겨 매 요청마다 Discord 재호출을 막음
+    await prisma.user
+      .update({
+        where: { discordId: discordUserId },
+        data: { guildSyncedAt: new Date() },
+      })
+      .catch(() => {});
+    return guildInfoFromDb(discordUserId);
+  }
 
   if (!member) {
     const info: GuildMemberInfo = {
@@ -309,7 +318,7 @@ export async function syncUserGuildDataBestEffort(
   return syncUserGuildData(discordUserId);
 }
 
-const DEFAULT_GUILD_SYNC_TTL_MS = 30 * 1000;
+const DEFAULT_GUILD_SYNC_TTL_MS = 5 * 60 * 1000;
 
 function guildSyncTtlMs() {
   const sec = Number(process.env.GUILD_SYNC_TTL_SEC);

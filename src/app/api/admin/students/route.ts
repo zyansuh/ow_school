@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { parseRoleNames } from '@/lib/discord-guild';
-import { normalizeNickFields, adminUserDisplayName, guildNicknameOnly, userDisplayName } from '@/lib/user-display';
+import { normalizeNickFields, adminUserDisplayName, guildNicknameOnly } from '@/lib/user-display';
 
 export async function GET() {
   try {
@@ -21,7 +21,7 @@ export async function GET() {
           id: u.id,
           discordId: u.discordId,
           nickname: adminUserDisplayName(fields),
-          guildNickname: guildNicknameOnly(fields) ?? userDisplayName(fields),
+          guildNickname: guildNicknameOnly(fields) ?? '-',
           displayNickname: u.displayNickname,
           discord: u.discordUsername,
           serverNick: u.discordServerNick,

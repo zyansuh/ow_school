@@ -10,6 +10,7 @@ export type UserNickFields = {
   discordNickname?: string | null;
 };
 
+/** Guild Member API `nick` 필드만 (서버 닉 오버라이드). 없으면 null — Discord UI는 global_name을 보여줌 */
 function guildNick(user: UserNickFields): string | null {
   const nick = user.discordServerNickname ?? user.discordServerNick;
   return nick?.trim() || null;

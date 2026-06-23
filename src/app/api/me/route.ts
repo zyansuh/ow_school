@@ -14,8 +14,14 @@ export async function GET(req: NextRequest) {
     const user = await requireUser();
     const refresh = req.nextUrl.searchParams.get('refresh') === '1';
 
-    if (refresh) {
-      await syncUserGuildDataIfStale(user.discordId, null, true);
+    const meta = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { guildSyncedAt: true },
+    });
+    const neverSynced = !meta?.guildSyncedAt;
+
+    if (refresh || neverSynced) {
+      await syncUserGuildDataIfStale(user.discordId, null, refresh || neverSynced);
     } else {
       after(async () => {
         try {
