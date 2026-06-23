@@ -1,13 +1,14 @@
 export const AUTH_ERROR_MESSAGES: Record<string, string> = {
   Configuration:
-    'OAuth 인증 쿠키(PKCE)가 만료되었거나 맞지 않습니다. 아래 버튼으로 다시 시도해 주세요. (오류 상세는 브라우저가 아니라 `npm run dev` 터미널에 출력됩니다.)',
+    'Discord OAuth 인증에 실패했습니다. 대부분 Client Secret이 잘못됐거나 만료된 경우입니다. Discord Developer Portal → OAuth2에서 Client Secret을 재발급하고 `.env`의 DISCORD_CLIENT_SECRET에 붙여넣은 뒤 dev 서버를 재시작하세요. (PKCE·쿠키 문제일 수도 있습니다.)',
   AccessDenied: '로그인이 거부되었습니다.',
   InvalidCheck:
     '로그인 세션이 만료되었습니다. 주소창의 callback URL로 직접 들어가지 말고, 아래 버튼으로 다시 로그인해 주세요.',
   OAuthCallbackError:
-    'Discord 인증 중 오류가 발생했습니다. Discord Client Secret과 Redirect URI를 확인한 뒤 다시 시도해 주세요.',
+    'Discord Client ID 또는 Client Secret이 올바르지 않습니다. Developer Portal에서 Secret을 재발급하고 .env·Vercel에 동일하게 설정하세요.',
   OAuthSignin: 'Discord 로그인을 시작할 수 없습니다. 환경 변수를 확인해 주세요.',
-  NotInGuild: '평화로운 게임마을 디스코드 서버에 가입한 뒤 다시 로그인해 주세요.',
+  NotInGuild:
+    '평화로운 게임마을 디스코드 서버에 가입한 Discord 계정으로 로그인해 주세요. 다른 계정이면 로그아웃 후 다시 시도하세요.',
   AuthError: '로그인 처리 중 오류가 발생했습니다. npm run db:setup 후 다시 시도해 주세요.',
 };
 

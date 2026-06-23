@@ -3,11 +3,14 @@ import { prisma, db } from '@/lib/prisma';
 import { ensureDefaultAdmin, isAdmin } from '@/lib/rbac';
 import { authConfig } from '@/lib/auth.config';
 import {
-  fetchGuildMember,
+  checkUserGuildMembership,
   getGuildConfig,
   parseRoleNames,
   syncUserGuildData,
+  syncUserGuildDataBestEffort,
 } from '@/lib/discord-guild';
+import { userDisplayName } from '@/lib/user-display';
+import { isTeacherFromDiscordRoles } from '@/lib/user-header';
 
 type DiscordProfile = {
   id: string;
@@ -32,6 +35,7 @@ declare module 'next-auth' {
       discordRoleNames: string[];
       isInGuild: boolean;
       isAdmin: boolean;
+      isTeacher: boolean;
       className: string | null;
       teacherName: string | null;
       status: string;
@@ -51,15 +55,24 @@ async function syncTokenFromUser(userId: string, token: Record<string, unknown>)
   );
   if (!user) return token;
 
+  const roleNames = parseRoleNames(user.discordRoleNames);
+  const teacherRecord = await db((client) =>
+    client.teacher.findFirst({
+      where: { discord: { equals: user.discordUsername, mode: 'insensitive' } },
+      select: { id: true },
+    }),
+  );
+
   token.userId = user.id;
   token.discordId = user.discordId;
   token.discordUsername = user.discordUsername;
   token.discordNickname = user.discordNickname;
   token.discordAvatar = user.discordAvatar;
   token.discordServerNick = user.discordServerNick;
-  token.discordRoleNames = parseRoleNames(user.discordRoleNames);
+  token.discordRoleNames = roleNames;
   token.isInGuild = user.isInGuild;
   token.isAdmin = !!user.adminRole;
+  token.isTeacher = !!teacherRecord || isTeacherFromDiscordRoles(roleNames);
   token.className = user.class?.name ?? null;
   token.teacherName = user.teacher?.name ?? null;
   token.status = user.status;
@@ -86,7 +99,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     ...authConfig.callbacks,
-    async signIn({ profile }) {
+    async signIn({ profile, account }) {
       try {
         const p = profile as DiscordProfile | undefined;
         const username = p ? discordUsernameFromProfile(p) : '';
@@ -96,10 +109,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         if (getGuildConfig()) {
-          const member = await fetchGuildMember(p.id);
-          if (member === null) return '/login?error=NotInGuild';
-          if (member === 'api_error') {
-            console.warn('[auth] guild check skipped: Discord bot API error');
+          const membership = await checkUserGuildMembership(
+            p.id,
+            account?.access_token,
+          );
+          if (membership === 'out') return '/login?error=NotInGuild';
+          if (membership === 'unknown') {
+            console.warn('[auth] guild membership unknown — allowing login');
           }
         }
 
@@ -109,7 +125,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return false;
       }
     },
-    async jwt({ token, profile, trigger }) {
+    async jwt({ token, profile, account, trigger }) {
       try {
         const p = profile as DiscordProfile | undefined;
 
@@ -139,7 +155,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           await db((client) => ensureDefaultAdmin(username, user.id, client));
 
           if (getGuildConfig()) {
-            await syncUserGuildData(p.id);
+            await syncUserGuildDataBestEffort(p.id, account?.access_token);
           }
 
           await syncTokenFromUser(user.id, token);
@@ -157,23 +173,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      const displayName =
-        (token.discordServerNick as string) ??
-        (token.discordNickname as string) ??
-        (token.discordUsername as string);
+      const userFields = {
+        discordServerNick: (token.discordServerNick as string) ?? null,
+        discordNickname: (token.discordNickname as string) ?? null,
+        discordUsername: token.discordUsername as string,
+      };
+      const displayName = userDisplayName(userFields);
 
       return {
         ...session,
         user: {
           id: token.userId as string,
           discordId: token.discordId as string,
-          discordUsername: token.discordUsername as string,
-          discordNickname: (token.discordNickname as string) ?? null,
+          discordUsername: userFields.discordUsername,
+          discordNickname: userFields.discordNickname,
           discordAvatar: (token.discordAvatar as string) ?? null,
-          discordServerNick: (token.discordServerNick as string) ?? null,
+          discordServerNick: userFields.discordServerNick,
           discordRoleNames: (token.discordRoleNames as string[]) ?? [],
           isInGuild: !!token.isInGuild,
           isAdmin: !!token.isAdmin,
+          isTeacher: !!token.isTeacher,
           className: (token.className as string) ?? null,
           teacherName: (token.teacherName as string) ?? null,
           status: (token.status as string) ?? 'active',
