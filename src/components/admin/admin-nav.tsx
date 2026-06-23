@@ -10,6 +10,7 @@ const links = [
   { href: '/admin/teachers', label: '선생님 관리' },
   { href: '/admin/applications', label: '신청 관리' },
   { href: '/admin/interviews', label: '졸업면담' },
+  { href: '/admin/graduation-reviews', label: '졸업후기' },
   { href: '/admin/roles', label: '관리자 권한' },
 ];
 

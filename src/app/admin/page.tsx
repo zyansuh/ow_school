@@ -1,13 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/input';
-import { LoadingPage } from '@/components/ui/loading';
+import { LoadingPage, EmptyState } from '@/components/ui/loading';
 import { toast } from 'sonner';
+import { formatDate } from '@/lib/utils';
 
 type MonthlyPoint = { month: string; count: number };
+
+type GraduationReview = {
+  id: string;
+  authorName: string;
+  className: string;
+  content: string;
+  createdAt: string;
+};
 
 function MonthlyChart({ title, data, color }: { title: string; data: MonthlyPoint[]; color: string }) {
   const max = Math.max(...data.map((d) => d.count), 1);
@@ -41,10 +51,14 @@ export default function AdminDashboard() {
   } | null>(null);
   const [noticesText, setNoticesText] = useState('');
   const [savingNotices, setSavingNotices] = useState(false);
+  const [reviews, setReviews] = useState<GraduationReview[]>([]);
 
   useEffect(() => {
     fetch('/api/admin/stats').then((r) => r.json()).then((d) => setStats(d.stats));
     fetch('/api/notices').then((r) => r.json()).then((d) => setNoticesText((d.items as string[]).join('\n')));
+    fetch('/api/admin/graduation-reviews').then((r) => r.json()).then((d) => {
+      if (Array.isArray(d)) setReviews(d);
+    });
   }, []);
 
   const saveNotices = async () => {
@@ -114,6 +128,47 @@ export default function AdminDashboard() {
               </div>
             ))}
           </div>
+        </div>
+      </Card>
+
+      <Card className="bg-gray-900/80 border-gray-800">
+        <div className="card-pad">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold">졸업후기</h2>
+            <Link href="/admin/graduation-reviews" className="text-sm text-purple-400 hover:text-purple-300">
+              전체 보기 →
+            </Link>
+          </div>
+          {reviews.length === 0 ? (
+            <EmptyState title="등록된 졸업후기가 없습니다" />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-800 text-gray-400 text-left">
+                    <th className="p-3 w-28">작성자</th>
+                    <th className="p-3 w-24">반</th>
+                    <th className="p-3">내용</th>
+                    <th className="p-3 w-28 hidden sm:table-cell">작성일</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reviews.map((r) => (
+                    <tr key={r.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                      <td className="p-3 text-gray-200 whitespace-nowrap">{r.authorName}</td>
+                      <td className="p-3 text-purple-300 whitespace-nowrap">{r.className}</td>
+                      <td className="p-3 text-gray-300 max-w-md">
+                        <p className="line-clamp-2 sm:line-clamp-3">{r.content}</p>
+                      </td>
+                      <td className="p-3 text-gray-500 text-xs hidden sm:table-cell whitespace-nowrap">
+                        {formatDate(r.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </Card>
 
