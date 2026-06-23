@@ -54,6 +54,17 @@ async function main() {
     });
   }
 
+  const defaultNotices = [
+    '신입 배정은 선착순입니다',
+    '정원 마감 시 선택 불가',
+    '신청 후 확인 1~2일 소요',
+  ];
+  await prisma.siteSetting.upsert({
+    where: { key: 'notices' },
+    create: { key: 'notices', value: JSON.stringify(defaultNotices) },
+    update: {},
+  });
+
   console.log('Seed completed');
 }
 
