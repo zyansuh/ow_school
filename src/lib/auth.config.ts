@@ -4,19 +4,23 @@ import { ensureAuthUrlEnv } from '@/lib/auth-url';
 
 ensureAuthUrlEnv();
 
+function authSecret() {
+  return process.env.AUTH_SECRET?.trim() || process.env.NEXTAUTH_SECRET?.trim();
+}
+
 export const DISCORD_OAUTH_SCOPES = 'identify guilds guilds.members.read';
 
 export const authConfig = {
   trustHost: true,
-  secret: process.env.AUTH_SECRET,
+  secret: authSecret(),
   providers: [
     Discord({
-      clientId: process.env.DISCORD_CLIENT_ID!,
-      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+      clientId: process.env.DISCORD_CLIENT_ID!.trim(),
+      clientSecret: process.env.DISCORD_CLIENT_SECRET!.trim(),
       authorization: { params: { scope: DISCORD_OAUTH_SCOPES } },
     }),
   ],
-  pages: { signIn: '/login', error: '/login' },
+  pages: { signIn: '/login', error: '/auth-error' },
   session: { strategy: 'jwt' as const },
   callbacks: {
     authorized({ auth, request }) {

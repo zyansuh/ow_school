@@ -62,6 +62,20 @@ async function syncTokenFromUser(userId: string, token: Record<string, unknown>)
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  debug: process.env.AUTH_DEBUG === 'true',
+  logger: {
+    error(error) {
+      console.error('[auth]', error);
+    },
+    warn(code) {
+      console.warn('[auth]', code);
+    },
+    debug(message, metadata) {
+      if (process.env.AUTH_DEBUG === 'true') {
+        console.debug('[auth]', message, metadata ?? '');
+      }
+    },
+  },
   callbacks: {
     ...authConfig.callbacks,
     async signIn({ profile }) {
@@ -71,7 +85,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (getGuildConfig()) {
           const member = await fetchGuildMember(p.id);
-          if (!member) return '/login?error=NotInGuild';
+          if (member === null) return '/login?error=NotInGuild';
+          if (member === 'api_error') {
+            console.warn('[auth] guild check skipped: Discord bot API error');
+          }
         }
 
         const discordAvatar = p.avatar

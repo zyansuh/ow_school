@@ -31,7 +31,9 @@ function botHeaders(botToken: string) {
   return { Authorization: `Bot ${botToken}` };
 }
 
-export async function fetchGuildMember(discordUserId: string): Promise<DiscordMember | null> {
+export async function fetchGuildMember(
+  discordUserId: string,
+): Promise<DiscordMember | null | 'api_error'> {
   const config = getGuildConfig();
   if (!config) return null;
 
@@ -44,7 +46,7 @@ export async function fetchGuildMember(discordUserId: string): Promise<DiscordMe
   if (!res.ok) {
     const text = await res.text();
     console.error('[discord] fetchGuildMember failed:', res.status, text);
-    return null;
+    return 'api_error';
   }
 
   return res.json() as Promise<DiscordMember>;
@@ -74,7 +76,7 @@ function resolveRoleNames(memberRoles: string[], guildRoles: DiscordRole[]) {
 
 export async function getGuildMemberInfo(discordUserId: string): Promise<GuildMemberInfo> {
   const member = await fetchGuildMember(discordUserId);
-  if (!member) {
+  if (!member || member === 'api_error') {
     return { isInGuild: false, serverNick: null, roleNames: [] };
   }
 
@@ -103,7 +105,7 @@ export async function updateGuildNickname(discordUserId: string, nick: string | 
   if (!config) throw new Error('DISCORD_NOT_CONFIGURED');
 
   const member = await fetchGuildMember(discordUserId);
-  if (!member) throw new Error('NOT_IN_GUILD');
+  if (!member || member === 'api_error') throw new Error('NOT_IN_GUILD');
 
   const res = await fetch(
     `${DISCORD_API}/guilds/${config.guildId}/members/${discordUserId}`,
