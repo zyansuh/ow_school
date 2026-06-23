@@ -23,6 +23,7 @@ export async function GET() {
         roleNames: parseRoleNames(u.discordRoleNames),
         isInGuild: u.isInGuild,
         className: u.class?.name ?? '미배정',
+        teacherId: u.teacherId,
         teacherName: u.teacher?.name ?? '-',
         status: u.status,
         createdAt: u.createdAt,
