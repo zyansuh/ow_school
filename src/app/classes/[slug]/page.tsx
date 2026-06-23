@@ -42,12 +42,14 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
           <Link href="/"><ArrowLeft className="h-4 w-4" /> 홈으로</Link>
         </Button>
 
-        <div className="relative h-48 sm:h-64 rounded-2xl overflow-hidden">
-          <Image src={clsInfo.bannerImage} alt={clsInfo.gameKr} fill className="object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/40 to-transparent" />
+        <div className="relative aspect-[21/9] sm:aspect-[2.5/1] rounded-2xl overflow-hidden border border-border shadow-card">
+          <Image src={clsInfo.bannerImage} alt={clsInfo.gameKr} fill sizes="100vw" className="object-cover" priority />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-black/50 to-black/20" />
+          <div className={`absolute inset-0 ${clsInfo.overlayTint}`} />
           <div className="absolute bottom-0 left-0 p-6 sm:p-8">
-            <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">{clsInfo.emoji} {clsInfo.name}</h1>
-            <p className={`text-lg ${clsInfo.color}`}>{clsInfo.gameKr}</p>
+            <p className="text-sm text-white/75 mb-1">{clsInfo.game}</p>
+            <h1 className="text-2xl sm:text-4xl font-bold text-white mb-1 drop-shadow-lg">{clsInfo.gameKr}</h1>
+            <p className={`text-lg font-medium ${clsInfo.color}`}>{clsInfo.emoji} {clsInfo.name}</p>
           </div>
         </div>
 
