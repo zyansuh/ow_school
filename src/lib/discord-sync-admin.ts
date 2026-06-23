@@ -4,7 +4,8 @@ import { syncAllTeacherStudentCounts, getActiveStudentCountsByTeacher } from '@/
 import { mapWithConcurrency } from '@/lib/async-utils';
 import { resolveTeacherEntityForUser } from '@/lib/teacher/identity';
 import { backfillAllTeacherDiscordUserIds } from '@/lib/teacher-discord-link';
-import { userDisplayName, adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
+import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
+import { isTeacherUser, loadUserRoleContext } from '@/lib/user-role';
 
 export type TeacherLinkMismatch = {
   userId: string;
@@ -64,8 +65,8 @@ export async function runAdminDiscordSync(): Promise<DiscordSyncReport> {
   const teacherCounts = await syncAllTeacherStudentCounts();
 
   const teacherLinkMismatches: TeacherLinkMismatch[] = [];
+  const roleCtx = await loadUserRoleContext();
   const teacherUsers = await prisma.user.findMany({
-    where: { adminRole: null },
     select: {
       id: true,
       discordId: true,
@@ -74,6 +75,7 @@ export async function runAdminDiscordSync(): Promise<DiscordSyncReport> {
       discordServerNick: true,
       discordRoleNames: true,
       teacherId: true,
+      adminRole: true,
       teacher: { select: { id: true, name: true } },
     },
   });
@@ -83,8 +85,9 @@ export async function runAdminDiscordSync(): Promise<DiscordSyncReport> {
   );
 
   for (const u of teacherUsers) {
+    const isTeacher = isTeacherUser(u, roleCtx);
     const resolved = await resolveTeacherEntityForUser(u);
-    if (!resolved && !u.teacherId) continue;
+    if (!isTeacher && !resolved && !u.teacherId) continue;
     if (resolved?.id !== u.teacherId) {
       teacherLinkMismatches.push({
         userId: u.id,
@@ -122,7 +125,7 @@ export async function runAdminDiscordSync(): Promise<DiscordSyncReport> {
     usersFailed,
     teachersDiscordLinked,
     teachersRecounted: teacherCounts.length,
-    teacherLinksVerified: teacherUsers.length,
+    teacherLinksVerified: teacherUsers.filter((u) => isTeacherUser(u, roleCtx)).length,
     teacherLinkMismatches,
     studentCountMismatches,
     teachersMissingDiscordUserId: stillMissing.map((t) => ({

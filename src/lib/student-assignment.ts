@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { syncTeacherStudentCount } from '@/lib/teacher-counts';
+import { isStudentUser, loadUserRoleContext } from '@/lib/user-role';
 
 export type StudentAssignment = {
   teacherId: string;
@@ -33,7 +34,8 @@ export async function resolveLastStudentAssignment(userId: string): Promise<Stud
 /** 관리자: 담당 선생님 변경 (정원·비활성 선생님도 허용) */
 export async function assignStudentTeacher(userId: string, teacherId: string | null) {
   const user = await prisma.user.findUnique({ where: { id: userId }, include: { adminRole: true } });
-  if (!user || user.adminRole) throw new Error('STUDENT_NOT_FOUND');
+  const ctx = await loadUserRoleContext();
+  if (!user || !isStudentUser(user, ctx)) throw new Error('STUDENT_NOT_FOUND');
   if (user.status === 'graduated') throw new Error('GRADUATED');
 
   const previousTeacherId = user.teacherId;
