@@ -1,5 +1,8 @@
 import type { NextAuthConfig } from 'next-auth';
 import Discord from 'next-auth/providers/discord';
+import { ensureAuthUrlEnv } from '@/lib/auth-url';
+
+ensureAuthUrlEnv();
 
 export const DISCORD_OAUTH_SCOPES = 'identify guilds guilds.members.read';
 
