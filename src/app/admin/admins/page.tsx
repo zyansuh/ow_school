@@ -1,78 +1,147 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Card } from '@/components/ui/card';
-import { LoadingPage, EmptyState } from '@/components/ui/loading';
+import { useCallback, useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { Button } from '@/components/ui/button';
+import { SkeletonTable } from '@/components/ui/skeleton';
+import { DataTable } from '@/components/ui/data-table';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { AdminGrantSearch } from '@/components/admin/admin-grant-search';
+import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/utils';
+import { ds } from '@/styles/design-system';
+import { toast } from 'sonner';
 
 type AdminUser = {
   id: string;
   userId: string;
   displayName: string;
-  discord: string;
+  discordId: string;
+  discordUsername: string;
   roleNames: string[];
   isInGuild: boolean;
   grantedAt: string;
 };
 
 export default function AdminAdminsPage() {
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
     fetch('/api/admin/admins')
       .then((r) => r.json())
       .then((d) => {
         setAdmins(Array.isArray(d) ? d : []);
-        setLoading(false);
-      });
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <LoadingPage />;
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const revoke = async (userId: string, name: string) => {
+    const isSelf = userId === currentUserId;
+    const msg = isSelf
+      ? `본인(「${name}」)의 관리자 권한을 해제하면 관리자 페이지에 접근할 수 없습니다. 계속할까요?`
+      : `「${name}」님의 관리자 권한을 해제할까요?`;
+    if (!confirm(msg)) return;
+
+    setRevokingId(userId);
+    try {
+      const res = await fetch('/api/admin/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'revoke', userId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || '해제 실패');
+      }
+      toast.success('관리자 권한이 해제되었습니다');
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '해제 실패');
+    } finally {
+      setRevokingId(null);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">관리자 목록</h1>
-        <Link href="/admin/roles" className="text-sm text-purple-400 hover:text-purple-300">
-          관리자 권한 부여/해제 →
-        </Link>
-      </div>
-      <Card className="bg-gray-900/80 border-gray-800 overflow-x-auto">
-        {admins.length === 0 ? (
-          <EmptyState title="등록된 관리자가 없습니다" />
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-800 text-gray-400 text-left">
-                <th className="p-4">서버 닉네임</th>
-                <th className="p-4">디스코드</th>
-                <th className="p-4">서버 역할</th>
-                <th className="p-4">권한 부여일</th>
-              </tr>
-            </thead>
-            <tbody>
-              {admins.map((a) => (
-                <tr key={a.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
-                  <td className="p-4">
-                    <div className="font-medium text-purple-200">{a.displayName}</div>
-                    {!a.isInGuild && <span className="text-xs text-amber-500">서버 미가입</span>}
-                  </td>
-                  <td className="p-4 text-gray-400">@{a.discord}</td>
-                  <td className="p-4 text-gray-400 max-w-[200px]">
-                    {a.roleNames?.length ? a.roleNames.join(', ') : '-'}
-                  </td>
-                  <td className="p-4 text-gray-500">{formatDate(a.grantedAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
-      <p className="text-xs text-gray-500">
-        새 관리자 추가는 <Link href="/admin/roles" className="text-purple-400">관리자 권한</Link> 페이지에서 할 수 있습니다.
-      </p>
+    <div className={ds.pageGap}>
+      <AdminPageHeader
+        title="관리자 목록"
+        description="관리자 등록·해제 및 권한 현황을 관리합니다. 테스트 시 자유롭게 등록/해제할 수 있습니다."
+      />
+
+      <AdminGrantSearch onChanged={load} />
+
+      {loading ? (
+        <SkeletonTable rows={4} />
+      ) : (
+        <DataTable
+          data={admins}
+          keyExtractor={(a) => a.id}
+          emptyTitle="등록된 관리자가 없습니다"
+          emptyDescription="위 검색으로 사용자를 찾아 관리자로 등록하세요."
+          columns={[
+            {
+              key: 'name',
+              header: '표시 이름',
+              cell: (a) => (
+                <div>
+                  <div className="font-medium text-primary">{a.displayName}</div>
+                  {a.userId === currentUserId && (
+                    <Badge variant="outline" className="mt-1 text-xs">나</Badge>
+                  )}
+                  {!a.isInGuild && <Badge variant="warning" className="mt-1 ml-1">서버 미가입</Badge>}
+                </div>
+              ),
+            },
+            {
+              key: 'discord',
+              header: '디스코드',
+              cell: (a) => (
+                <span className="text-sm">
+                  @{a.discordUsername}
+                  <span className="block text-xs text-muted-foreground font-mono mt-0.5">{a.discordId}</span>
+                </span>
+              ),
+            },
+            {
+              key: 'roles',
+              header: '서버 역할',
+              cell: (a) => (a.roleNames?.length ? a.roleNames.join(', ') : '-'),
+              hideOnMobile: true,
+            },
+            {
+              key: 'date',
+              header: '등록일',
+              cell: (a) => <span className="text-muted-foreground">{formatDate(a.grantedAt)}</span>,
+            },
+            {
+              key: 'action',
+              header: '관리',
+              mobileFooter: true,
+              cell: (a) => (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-danger border-danger/30 hover:bg-danger/10 min-h-11 sm:min-h-0"
+                  disabled={revokingId === a.userId}
+                  onClick={() => void revoke(a.userId, a.displayName)}
+                >
+                  {revokingId === a.userId ? '해제 중...' : '해제'}
+                </Button>
+              ),
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }

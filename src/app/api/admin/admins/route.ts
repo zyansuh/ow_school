@@ -19,6 +19,7 @@ export async function GET() {
         userId: r.userId,
         displayName: adminUserDisplayName(normalizeNickFields(r.user)),
         discordId: r.user.discordId,
+        discordUsername: r.user.discordUsername,
         serverNick: r.user.discordServerNick,
         roleNames: parseRoleNames(r.user.discordRoleNames),
         isInGuild: r.user.isInGuild,
