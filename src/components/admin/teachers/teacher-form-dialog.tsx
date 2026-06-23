@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Textarea, Select } from '@/components/ui/input';
 import { TeacherActivityFields } from '@/components/teacher/teacher-activity-fields';
@@ -12,7 +13,12 @@ import {
 } from '@/components/ui/dialog';
 import { MBTI_TYPES } from '@/lib/mbti';
 import { cn } from '@/lib/utils';
-import { DiscordUserSearch } from '@/components/admin/discord-user-search';
+import {
+  DiscordUserSearch,
+  DiscordUserIdLookup,
+  type DiscordSearchUser,
+} from '@/components/admin/discord-user-search';
+import { ProfileImageField } from '@/components/admin/teachers/profile-image-field';
 import type { TeacherFormState, ClassItem } from '@/hooks/admin/use-admin-teachers';
 
 type Props = {
@@ -46,12 +52,35 @@ export function TeacherFormDialog({
   onSubmit,
   onClose,
 }: Props) {
+  const formRef = useRef(form);
+  formRef.current = form;
+
   const toggleClass = (classId: string) => {
     const next = form.classIds.includes(classId)
       ? form.classIds.filter((id) => id !== classId)
       : [...form.classIds, classId];
     onChange({ ...form, classIds: next, classId: next[0] ?? '' });
   };
+
+  const applyDiscordUser = useCallback(
+    (user: DiscordSearchUser) => {
+      onChange({
+        ...formRef.current,
+        discordUserId: user.discordId,
+        discord: user.serverNickname ?? '',
+      });
+    },
+    [onChange],
+  );
+
+  const onIdLookupResolved = useCallback(
+    (payload: { serverNickname: string | null; discordUsername: string | null }) => {
+      if (payload.serverNickname) {
+        onChange({ ...formRef.current, discord: payload.serverNickname });
+      }
+    },
+    [onChange],
+  );
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -85,11 +114,11 @@ export function TeacherFormDialog({
                   ))}
                 </Select>
               </Field>
-              <Field label="디스코드 유저명">
+              <Field label="서버 닉네임" hint="Discord User ID 입력·검색 시 서버 닉이 자동으로 채워집니다.">
                 <Input
                   value={form.discord}
                   onChange={(e) => onChange({ ...form, discord: e.target.value })}
-                  placeholder="@username"
+                  placeholder="디스코드 서버 닉네임"
                 />
               </Field>
               <Field label="최대 인원">
@@ -103,33 +132,32 @@ export function TeacherFormDialog({
               </Field>
             </div>
 
-            <Field label="Discord 계정 연결" hint="로그인한 유저를 검색해 User ID를 자동 입력하세요.">
+            <Field label="Discord 계정 연결" hint="서버 닉·Discord User ID로 검색해 연결하세요.">
               <DiscordUserSearch
                 selectedDiscordId={form.discordUserId || undefined}
-                onSelect={(u) =>
-                  onChange({
-                    ...form,
-                    discordUserId: u.discordId,
-                    discord: u.discordUsername,
-                  })
-                }
+                selectedServerNickname={form.discord || null}
+                onSelect={applyDiscordUser}
               />
             </Field>
 
-            <Field label="Discord User ID" hint="닉 변경에도 유지되는 고유 ID. 비워두면 미연결 상태로 저장됩니다.">
+            <Field label="Discord User ID" hint="ID를 입력하면 서버 닉네임을 자동 조회합니다.">
               <Input
                 value={form.discordUserId}
                 onChange={(e) => onChange({ ...form, discordUserId: e.target.value })}
                 placeholder="예: 123456789012345678"
                 className="font-mono text-sm"
               />
+              <DiscordUserIdLookup
+                discordUserId={form.discordUserId}
+                onResolved={onIdLookupResolved}
+              />
             </Field>
 
-            <Field label="프로필 이미지 URL">
-              <Input
+            <Field label="프로필 사진" hint="휴대폰 갤러리·카메라에서 바로 올리거나, 이미지를 끌어다 놓을 수 있습니다.">
+              <ProfileImageField
                 value={form.profileImage}
-                onChange={(e) => onChange({ ...form, profileImage: e.target.value })}
-                placeholder="https://..."
+                onChange={(profileImage) => onChange({ ...form, profileImage })}
+                disabled={saving}
               />
             </Field>
           </section>
