@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { assertDiscordUserIdAvailable } from '@/lib/teacher-auth';
+import { deleteTeacherById } from '@/lib/teacher-delete';
 import { z } from 'zod';
 
 const updateSchema = z.object({
@@ -53,9 +54,12 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
   try {
     await requireAdminUser();
     const { id } = await params;
-    await prisma.teacher.delete({ where: { id } });
+    await deleteTeacherById(id);
     return NextResponse.json({ ok: true });
   } catch (e) {
+    if (e instanceof Error && e.message === 'TEACHER_NOT_FOUND') {
+      return NextResponse.json({ error: '선생님을 찾을 수 없습니다' }, { status: 404 });
+    }
     return apiError(e);
   }
 }

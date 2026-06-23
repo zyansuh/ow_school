@@ -88,7 +88,12 @@ export default function AdminTeachersPage() {
             onEdit={openEdit}
             onToggleActive={toggleActive}
             onRemove={(id) => {
-              if (!confirm('이 선생님을 삭제하시겠습니까?')) return;
+              const t = teachers.find((x) => x.id === id);
+              const extra =
+                t && t.currentStudents > 0
+                  ? `\n담당 학생 ${t.currentStudents}명은 미배정으로 전환됩니다.`
+                  : '';
+              if (!confirm(`이 선생님을 삭제하시겠습니까?${extra}`)) return;
               void remove(id);
             }}
           />
