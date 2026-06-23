@@ -40,7 +40,7 @@ Next.js App Router 하나로 프론트·API·인증을 모두 처리하고, **Di
 |--------|------------------|
 | **일반 유저** | 반별 선생님 둘러보기 · 수강 신청 · 마이페이지 · 서버 닉 변경 · 졸업면담 작성 |
 | **선생님** | 담당 학생 목록 · 학생 상세 · 통계 대시보드 |
-| **관리자** | 대시보드 · 학생/선생님 CRUD · 신청 승인 · 졸업면담 · 포인트 · Discord 동기화 |
+| **관리자** | 대시보드 · 학생/선생님 CRUD · 담당 선생님 변경 · 졸업/졸업 취소 · Discord 동기화 |
 
 다크 테마 UI 🌌 + 모바일 반응형 📱 + Discord 서버 연동 🔗까지 갖춘, **실제 운영을 염두에 둔** 프로젝트예요.
 
@@ -57,7 +57,7 @@ Next.js App Router 하나로 프론트·API·인증을 모두 처리하고, **Di
 | 👨‍🏫 **선생님 상세** | `/teachers/[id]` | 프로필 · MBTI · **담당 학생 표** · 신청 버튼 |
 | 📝 **수강 신청** | `/apply` | 닉네임 · 디스코드 · 플레이 시간 · 담당 선생님 선택 |
 | 💬 **졸업면담** | `/interview` | 졸업생 인터뷰 제출 · 포인트 자동 지급 |
-| 👤 **마이페이지** | `/mypage` | 서버 닉·역할 · 신청/면담 내역 · 닉네임 변경 |
+| 👤 **마이페이지** | `/mypage` | 서버 닉·역할 · 신청/면담 내역 · 닉 변경 · **Discord 새로고침** |
 
 ### 👨‍🏫 선생님 페이지
 
@@ -72,15 +72,16 @@ Next.js App Router 하나로 프론트·API·인증을 모두 처리하고, **Di
 
 | 메뉴 | URL | 하이라이트 |
 |------|-----|-----------|
-| 📊 **대시보드** | `/admin` | 월별 차트 · 반별 통계 · **Discord 동기화** |
-| 👥 **학생 관리** | `/admin/students` | 서버 닉·역할 · 담당 선생님 · 닉 수정 |
-| 🎓 **졸업생** | `/admin/graduated` | 졸업 처리된 학생 목록 |
-| 👨‍🏫 **선생님 관리** | `/admin/teachers` | 등록/수정 · 정원 설정 |
-| 📋 **신청 관리** | `/admin/applications` | 승인/거절 · 토스트 알림 |
+| 📊 **대시보드** | `/admin` | 월별 차트 · 반별 통계 · Discord 동기화 요약 |
+| 🔗 **Discord 동기화** | `/admin/discord-sync` | 일괄 동기화 · 불일치 상세 · 연결 수정 |
+| 👥 **학생 관리** | `/admin/students` | **담당 선생님 변경** · 졸업 처리 |
+| 🎓 **졸업생** | `/admin/graduated` | 졸업생 목록 · **졸업 취소(재학 복구)** |
+| 👨‍🏫 **선생님 관리** | `/admin/teachers` | 등록/수정/삭제 · **활동/비활성(휴식)** · 정원 설정 |
+| 📋 **신청 관리** | `/admin/applications` | 신청 내역 조회 |
 | 💬 **졸업면담** | `/admin/interviews` | 조회 · 삭제 (감사 로그) |
 | 💰 **포인트 관리** | `/admin/points` | 월별 표 · 엑셀 다운로드 |
 | ⭐ **졸업후기** | `/admin/graduation-reviews` | 졸업후기 CRUD |
-| 🛡️ **관리자 목록** | `/admin/admins` · `/admin/roles` | 관리자 권한 부여 |
+| 🛡️ **관리자** | `/admin/admins` · `/admin/roles` | 권한 부여 · **권한 요청 승인** |
 
 ### 🔗 Discord 연동 핵심
 
@@ -90,7 +91,8 @@ Next.js App Router 하나로 프론트·API·인증을 모두 처리하고, **Di
 | **학생↔선생님** | `teacherId` (User.teacherId) |
 | **화면 표시** | 서버 닉 → 글로벌 표시 이름 → 유저네임 |
 | **닉 변경** | 마이페이지에서 변경해도 연결·포인트·면담 유지 |
-| **관리자 동기화** | 서버 닉·역할 최신화 · 학생 수 재계산 · 연결 검증 |
+| **관리자 동기화** | 서버 닉·역할 최신화 · 학생 수 재계산 · 연결 검증 (10명 병렬) |
+| **성능** | `/api/me` DB 즉시 반환 + stale 시 백그라운드 sync · 로그인 시 guild sync 비동기 |
 
 ---
 
@@ -194,7 +196,9 @@ peaceful_game/
     │   ├── admin/               ← 관리자
     │   └── api/                 ← REST API
     ├── components/              ← layout, ui, admin, pages
-    ├── lib/                     ← auth, prisma, discord-guild, points …
+    ├── lib/                     ← auth, prisma, discord-guild, student-assignment …
+    ├── hooks/                   ← admin, mypage, apply
+    ├── styles/                  ← admin 공통 스타일
     └── types/                   ← 공유 타입
 ```
 
@@ -235,6 +239,9 @@ cp .env.example .env
 | `DISCORD_CLIENT_SECRET` | ✅ | Discord OAuth 시크릿 |
 | `DISCORD_GUILD_ID` | ⭐ | 디스코드 서버 ID (가입 확인·닉·역할) |
 | `DISCORD_BOT_TOKEN` | ⭐ | 봇 토큰 (닉 변경·동기화) |
+| `GUILD_SYNC_TTL_SEC` | — | Guild 닉·역할 캐시 TTL(초). 기본 30 |
+| `DISCORD_WEBHOOK_URL` | — | 졸업면담·관리자 알림 웹훅 |
+| `CRON_SECRET` | — | Vercel Cron Discord 동기화 인증 |
 
 > ⭐ `DISCORD_GUILD_ID` / `DISCORD_BOT_TOKEN` 없으면 일반 로그인만 동작합니다.
 
@@ -317,8 +324,15 @@ https://discord.com/api/oauth2/authorize?client_id=CLIENT_ID&permissions=1342177
 
 - 로그인 시 **서버 미가입**이면 로그인 거부 (Guild ID 설정 시)
 - 마이페이지: **서버 닉·역할** 표시 및 **닉네임 변경**
-- 관리자: **Discord 동기화** — 전체 유저 닉·역할 갱신 + 학생 수 재계산
+- 관리자: **Discord 동기화** — 전체 유저 닉·역할 갱신 + 학생 수 재계산 (`/admin/discord-sync`)
+- 마이페이지 **「Discord 새로고침」** — 닉 변경 직후 수동 동기화
 - 사용자 식별은 **Discord User ID** 기준 (닉 변경해도 데이터 유지)
+
+### 선생님 휴식 · 담당 변경
+
+1. `/admin/teachers`에서 선생님 **비활성** → 신규 수강 신청 대상에서 제외
+2. `/admin/students`에서 기존 학생 **담당 선생님 변경** → 반·인원 수 자동 갱신
+3. `/admin/graduated`에서 **졸업 취소** → `active` 복구 + 마지막 담당 선생님·반 복원
 
 ---
 
@@ -384,12 +398,14 @@ https://discord.com/api/oauth2/authorize?client_id=CLIENT_ID&permissions=1342177
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
 | `GET` | `/api/health` | 헬스체크 |
-| `GET` | `/api/me` | 내 프로필 (닉·역할·신청·면담) |
+| `GET` | `/api/me` | 내 프로필 (`?refresh=1` 시 Discord 강제 동기화) |
 | `PATCH` | `/api/me/guild-nick` | 서버 닉네임 변경 |
-| `POST` | `/api/applications` | 수강 신청 |
+| `POST` | `/api/applications` | 수강 신청 (즉시 승인) |
 | `POST` | `/api/interviews` | 졸업면담 제출 |
+| `PATCH` | `/api/admin/students/[id]` | 졸업 · 졸업 취소 · 담당 선생님 변경 |
 | `GET` | `/api/teacher/students` | 선생님 — 담당 학생 목록 |
 | `POST` | `/api/admin/discord-sync` | 관리자 — Discord 일괄 동기화 |
+| `GET` | `/api/admin/ops-status` | 스키마·연동 상태 점검 |
 | `GET` | `/api/admin/points` | 관리자 — 포인트 월별 조회 |
 
 ---
