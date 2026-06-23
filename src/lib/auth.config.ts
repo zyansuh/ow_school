@@ -1,0 +1,24 @@
+import type { NextAuthConfig } from 'next-auth';
+import Discord from 'next-auth/providers/discord';
+
+export const authConfig = {
+  providers: [
+    Discord({
+      clientId: process.env.DISCORD_CLIENT_ID!,
+      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+    }),
+  ],
+  pages: { signIn: '/login' },
+  session: { strategy: 'jwt' as const },
+  callbacks: {
+    authorized({ auth, request }) {
+      if (request.nextUrl.pathname.startsWith('/admin')) {
+        return !!auth?.user?.isAdmin;
+      }
+      return true;
+    },
+    async jwt({ token }) {
+      return token;
+    },
+  },
+} satisfies NextAuthConfig;

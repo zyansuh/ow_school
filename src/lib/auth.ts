@@ -1,8 +1,14 @@
 import NextAuth from 'next-auth';
-import Discord from 'next-auth/providers/discord';
 import { prisma } from '@/lib/prisma';
-import { ensureDefaultAdmin } from '@/lib/rbac';
-import { isAdmin } from '@/lib/rbac';
+import { ensureDefaultAdmin, isAdmin } from '@/lib/rbac';
+import { authConfig } from '@/lib/auth.config';
+
+type DiscordProfile = {
+  id: string;
+  username: string;
+  global_name?: string | null;
+  avatar?: string | null;
+};
 
 declare module 'next-auth' {
   interface Session {
@@ -23,72 +29,66 @@ declare module 'next-auth' {
   }
 }
 
-type DiscordProfile = {
-  id: string;
-  username: string;
-  global_name?: string | null;
-  avatar?: string | null;
-};
+async function syncTokenFromUser(userId: string, token: Record<string, unknown>) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { class: true, teacher: true, adminRole: true },
+  });
+  if (!user) return token;
+
+  token.userId = user.id;
+  token.discordId = user.discordId;
+  token.discordUsername = user.discordUsername;
+  token.discordNickname = user.discordNickname;
+  token.discordAvatar = user.discordAvatar;
+  token.isAdmin = !!user.adminRole;
+  token.className = user.class?.name ?? null;
+  token.teacherName = user.teacher?.name ?? null;
+  token.status = user.status;
+  return token;
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [
-    Discord({
-      clientId: process.env.DISCORD_CLIENT_ID!,
-      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
-    }),
-  ],
+  ...authConfig,
   callbacks: {
+    ...authConfig.callbacks,
     async signIn({ profile }) {
       const p = profile as DiscordProfile | undefined;
       if (!p?.id || !p.username) return false;
 
-      const discordId = p.id;
-      const discordUsername = p.username;
-      const discordNickname = p.global_name || p.username;
       const discordAvatar = p.avatar
         ? `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.png`
         : null;
 
       const user = await prisma.user.upsert({
-        where: { discordId },
-        create: { discordId, discordUsername, discordNickname, discordAvatar },
-        update: { discordUsername, discordNickname, discordAvatar },
+        where: { discordId: p.id },
+        create: {
+          discordId: p.id,
+          discordUsername: p.username,
+          discordNickname: p.global_name || p.username,
+          discordAvatar,
+        },
+        update: {
+          discordUsername: p.username,
+          discordNickname: p.global_name || p.username,
+          discordAvatar,
+        },
       });
 
-      await ensureDefaultAdmin(discordUsername, user.id);
+      await ensureDefaultAdmin(p.username, user.id);
       return true;
     },
-    async jwt({ token, profile }) {
+    async jwt({ token, profile, trigger }) {
       const p = profile as DiscordProfile | undefined;
+
       if (p?.id) {
-        const user = await prisma.user.findUnique({
-          where: { discordId: p.id },
-          include: { class: true, teacher: true, adminRole: true },
-        });
-        if (user) {
-          token.userId = user.id;
-          token.discordId = user.discordId;
-          token.discordUsername = user.discordUsername;
-          token.discordNickname = user.discordNickname;
-          token.discordAvatar = user.discordAvatar;
-          token.isAdmin = !!user.adminRole;
-          token.className = user.class?.name ?? null;
-          token.teacherName = user.teacher?.name ?? null;
-          token.status = user.status;
-        }
-      } else if (token.userId) {
-        const user = await prisma.user.findUnique({
-          where: { id: token.userId as string },
-          include: { class: true, teacher: true },
-        });
-        if (user) {
-          token.isAdmin = await isAdmin(user.id);
-          token.className = user.class?.name ?? null;
-          token.teacherName = user.teacher?.name ?? null;
-          token.status = user.status;
-          token.discordNickname = user.discordNickname;
-        }
+        const user = await prisma.user.findUnique({ where: { discordId: p.id } });
+        if (user) await syncTokenFromUser(user.id, token);
+      } else if (token.userId && (trigger === 'update' || !token.isAdmin)) {
+        await syncTokenFromUser(token.userId as string, token);
+        token.isAdmin = await isAdmin(token.userId as string);
       }
+
       return token;
     },
     async session({ session, token }) {
@@ -111,6 +111,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       };
     },
   },
-  pages: { signIn: '/login' },
-  session: { strategy: 'jwt' },
 });
