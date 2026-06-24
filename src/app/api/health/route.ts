@@ -8,10 +8,13 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const rawNextAuthUrl = process.env.NEXTAUTH_URL ?? 'missing';
   const effectiveAuthUrl = resolveAuthUrl();
+  const oauthRedirectUri = `${effectiveAuthUrl}/api/auth/callback/discord`;
+
   const checks: Record<string, string> = {
     DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'missing',
     AUTH_SECRET: process.env.AUTH_SECRET ? 'set' : 'missing',
     DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID ? 'set' : 'missing',
+    DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET ? 'set' : 'missing',
     DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID ? 'set' : 'missing',
     DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN ? 'set' : 'missing',
     NEXTAUTH_URL: rawNextAuthUrl,
@@ -20,6 +23,13 @@ export async function GET() {
   };
 
   const warnings: string[] = [];
+
+  if (!process.env.DISCORD_CLIENT_SECRET) {
+    warnings.push('DISCORD_CLIENT_SECRET이 없습니다. Discord OAuth 로그인이 실패합니다.');
+  }
+  if (!process.env.AUTH_SECRET && !process.env.NEXTAUTH_SECRET) {
+    warnings.push('AUTH_SECRET이 없습니다. 세션/JWT 서명이 실패합니다.');
+  }
   if (
     process.env.VERCEL &&
     rawNextAuthUrl !== 'missing' &&
@@ -27,7 +37,7 @@ export async function GET() {
     effectiveAuthUrl !== rawNextAuthUrl
   ) {
     warnings.push(
-      `NEXTAUTH_URL 환경 변수가 ${rawNextAuthUrl} 입니다. 런타임에 ${effectiveAuthUrl} 로 보정 중입니다. Vercel Production 값을 https://ow-school.vercel.app 로 수정하세요.`
+      `NEXTAUTH_URL 환경 변수가 ${rawNextAuthUrl} 입니다. 런타임에 ${effectiveAuthUrl} 로 보정 중입니다. Vercel Production 값을 https://ow-school.vercel.app 로 수정하세요.`,
     );
   } else if (process.env.VERCEL && rawNextAuthUrl.includes('localhost')) {
     warnings.push('NEXTAUTH_URL이 localhost입니다. Production에는 https://ow-school.vercel.app 로 설정하세요.');
@@ -47,10 +57,16 @@ export async function GET() {
     checks.DISCORD_BOT_IN_GUILD = botOk ? 'yes' : 'no';
     if (!botOk) {
       warnings.push(
-        '봇이 DISCORD_GUILD_ID 서버에 없거나 서버 ID가 틀렸습니다. 디스코드 서버에 OW_School 봇을 초대하세요.'
+        '봇이 DISCORD_GUILD_ID 서버에 없거나 서버 ID가 틀렸습니다. 디스코드 서버에 OW_School 봇을 초대하세요.',
       );
     }
   }
 
-  return NextResponse.json({ ok: db.startsWith('ok'), db, env: checks, warnings });
+  return NextResponse.json({
+    ok: db.startsWith('ok'),
+    db,
+    env: checks,
+    oauthRedirectUri,
+    warnings,
+  });
 }

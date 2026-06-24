@@ -58,7 +58,12 @@ async function syncTokenFromUser(userId: string, token: Record<string, unknown>)
   if (!user) return token;
 
   const roleNames = parseRoleNames(user.discordRoleNames);
-  const roleCtx = await loadUserRoleContext();
+  let roleCtx = { teacherDiscordUserIds: new Set<string>() };
+  try {
+    roleCtx = await loadUserRoleContext();
+  } catch (e) {
+    console.warn('[auth] loadUserRoleContext failed, using empty context:', e);
+  }
   const siteRole = getUserRole(user, roleCtx);
 
   token.userId = user.id;
@@ -169,6 +174,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
 
           await syncTokenFromUser(user.id, token);
+          console.info('[auth] login ok', { discordId: p.id, userId: user.id });
         } else if (token.userId) {
           if (trigger === 'update' && token.discordId) {
             await syncUserGuildData(token.discordId as string);
