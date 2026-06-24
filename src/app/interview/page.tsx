@@ -15,6 +15,7 @@ import { GraduationReviewFab } from '@/components/interview/graduation-review-fa
 import { ds } from '@/styles/design-system';
 import { CLUB_POINT, CLUB_RECOMMENDATION_URL, formatPoint, GRADUATION_POINT } from '@/lib/points';
 import { Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type MeData = {
   discordId?: string;
@@ -59,12 +60,44 @@ function resolveTeacherName(me: MeData | null): string {
   return approved?.teacher?.name ?? '미배정';
 }
 
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
+function InfoTile({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div>
-      <p className="text-subtle text-xs mb-1">{label}</p>
-      <p className="text-foreground text-sm font-medium">{value}</p>
+    <div className="rounded-xl border border-border/80 bg-surface/50 px-4 py-3 min-w-0">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground mb-1.5">{label}</p>
+      <p
+        className={cn(
+          'text-sm font-semibold text-foreground leading-snug',
+          mono && 'font-mono text-xs break-all',
+        )}
+      >
+        {value}
+      </p>
     </div>
+  );
+}
+
+function QuestionBlock({
+  number,
+  title,
+  hint,
+  children,
+}: {
+  number: number;
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-surface/30 p-5 sm:p-6 space-y-4">
+      <div className="space-y-2">
+        <span className="inline-flex items-center rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+          질문 {number}
+        </span>
+        <p className="text-base sm:text-lg font-medium text-foreground leading-relaxed">{title}</p>
+        {hint && <p className="text-sm text-muted-foreground leading-relaxed">{hint}</p>}
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -183,101 +216,106 @@ export default function InterviewPage() {
           {editId ? '졸업면담 수정' : '졸업면담'}
         </h1>
 
-        <Card className={`${ds.card} max-w-lg mx-auto`}>
-          <div className={`${ds.cardPad} grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-border`}>
-            <ReadOnlyField label="작성자" value={authorName} />
-            <ReadOnlyField label="Discord User ID" value={authorDiscordId} />
-            <ReadOnlyField label="담당 선생님" value={resolveTeacherName(me)} />
-            <ReadOnlyField label="반" value={resolveClassName(me)} />
+        <Card className={`${ds.card} max-w-2xl mx-auto overflow-hidden`}>
+          <div className={`${ds.cardPad} border-b border-border space-y-4`}>
+            <p className="text-sm text-muted-foreground">작성자 정보는 자동으로 채워집니다.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <InfoTile label="작성자" value={authorName} />
+              <InfoTile label="반" value={resolveClassName(me)} />
+              <InfoTile label="담당 선생님" value={resolveTeacherName(me)} />
+              <InfoTile label="Discord User ID" value={authorDiscordId} mono />
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className={`${ds.cardPad} space-y-6`}>
-            <div>
-              <Label>질문 1</Label>
-              <p className="text-sm text-gray-300 mt-2 mb-1">
-                평겜마 콘텐츠를 참여하신 경험이 있으실까요?
-                <br />
-                참여하셨다면 느낀점이 있으실까요?
-              </p>
-              <p className="text-xs text-gray-500 mb-2">ex) 일반내전, 공식내전, 천타온, 옵스나이트 등</p>
+          <form onSubmit={handleSubmit} className={`${ds.cardPad} space-y-5`}>
+            <QuestionBlock
+              number={1}
+              title="평겜마 콘텐츠를 참여하신 경험이 있으실까요? 참여하셨다면 느낀점이 있으실까요?"
+              hint="예) 일반내전, 공식내전, 천타온, 옵스나이트 등"
+            >
               <Textarea
                 required
                 value={form.contentExperience}
                 onChange={(e) => setForm({ ...form, contentExperience: e.target.value })}
-                className="min-h-[100px]"
+                placeholder="경험과 느낀점을 자유롭게 적어 주세요"
+                className="min-h-[120px] bg-background"
               />
-            </div>
+            </QuestionBlock>
 
-            <div>
-              <Label>질문 2</Label>
-              <p className="text-sm text-gray-300 mt-2 mb-1">
-                최근 함께한 사람 중 인상 깊거나 좋았던 분이 있으실까요?
-              </p>
-              <p className="text-xs text-gray-500 mb-2">*담당선생님 제외*</p>
+            <QuestionBlock
+              number={2}
+              title="최근 함께한 사람 중 인상 깊거나 좋았던 분이 있으실까요?"
+              hint="담당 선생님은 제외해 주세요."
+            >
               <Textarea
                 required
                 value={form.memorablePerson}
                 onChange={(e) => setForm({ ...form, memorablePerson: e.target.value })}
-                className="min-h-[100px]"
+                placeholder="인상 깊었던 분과 이유를 적어 주세요"
+                className="min-h-[120px] bg-background"
               />
-            </div>
+            </QuestionBlock>
 
-            <div>
-              <Label>질문 3 · 동호회 가입 여부</Label>
-              <Select
-                required
-                value={form.joinedClub}
-                onChange={(e) => setForm({ ...form, joinedClub: e.target.value as 'yes' | 'no', clubNames: [''] })}
-                className="mt-2"
-              >
-                <option value="no">아니오</option>
-                <option value="yes">예</option>
-              </Select>
-
-              <p className="text-xs text-gray-500 mt-2">
-                동호회를 찾고 계신가요?{' '}
-                <a
-                  href={CLUB_RECOMMENDATION_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-purple-400 hover:text-purple-300 underline"
+            <QuestionBlock
+              number={3}
+              title="동호회에 가입하셨나요?"
+            >
+              <div className="space-y-3">
+                <Select
+                  required
+                  value={form.joinedClub}
+                  onChange={(e) => setForm({ ...form, joinedClub: e.target.value as 'yes' | 'no', clubNames: [''] })}
+                  className="max-w-xs bg-background"
                 >
-                  동호회 추천 채널 바로가기
-                </a>
-              </p>
+                  <option value="no">아니오</option>
+                  <option value="yes">예</option>
+                </Select>
 
-              {form.joinedClub === 'yes' && (
-                <div className="mt-4 space-y-3">
-                  {form.clubNames.map((name, i) => (
-                    <div key={i}>
-                      <Label>동호회명 {i + 1}</Label>
-                      <Input
-                        required
-                        value={name}
-                        onChange={(e) => updateClubName(i, e.target.value)}
-                        placeholder="동호회명 입력"
-                        className="mt-2"
-                      />
-                    </div>
-                  ))}
-                  {form.clubNames.length < 3 && (
-                    <Button type="button" variant="outline" size="sm" onClick={addClubField}>
-                      <Plus className="h-4 w-4" /> 동호회 추가
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
+                <p className="text-sm text-muted-foreground">
+                  동호회를 찾고 계신가요?{' '}
+                  <a
+                    href={CLUB_RECOMMENDATION_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline font-medium"
+                  >
+                    동호회 추천 채널 바로가기
+                  </a>
+                </p>
+
+                {form.joinedClub === 'yes' && (
+                  <div className="space-y-3 pt-1">
+                    {form.clubNames.map((name, i) => (
+                      <div key={i}>
+                        <Label className="text-xs text-muted-foreground">동호회명 {i + 1}</Label>
+                        <Input
+                          required
+                          value={name}
+                          onChange={(e) => updateClubName(i, e.target.value)}
+                          placeholder="동호회명 입력"
+                          className="mt-1.5 bg-background"
+                        />
+                      </div>
+                    ))}
+                    {form.clubNames.length < 3 && (
+                      <Button type="button" variant="outline" size="sm" onClick={addClubField}>
+                        <Plus className="h-4 w-4" /> 동호회 추가
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </QuestionBlock>
 
             {!editId && (
-              <Card className="bg-purple-950/40 border-purple-500/30">
-                <div className="card-pad space-y-3 text-sm">
-                  <h3 className="font-semibold text-purple-200">동호회 가입 시 추가 포인트!</h3>
-                  <div className="text-gray-300 space-y-1">
+              <Card className="bg-primary/5 border-primary/25">
+                <div className="card-pad space-y-2 text-sm">
+                  <h3 className="font-semibold text-foreground">제출 시 포인트 안내</h3>
+                  <div className="text-muted-foreground space-y-1">
                     <p>졸업 포인트 {formatPoint(GRADUATION_POINT)}</p>
-                    <p>+ 동호회 가입 포인트 {formatPoint(CLUB_POINT)}</p>
-                    <p className="text-purple-300 font-medium pt-1">
-                      = 총 {formatPoint(GRADUATION_POINT + CLUB_POINT)} 지급
+                    <p>동호회 가입 시 추가 {formatPoint(CLUB_POINT)}</p>
+                    <p className="text-foreground font-medium pt-1">
+                      최대 {formatPoint(GRADUATION_POINT + CLUB_POINT)} 지급
                     </p>
                   </div>
                 </div>
