@@ -36,9 +36,15 @@
     @apply border-border;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Pretendard', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
   }
 }
 
@@ -65,6 +71,12 @@
 
   .section-gap {
     @apply space-y-6 sm:space-y-8;
+  }
+
+  /** 한국어 본문 — 모바일 줄바꿈·자동 확대 방지 */
+  .text-body-ko {
+    @apply text-base leading-relaxed break-keep;
+    overflow-wrap: anywhere;
   }
 
   .page-enter {
