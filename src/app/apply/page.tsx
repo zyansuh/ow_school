@@ -9,6 +9,7 @@ import { LoadingPage } from '@/components/ui/loading';
 import { PLAY_TIME_SLOTS } from '@/lib/form-options';
 import { ds } from '@/styles/design-system';
 import { useApplyForm } from '@/hooks/apply/use-apply-form';
+import { TeacherSelectCard } from '@/components/apply/teacher-select-card';
 
 function ApplyForm() {
   const { session, status, teachers, form, setForm, loading, submit, signIn } = useApplyForm();
@@ -19,14 +20,14 @@ function ApplyForm() {
     return (
       <div className="text-center py-16 space-y-4">
         <p className={ds.textMuted}>수강 신청은 로그인 후 가능합니다</p>
-        <Button onClick={() => void signIn()}>Discord 로그인</Button>
+        <Button onClick={() => void signIn('/apply')}>Discord 로그인</Button>
       </div>
     );
   }
 
   return (
-    <Card className={`${ds.card} max-w-lg mx-auto`}>
-      <form onSubmit={submit} className="card-pad space-y-5">
+    <Card className={`${ds.card} max-w-2xl mx-auto`}>
+      <form onSubmit={submit} className="card-pad space-y-6">
         <div>
           <Label htmlFor="nickname">평겜마 닉네임(오픈카톡 닉네임) *</Label>
           <Input id="nickname" required value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} className="mt-2" />
@@ -43,16 +44,26 @@ function ApplyForm() {
             ))}
           </Select>
         </div>
-        <div>
-          <Label htmlFor="teacherId">희망 선생님 *</Label>
-          <Select id="teacherId" required value={form.teacherId} onChange={(e) => setForm({ ...form, teacherId: e.target.value })} className="mt-2">
-            <option value="">선택하세요</option>
+        <div className="space-y-3">
+          <Label>희망 선생님 *</Label>
+          <p className="text-xs text-muted-foreground">선생님 이름 · 담당 반 · 주 활동시간을 확인하고 선택하세요</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {teachers.map((t) => (
-              <option key={t.id} value={t.id}>{t.name} ({t.class.name})</option>
+              <TeacherSelectCard
+                key={t.id}
+                teacher={t}
+                selected={form.teacherId === t.id}
+                onSelect={(id) => setForm({ ...form, teacherId: id })}
+              />
             ))}
-          </Select>
+          </div>
+          {teachers.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-6">모집 중인 선생님이 없습니다</p>
+          )}
         </div>
-        <Button type="submit" disabled={loading} className="w-full">{loading ? '신청 중...' : '신청하기'}</Button>
+        <Button type="submit" disabled={loading || !form.teacherId} className="w-full">
+          {loading ? '신청 중...' : '신청하기'}
+        </Button>
       </form>
     </Card>
   );

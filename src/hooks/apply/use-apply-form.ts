@@ -7,8 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { userDisplayName } from '@/lib/user-display';
 import { PLAY_TIME_SLOTS } from '@/lib/form-options';
-
-type Teacher = { id: string; name: string; class: { name: string } };
+import type { TeacherSelectItem } from '@/components/apply/teacher-select-card';
 
 export function useApplyForm() {
   const { data: session, status } = useSession();
@@ -16,7 +15,7 @@ export function useApplyForm() {
   const params = useSearchParams();
   const preTeacher = params.get('teacher');
 
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [teachers, setTeachers] = useState<TeacherSelectItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     nickname: '',
@@ -26,7 +25,9 @@ export function useApplyForm() {
   });
 
   useEffect(() => {
-    fetch('/api/teachers').then((r) => r.json()).then(setTeachers);
+    fetch('/api/teachers')
+      .then((r) => r.json())
+      .then((data) => setTeachers(Array.isArray(data) ? data : []));
   }, []);
 
   useEffect(() => {
@@ -35,7 +36,6 @@ export function useApplyForm() {
         ...f,
         discord: session.user.discordId,
       }));
-      // 세션 JWT는 길드 닉 동기화 전 값일 수 있어 /api/me 최신 표시명 사용
       fetch('/api/me')
         .then((r) => r.json())
         .then((me) => {
@@ -53,6 +53,10 @@ export function useApplyForm() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.teacherId) {
+      toast.error('희망 선생님을 선택해 주세요');
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch('/api/applications', {

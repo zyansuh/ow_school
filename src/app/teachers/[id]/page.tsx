@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Card } from '@/components/ui/card';
@@ -12,6 +11,7 @@ import { getTeacherAssignedStudentRows } from '@/lib/teacher-assigned-students';
 import { formatDate } from '@/lib/utils';
 import { ds } from '@/styles/design-system';
 import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher-recruiting';
+import { formatMainActivityTime, teacherRoleLabel } from '@/lib/teacher-display';
 
 export { dynamic } from '@/lib/segment';
 
@@ -51,26 +51,27 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
 
         <Card className={ds.card}>
           <div className={`${ds.cardPad} space-y-6`}>
-            <div className="flex items-start gap-5">
-              {teacher.profileImage && (
-                <Image src={teacher.profileImage} alt={teacher.name} width={80} height={80} className="rounded-full border-2 border-border" />
-              )}
-              <div className="space-y-2">
+            <div className="space-y-3">
+              <div>
                 <h1 className={ds.title}>{teacher.name}</h1>
-                <p className={ds.textMuted}>{teacher.class.name} · {teacher.class.gameKr}</p>
-                <div className="flex flex-wrap gap-2">
-                  {teacher.mbti && <Badge variant="outline">MBTI: {teacher.mbti}</Badge>}
-                  <Badge variant={full ? 'danger' : 'success'}>
-                    {recruitmentStatusLabel(recruitStatus)} ({activeCount}/{teacher.maxStudents})
-                  </Badge>
-                </div>
+                <p className={`${ds.textMuted} mt-1`}>{teacherRoleLabel(teacher)}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {teacher.mbti && <Badge variant="outline">MBTI: {teacher.mbti}</Badge>}
+                <Badge variant={full ? 'danger' : 'success'}>
+                  {recruitmentStatusLabel(recruitStatus)} ({activeCount}/{teacher.maxStudents})
+                </Badge>
               </div>
             </div>
 
-            {(activityDays.length > 0 || teacher.activityTimeSlot) && (
-              <div className="text-sm text-muted-foreground space-y-1">
-                {activityDays.length > 0 && <p>활동 요일: {activityDays.join(', ')}</p>}
-                {teacher.activityTimeSlot && <p>활동 시간: {teacher.activityTimeSlot}</p>}
+            <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+              <p className="text-xs text-muted-foreground mb-1">주 활동시간</p>
+              <p className="text-sm text-foreground">{formatMainActivityTime(teacher.activityTimeSlot)}</p>
+            </div>
+
+            {activityDays.length > 0 && (
+              <div className="text-sm text-muted-foreground">
+                <p>활동 요일: {activityDays.join(', ')}</p>
               </div>
             )}
 
