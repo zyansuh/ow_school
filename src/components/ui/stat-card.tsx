@@ -13,7 +13,7 @@ export function StatCard({ label, value, icon: Icon, className, suffix }: Props)
   return (
     <div
       className={cn(
-        'flex h-full min-h-[120px] flex-col justify-between rounded-xl border border-border bg-card p-5 shadow-card transition-all duration-200 hover:border-primary/25 hover:bg-card-hover hover:shadow-card-hover',
+        'flex h-full min-h-[100px] sm:min-h-[120px] flex-col justify-between rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card transition-all duration-200 hover:border-primary/25 hover:bg-card-hover hover:shadow-card-hover min-w-0',
         className,
       )}
     >
@@ -23,7 +23,7 @@ export function StatCard({ label, value, icon: Icon, className, suffix }: Props)
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="mt-4 text-3xl font-bold tracking-tight text-foreground">
+      <p className="mt-3 sm:mt-4 text-2xl sm:text-3xl font-bold tracking-tight text-foreground break-keep">
         {value}
         {suffix && <span className="ml-1 text-lg font-semibold text-muted-foreground">{suffix}</span>}
       </p>
