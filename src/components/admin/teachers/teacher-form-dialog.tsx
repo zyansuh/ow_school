@@ -190,27 +190,34 @@ export function TeacherFormDialog({
           <section className="space-y-3">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">담당 반 *</h3>
             <p className="text-xs text-muted-foreground">복수 선택 가능 · 첫 번째 반이 주 담당 반으로 표시됩니다</p>
-            <div className="flex flex-wrap gap-2">
-              {classes.map((c) => {
-                const selected = form.classIds.includes(c.id);
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => toggleClass(c.id)}
-                    className={cn(
-                      'px-4 py-2 rounded-xl text-sm border transition-colors min-h-10',
-                      selected
-                        ? 'border-primary/50 bg-primary/15 text-primary font-medium'
-                        : 'border-border text-muted-foreground hover:border-primary/30 hover:bg-accent',
-                    )}
-                  >
-                    {c.name}
-                  </button>
-                );
-              })}
-            </div>
-            {form.classIds.length === 0 && (
+            {classes.length === 0 ? (
+              <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                반 목록을 불러오지 못했습니다. 페이지를 새로고침하거나, 터미널에서{' '}
+                <code className="text-xs">npm run db:seed</code> 로 반 데이터를 넣어 주세요.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {classes.map((c) => {
+                  const selected = form.classIds.includes(c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => toggleClass(c.id)}
+                      className={cn(
+                        'px-4 py-2 rounded-xl text-sm border transition-colors min-h-10',
+                        selected
+                          ? 'border-primary/50 bg-primary/15 text-primary font-medium'
+                          : 'border-border text-muted-foreground hover:border-primary/30 hover:bg-accent',
+                      )}
+                    >
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {classes.length > 0 && form.classIds.length === 0 && (
               <p className="text-xs text-danger">담당 반을 1개 이상 선택하세요</p>
             )}
           </section>

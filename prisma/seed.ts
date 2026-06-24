@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { GAME_CLASSES } from '../src/lib/constants';
+import { ensureGameClasses } from '../src/lib/ensure-game-classes';
 
 const prisma = new PrismaClient();
 
@@ -13,24 +13,7 @@ const TEACHERS = [
 ];
 
 async function main() {
-  for (const cls of GAME_CLASSES) {
-    await prisma.class.upsert({
-      where: { slug: cls.slug },
-      create: {
-        slug: cls.slug,
-        name: cls.name,
-        game: cls.game,
-        gameKr: cls.gameKr,
-        description: cls.description,
-      },
-      update: {
-        name: cls.name,
-        game: cls.game,
-        gameKr: cls.gameKr,
-        description: cls.description,
-      },
-    });
-  }
+  await ensureGameClasses(prisma);
 
   for (const t of TEACHERS) {
     const cls = await prisma.class.findUnique({ where: { slug: t.slug } });
