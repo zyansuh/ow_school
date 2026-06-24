@@ -20,7 +20,6 @@ import {
   type DiscordSearchUser,
   type DiscordIdLookupResult,
 } from '@/components/admin/discord-user-search';
-import { ProfileImageField } from '@/components/admin/teachers/profile-image-field';
 import type { TeacherFormState, ClassItem } from '@/hooks/admin/use-admin-teachers';
 
 type Props = {
@@ -184,14 +183,6 @@ export function TeacherFormDialog({
               <DiscordUserIdLookup
                 discordUserId={form.discordUserId}
                 onResolved={onIdLookupResolved}
-              />
-            </Field>
-
-            <Field label="프로필 사진" hint="휴대폰 갤러리·카메라에서 바로 올리거나, 이미지를 끌어다 놓을 수 있습니다.">
-              <ProfileImageField
-                value={form.profileImage}
-                onChange={(profileImage) => onChange({ ...form, profileImage })}
-                disabled={saving}
               />
             </Field>
           </section>

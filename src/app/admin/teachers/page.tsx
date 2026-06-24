@@ -41,7 +41,6 @@ export default function AdminTeachersPage() {
     setEditing(t.id);
     setForm({
       name: t.name,
-      profileImage: t.profileImage || '',
       mbti: t.mbti || '',
       intro: t.intro || '',
       discord: t.discord || '',

@@ -9,7 +9,6 @@ import { z } from 'zod';
 
 const teacherSchema = z.object({
   name: z.string().min(1, '이름을 입력하세요'),
-  profileImage: z.string().optional(),
   mbti: z.string().optional(),
   intro: z.string().optional(),
   classIds: z.array(z.string().min(1)).min(1, '담당 반을 1개 이상 선택하세요'),

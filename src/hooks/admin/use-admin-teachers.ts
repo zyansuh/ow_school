@@ -7,7 +7,6 @@ import { isDiscordSnowflake } from '@/lib/discord-id';
 export type AdminTeacher = {
   id: string;
   name: string;
-  profileImage?: string;
   mbti?: string;
   intro?: string;
   discord?: string;
@@ -27,7 +26,6 @@ export type ClassItem = { id: string; name: string };
 
 export type TeacherFormState = {
   name: string;
-  profileImage: string;
   mbti: string;
   intro: string;
   discord: string;
@@ -42,7 +40,6 @@ export type TeacherFormState = {
 
 export const emptyTeacherForm: TeacherFormState = {
   name: '',
-  profileImage: '',
   mbti: '',
   intro: '',
   discord: '',
@@ -112,7 +109,6 @@ export function useAdminTeachers() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.name.trim(),
-          profileImage: form.profileImage.trim() || undefined,
           mbti: form.mbti || undefined,
           intro: form.intro.trim() || undefined,
           discord: form.discord.trim() || undefined,
