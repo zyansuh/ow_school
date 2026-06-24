@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession, signIn } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { signInWithDiscord } from '@/hooks/use-discord-sign-in';
 import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Card } from '@/components/ui/card';
@@ -109,7 +110,7 @@ export default function InterviewPage() {
       <MainLayout>
         <div className="page-container py-20 text-center space-y-4">
           <p className="text-gray-400">졸업면담은 로그인 후 작성할 수 있습니다</p>
-          <Button onClick={() => signIn('discord')}>Discord 로그인</Button>
+          <Button onClick={() => void signInWithDiscord('/interview')}>Discord 로그인</Button>
         </div>
       </MainLayout>
     );

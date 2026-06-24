@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession, signIn } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { signInWithDiscord } from '@/hooks/use-discord-sign-in';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { userDisplayName } from '@/lib/user-display';
@@ -70,5 +71,5 @@ export function useApplyForm() {
     }
   };
 
-  return { session, status, teachers, form, setForm, loading, submit, signIn };
+  return { session, status, teachers, form, setForm, loading, submit, signIn: signInWithDiscord };
 }

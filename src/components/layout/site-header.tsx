@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { Gamepad2, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { signInWithDiscord } from '@/hooks/use-discord-sign-in';
 import { userDisplayName } from '@/lib/user-display';
 import { userHeaderSubtitle } from '@/lib/user-header';
 import { SITE_NAME } from '@/lib/site-brand';
@@ -66,7 +67,7 @@ export function SiteHeader() {
               <Button variant="outline" size="sm" onClick={() => signOut()}>로그아웃</Button>
             </div>
           ) : (
-            <Button size="sm" onClick={() => signIn('discord')}>Discord 로그인</Button>
+            <Button size="sm" onClick={() => void signInWithDiscord()}>Discord 로그인</Button>
           )}
 
           <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setOpen(!open)}>

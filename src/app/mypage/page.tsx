@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { signIn } from 'next-auth/react';
+import { signInWithDiscord } from '@/hooks/use-discord-sign-in';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +35,7 @@ export default function MyPage() {
       <MainLayout>
         <div className="page-container py-20 text-center space-y-4">
           <p className={ds.textMuted}>마이페이지는 로그인 후 이용 가능합니다</p>
-          <Button onClick={() => signIn('discord')}>Discord 로그인</Button>
+          <Button onClick={() => void signInWithDiscord('/mypage')}>Discord 로그인</Button>
         </div>
       </MainLayout>
     );

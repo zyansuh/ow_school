@@ -19,7 +19,7 @@ function ApplyForm() {
     return (
       <div className="text-center py-16 space-y-4">
         <p className={ds.textMuted}>수강 신청은 로그인 후 가능합니다</p>
-        <Button onClick={() => signIn('discord')}>Discord 로그인</Button>
+        <Button onClick={() => void signIn()}>Discord 로그인</Button>
       </div>
     );
   }

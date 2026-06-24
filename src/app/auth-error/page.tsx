@@ -8,13 +8,15 @@ function AuthErrorRedirect() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const error = searchParams.get('error') ?? 'Configuration';
+  const callbackUrl = searchParams.get('callbackUrl');
 
   useEffect(() => {
     void resetAuthCookies().finally(() => {
       const params = new URLSearchParams({ error });
+      if (callbackUrl) params.set('callbackUrl', callbackUrl);
       router.replace(`/login?${params.toString()}`);
     });
-  }, [error, router]);
+  }, [callbackUrl, error, router]);
 
   const message = AUTH_ERROR_MESSAGES[error] ?? AUTH_ERROR_MESSAGES.Configuration;
 

@@ -103,7 +103,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const username = p ? discordUsernameFromProfile(p) : '';
         if (!p?.id || !username) {
           console.warn('[auth] signIn rejected: missing discord id/username', profile);
-          return false;
+          return '/login?error=AccessDenied';
         }
 
         if (getGuildConfig()) {
@@ -120,13 +120,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return true;
       } catch (e) {
         console.error('[auth] signIn failed:', e);
-        return false;
+        return '/login?error=AuthError';
       }
     },
     async jwt({ token, profile, account, trigger }) {
+      const p = profile as DiscordProfile | undefined;
       try {
-        const p = profile as DiscordProfile | undefined;
-
         if (p?.id) {
           const username = discordUsernameFromProfile(p);
           const discordAvatar = p.avatar
@@ -179,6 +178,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       } catch (e) {
         console.error('[auth] jwt failed:', e);
+        if (p?.id) {
+          throw e;
+        }
       }
 
       return token;

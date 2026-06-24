@@ -21,7 +21,8 @@ export const authConfig = {
     }),
   ],
   pages: { signIn: '/login', error: '/auth-error' },
-  session: { strategy: 'jwt' as const },
+  session: { strategy: 'jwt' as const, maxAge: 30 * 24 * 60 * 60 },
+  jwt: { maxAge: 30 * 24 * 60 * 60 },
   callbacks: {
     authorized({ auth, request }) {
       if (request.nextUrl.pathname.startsWith('/admin')) {
