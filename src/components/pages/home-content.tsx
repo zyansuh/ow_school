@@ -42,41 +42,41 @@ export async function HomeContent() {
       <section className="relative overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.07] via-transparent to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_-15%,rgba(88,101,242,0.14),transparent)] pointer-events-none" />
-        <div className="page-container relative z-10 py-14 sm:py-20 lg:py-24">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="flex justify-center mb-7 sm:mb-8">
+        <div className="page-container relative z-10 py-12 sm:py-20 lg:py-24">
+          <div className="mx-auto w-full min-w-0 max-w-2xl text-center px-0.5">
+            <div className="flex justify-center mb-6 sm:mb-8">
               <Image
                 src="/images/logo/logo-peaceful-gaming-village.webp"
                 alt={SITE_NAME}
-                width={80}
-                height={80}
+                width={72}
+                height={72}
                 priority
-                sizes="80px"
-                className="rounded-2xl border border-border/70 shadow-card"
+                sizes="72px"
+                className="h-[72px] w-[72px] sm:h-20 sm:w-20 rounded-2xl border border-border/70 shadow-card"
               />
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-bold tracking-tight text-foreground leading-[1.15]">
+            <h1 className="text-[1.875rem] sm:text-5xl lg:text-[3.25rem] font-bold tracking-tight text-foreground leading-[1.2] break-keep text-balance">
               {SITE_NAME}
             </h1>
-            <p className="mt-3 text-lg sm:text-xl font-medium text-primary/90 tracking-tight">
+            <p className="mt-2.5 sm:mt-3 text-base sm:text-xl font-medium text-primary/90 tracking-tight break-keep">
               {SITE_TAGLINE}
             </p>
 
-            <div className="mt-8 sm:mt-10 mx-auto max-w-md sm:max-w-lg space-y-4 text-left sm:text-center">
-              <p className="text-[15px] sm:text-base text-muted-foreground leading-[1.7]">
+            <div className="mt-7 sm:mt-10 mx-auto w-full min-w-0 max-w-lg space-y-3.5 sm:space-y-4 text-center px-1">
+              <p className="text-body-ko text-muted-foreground">
                 평겜마에서 적응 할 수 있도록 도와주는 분들이 담당선생님입니다.
               </p>
-              <p className="text-[15px] sm:text-base text-foreground/90 leading-[1.7] font-medium">
+              <p className="text-body-ko text-foreground/90 font-medium">
                 각 반마다 담당 선생님들이 여러분을 기다리고 있습니다
               </p>
             </div>
 
-            <div className="mt-9 sm:mt-11 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4">
-              <Button asChild size="lg" className="w-full sm:w-auto min-w-[168px] h-12">
+            <div className="mt-8 sm:mt-11 mx-auto w-full max-w-[min(100%,20rem)] sm:max-w-none grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 sm:justify-center sm:w-auto sm:inline-grid">
+              <Button asChild size="lg" className="w-full sm:min-w-[9.5rem] h-12 text-base">
                 <Link href="/apply">수강 신청</Link>
               </Button>
-              <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto min-w-[168px] h-12">
+              <Button asChild size="lg" variant="secondary" className="w-full sm:min-w-[9.5rem] h-12 text-base">
                 <Link href="/teachers">선생님 보기</Link>
               </Button>
             </div>
@@ -85,8 +85,8 @@ export async function HomeContent() {
       </section>
 
       {/* Site stats */}
-      <section className="page-container -mt-8 relative z-20">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <section className="page-container -mt-5 sm:-mt-8 relative z-20">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <StatCard label="학생 수" value={siteStats.students} suffix="명" icon={Users} />
           <StatCard label="선생님 수" value={siteStats.teachers} suffix="명" icon={UserCheck} />
           <StatCard label="졸업생 수" value={siteStats.graduated} suffix="명" icon={GraduationCap} />
@@ -95,9 +95,9 @@ export async function HomeContent() {
 
       {/* Classes */}
       <section id="classes" className="page-container section-gap pt-6 sm:pt-8">
-        <div className="text-center mb-10 sm:mb-12 max-w-2xl mx-auto">
-          <h2 className="heading-section text-foreground mb-3 tracking-tight">클래스 소개</h2>
-          <p className="text-sm sm:text-[15px] text-muted-foreground leading-relaxed">
+        <div className="text-center mb-8 sm:mb-12 max-w-2xl mx-auto px-1 min-w-0">
+          <h2 className="heading-section text-foreground mb-3 tracking-tight break-keep">클래스 소개</h2>
+          <p className="text-sm sm:text-[15px] text-muted-foreground leading-relaxed text-balance break-keep">
             오버워치 · PUBG · 발로란트 — 게임별 반을 선택하고 담당 선생님을 만나보세요
           </p>
         </div>
