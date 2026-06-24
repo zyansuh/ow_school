@@ -3,16 +3,36 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { put } from '@vercel/blob';
+import {
+  TEACHER_AVATAR_MAX_BYTES,
+  TEACHER_AVATAR_MIME_TYPES,
+} from '@/lib/teacher-avatar-constants';
 
-const MAX_BYTES = 5 * 1024 * 1024;
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']);
+const EXT_TO_MIME: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+};
+
+function detectImageMime(file: File): string | null {
+  const type = file.type?.toLowerCase().split(';')[0]?.trim();
+  if (type && TEACHER_AVATAR_MIME_TYPES.has(type)) return type;
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  if (!ext) return null;
+  const fromExt = EXT_TO_MIME[ext];
+  return fromExt && TEACHER_AVATAR_MIME_TYPES.has(fromExt) ? fromExt : null;
+}
 
 export function validateTeacherAvatarFile(file: File) {
-  if (!file.type || !ALLOWED_TYPES.has(file.type)) {
+  if (!detectImageMime(file)) {
     throw new Error('INVALID_TYPE');
   }
-  if (file.size > MAX_BYTES) {
+  if (file.size > TEACHER_AVATAR_MAX_BYTES) {
     throw new Error('FILE_TOO_LARGE');
+  }
+  if (file.size === 0) {
+    throw new Error('EMPTY_FILE');
   }
 }
 
@@ -20,11 +40,16 @@ export async function saveTeacherAvatar(file: File): Promise<string> {
   validateTeacherAvatarFile(file);
 
   const input = Buffer.from(await file.arrayBuffer());
-  const optimized = await sharp(input)
-    .rotate()
-    .resize(512, 512, { fit: 'cover', withoutEnlargement: true })
-    .webp({ quality: 85 })
-    .toBuffer();
+  let optimized: Buffer;
+  try {
+    optimized = await sharp(input)
+      .rotate()
+      .resize(512, 512, { fit: 'cover', withoutEnlargement: true })
+      .webp({ quality: 85 })
+      .toBuffer();
+  } catch {
+    throw new Error('IMAGE_PROCESS_FAILED');
+  }
 
   const filename = `${randomUUID()}.webp`;
 

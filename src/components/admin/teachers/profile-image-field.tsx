@@ -1,11 +1,17 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
-import { Camera, ImagePlus, Link2, Loader2, Trash2, Upload } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Camera, ImageIcon, ImagePlus, Link2, Loader2, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  DEFAULT_TEACHER_PROFILE_IMAGE,
+  TEACHER_AVATAR_ACCEPT,
+  TEACHER_AVATAR_MAX_BYTES,
+  TEACHER_AVATAR_MIME_TYPES,
+} from '@/lib/teacher-avatar-constants';
 
 type Props = {
   value: string;
@@ -13,15 +19,46 @@ type Props = {
   disabled?: boolean;
 };
 
+function validateClientFile(file: File): string | null {
+  const type = file.type?.toLowerCase().split(';')[0]?.trim();
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  const extOk = ext && ['jpg', 'jpeg', 'png', 'webp'].includes(ext);
+  if (!type && !extOk) return 'JPG, PNG, WEBP 이미지만 업로드할 수 있습니다.';
+  if (type && !TEACHER_AVATAR_MIME_TYPES.has(type) && !extOk) {
+    return 'JPG, PNG, WEBP 이미지만 업로드할 수 있습니다.';
+  }
+  if (file.size > TEACHER_AVATAR_MAX_BYTES) {
+    return `이미지는 ${TEACHER_AVATAR_MAX_BYTES / (1024 * 1024)}MB 이하만 업로드할 수 있습니다.`;
+  }
+  if (file.size === 0) return '빈 파일은 업로드할 수 없습니다.';
+  return null;
+}
+
 export function ProfileImageField({ value, onChange, disabled }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [showUrl, setShowUrl] = useState(false);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (localPreview) URL.revokeObjectURL(localPreview);
+    };
+  }, [localPreview]);
 
   const uploadFile = useCallback(
     async (file: File) => {
+      const validationError = validateClientFile(file);
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      setLocalPreview(objectUrl);
       setUploading(true);
+
       try {
         const body = new FormData();
         body.append('file', file);
@@ -29,14 +66,16 @@ export function ProfileImageField({ value, onChange, disabled }: Props) {
           method: 'POST',
           body,
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || '업로드 실패');
+        const data = (await res.json()) as { url?: string; error?: string };
+        if (!res.ok) throw new Error(data.error || '업로드에 실패했습니다');
         onChange(data.url as string);
         toast.success('프로필 사진이 업로드되었습니다');
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : '업로드 실패');
+        toast.error(err instanceof Error ? err.message : '업로드에 실패했습니다');
       } finally {
         setUploading(false);
+        URL.revokeObjectURL(objectUrl);
+        setLocalPreview(null);
         if (inputRef.current) inputRef.current.value = '';
       }
     },
@@ -53,10 +92,10 @@ export function ProfileImageField({ value, onChange, disabled }: Props) {
     setDragOver(false);
     if (disabled || uploading) return;
     const file = e.dataTransfer.files?.[0];
-    if (file?.type.startsWith('image/')) void uploadFile(file);
+    if (file) void uploadFile(file);
   };
 
-  const previewSrc = value || null;
+  const previewSrc = localPreview || value || null;
 
   return (
     <div className="space-y-3">
@@ -68,7 +107,6 @@ export function ProfileImageField({ value, onChange, disabled }: Props) {
           )}
         >
           {previewSrc ? (
-            // 업로드 직후 로컬·Blob URL 모두 미리보기
             // eslint-disable-next-line @next/next/no-img-element
             <img src={previewSrc} alt="프로필 미리보기" className="h-full w-full object-cover" />
           ) : (
@@ -98,7 +136,7 @@ export function ProfileImageField({ value, onChange, disabled }: Props) {
             <p className="text-sm text-muted-foreground mb-3">
               갤러리에서 선택하거나 사진을 끌어다 놓으세요
             </p>
-            <div className="flex flex-col xs:flex-row gap-2 justify-center">
+            <div className="flex flex-col xs:flex-row gap-2 justify-center flex-wrap">
               <Button
                 type="button"
                 variant="outline"
@@ -109,6 +147,17 @@ export function ProfileImageField({ value, onChange, disabled }: Props) {
               >
                 <ImagePlus className="h-4 w-4" />
                 사진 선택
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="min-h-11"
+                disabled={disabled || uploading}
+                onClick={() => onChange(DEFAULT_TEACHER_PROFILE_IMAGE)}
+              >
+                <ImageIcon className="h-4 w-4" />
+                기본 이미지
               </Button>
               <Button
                 type="button"
@@ -136,14 +185,14 @@ export function ProfileImageField({ value, onChange, disabled }: Props) {
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              JPG · PNG · WebP · 최대 5MB · 휴대폰 카메라/앨범 지원
+              JPG · PNG · WEBP · 최대 4MB · 휴대폰 카메라/앨범 지원
             </p>
           </div>
 
           <input
             ref={inputRef}
             type="file"
-            accept="image/*"
+            accept={TEACHER_AVATAR_ACCEPT}
             className="sr-only"
             disabled={disabled || uploading}
             onChange={onFileChange}
