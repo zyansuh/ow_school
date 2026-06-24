@@ -52,7 +52,7 @@ export const getHomeClassStats = unstable_cache(
           return [
             c.slug,
             {
-              recruiting: roster.some((t) => (liveCounts[t.id] ?? 0) < t.maxStudents),
+              recruiting: roster.some((t) => t.maxStudents > 0 && (liveCounts[t.id] ?? 0) < t.maxStudents),
               current: roster.reduce((sum, t) => sum + (liveCounts[t.id] ?? 0), 0),
               max: roster.reduce((sum, t) => sum + t.maxStudents, 0),
             },

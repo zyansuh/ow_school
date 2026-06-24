@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { applyApplicationStatusChange } from '@/lib/applications';
 import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
+import { isRecruitmentOpen } from '@/lib/teacher-recruiting';
 import { initialApplicationStatus } from '@/lib/applications/policy';
 import { notifyApplicationSubmitted } from '@/lib/notifications/application-submitted';
 import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
@@ -19,12 +20,12 @@ export async function assertCanApply(userId: string, teacherId: string) {
     prisma.user.findUnique({ where: { id: userId } }),
   ]);
 
-  if (!teacher || !teacher.isActive) {
+  if (!teacher) {
     throw new Error('TEACHER_NOT_FOUND');
   }
 
   const activeCount = await countActiveStudentsForTeacher(teacher.id);
-  if (activeCount >= teacher.maxStudents) {
+  if (!isRecruitmentOpen(teacher.maxStudents, activeCount, teacher.isActive)) {
     throw new Error('TEACHER_FULL');
   }
 

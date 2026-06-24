@@ -7,6 +7,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ds } from '@/styles/design-system';
 import type { AdminTeacher } from '@/hooks/admin/use-admin-teachers';
+import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher-recruiting';
 
 type Props = {
   teachers: AdminTeacher[];
@@ -55,7 +56,14 @@ export function TeacherTable({ teachers, deletingId, onEdit, onToggleActive, onR
                 )}
               </td>
               <td className="p-4">
-                <Badge variant={t.isActive ? 'success' : 'danger'}>{t.isActive ? '활동' : '비활성'}</Badge>
+                {(() => {
+                  const status = getRecruitmentStatus(t.maxStudents, t.currentStudents, t.isActive);
+                  return (
+                    <Badge variant={status === 'open' ? 'success' : 'danger'}>
+                      {recruitmentStatusLabel(status)}
+                    </Badge>
+                  );
+                })()}
               </td>
               <td className="p-4 flex gap-1 items-center">
                 <Button size="sm" variant="ghost" disabled={busy} onClick={() => onEdit(t)}>

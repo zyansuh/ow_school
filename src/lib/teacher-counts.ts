@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { filterStudentUsers, loadUserRoleContext } from '@/lib/user-role';
+import { computeTeacherIsActive } from '@/lib/teacher-recruiting';
 
 /** teacherId 기준 활성 담당 학생 (Discord userId로 User 연결) */
 export function activeAssignedStudentWhere(teacherId: string) {
@@ -29,7 +30,7 @@ export async function syncTeacherStudentCount(teacherId: string) {
     where: { id: teacherId },
     data: {
       currentStudents: count,
-      isActive: count < teacher.maxStudents,
+      isActive: computeTeacherIsActive(teacher.maxStudents, count),
     },
   });
   return count;

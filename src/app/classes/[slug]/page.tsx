@@ -9,6 +9,7 @@ import { Users, ArrowLeft } from 'lucide-react';
 import { getClassBySlug } from '@/lib/constants';
 import { prisma } from '@/lib/prisma';
 import { getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
+import { getRecruitmentStatus, isRecruitmentOpen, recruitmentStatusLabel } from '@/lib/teacher-recruiting';
 
 export { dynamic } from '@/lib/segment';
 
@@ -37,7 +38,7 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
   }));
 
   const available = teachers
-    .filter((t) => t.isActive && t.activeStudents < t.maxStudents)
+    .filter((t) => isRecruitmentOpen(t.maxStudents, t.activeStudents, t.isActive))
     .reduce((sum, t) => sum + (t.maxStudents - t.activeStudents), 0);
 
   const totalStudents = teachers.reduce((sum, t) => sum + t.activeStudents, 0);
@@ -75,14 +76,19 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
           <h2 className="heading-section text-gray-100 mb-6">담당 선생님</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {teachers.map((teacher) => {
-              const full = !teacher.isActive || teacher.activeStudents >= teacher.maxStudents;
+              const recruitStatus = getRecruitmentStatus(
+                teacher.maxStudents,
+                teacher.activeStudents,
+                teacher.isActive,
+              );
+              const full = recruitStatus !== 'open';
               return (
                 <Link key={teacher.id} href={`/teachers/${teacher.id}`}>
                   <Card className={`bg-gray-900/80 border-gray-800 hover:border-purple-500/50 transition-all h-full ${full ? 'opacity-60' : ''}`}>
                     <CardContent className="p-5 pt-5 space-y-3">
                       <div className="flex justify-between gap-2">
                         <h3 className="font-bold text-lg">{teacher.name}</h3>
-                        <Badge variant={full ? 'danger' : 'success'}>{full ? '마감' : '모집중'}</Badge>
+                        <Badge variant={full ? 'danger' : 'success'}>{recruitmentStatusLabel(recruitStatus)}</Badge>
                       </div>
                       {teacher.mbti && <p className="text-xs text-purple-400">MBTI: {teacher.mbti}</p>}
                       <p className="text-sm text-gray-400 line-clamp-2">{teacher.intro}</p>

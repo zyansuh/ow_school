@@ -155,13 +155,13 @@ export function TeacherFormDialog({
                   placeholder="서버 닉네임 (없으면 글로벌 닉·username)"
                 />
               </Field>
-              <Field label="최대 인원">
+              <Field label="최대 인원" hint="0명이면 모집 마감으로 표시됩니다">
                 <Input
                   type="number"
-                  min={1}
+                  min={0}
                   max={99}
                   value={form.maxStudents}
-                  onChange={(e) => onChange({ ...form, maxStudents: Number(e.target.value) })}
+                  onChange={(e) => onChange({ ...form, maxStudents: Math.max(0, Number(e.target.value) || 0) })}
                 />
               </Field>
             </div>

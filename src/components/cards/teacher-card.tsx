@@ -5,6 +5,8 @@ import { PageCard, PageCardHeader, PageCardBody, PageCardFooter } from '@/compon
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { parseActivityDays } from '@/lib/teacher-activity';
+import { DEFAULT_TEACHER_PROFILE_IMAGE } from '@/lib/teacher-avatar-constants';
+import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher-recruiting';
 
 type TeacherCardData = {
   id: string;
@@ -35,23 +37,18 @@ function classLine(teacher: TeacherCardData) {
 }
 
 export function TeacherCard({ teacher, activeCount }: Props) {
-  const full = activeCount >= teacher.maxStudents;
+  const status = getRecruitmentStatus(teacher.maxStudents, activeCount);
+  const full = status !== 'open';
   const days = parseActivityDays(teacher.activityDays);
   const daysLabel = days.length ? days.join(', ') : '미정';
-  const profileSrc = teacher.profileImage?.trim();
+  const profileSrc = teacher.profileImage?.trim() || DEFAULT_TEACHER_PROFILE_IMAGE;
 
   return (
     <PageCard hover className="min-h-[320px]">
       <PageCardHeader>
         <div className="flex items-start gap-4">
           <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
-            {profileSrc ? (
-              <Image src={profileSrc} alt={teacher.name} fill className="object-cover" sizes="56px" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-lg font-bold text-primary">
-                {teacher.name.charAt(0)}
-              </div>
-            )}
+            <Image src={profileSrc} alt={teacher.name} fill className="object-cover" sizes="56px" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
@@ -59,7 +56,7 @@ export function TeacherCard({ teacher, activeCount }: Props) {
                 <h3 className="font-semibold text-lg text-foreground truncate">{teacher.name}</h3>
                 <p className="text-sm text-muted-foreground line-clamp-2">{classLine(teacher)}</p>
               </div>
-              <Badge variant={full ? 'danger' : 'success'}>{full ? '마감' : '모집중'}</Badge>
+              <Badge variant={full ? 'danger' : 'success'}>{recruitmentStatusLabel(status)}</Badge>
             </div>
           </div>
         </div>

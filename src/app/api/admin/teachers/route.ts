@@ -4,6 +4,7 @@ import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { assertDiscordUserIdAvailable } from '@/lib/teacher-auth';
 import { mapTeacherWithClasses, syncTeacherClasses } from '@/lib/teacher-classes';
 import { assertValidTeacherDiscordField } from '@/lib/teacher-discord-field';
+import { computeTeacherIsActive } from '@/lib/teacher-recruiting';
 import { z } from 'zod';
 
 const teacherSchema = z.object({
@@ -21,7 +22,7 @@ const teacherSchema = z.object({
   activityDays: z.array(z.string()).optional(),
   activityTimeSlot: z.string().max(64).nullable().optional(),
   isActive: z.boolean().optional(),
-  maxStudents: z.number().int().min(1).max(99).optional(),
+  maxStudents: z.number().int().min(0).max(99).optional(),
 });
 
 const teacherInclude = {
@@ -51,10 +52,13 @@ export async function POST(req: NextRequest) {
       await assertDiscordUserIdAvailable(body.discordUserId);
     }
 
-    const { activityDays, classIds, discordUserId, ...rest } = body;
+    const { activityDays, classIds, discordUserId, maxStudents, ...rest } = body;
+    const resolvedMax = maxStudents ?? 5;
     const teacher = await prisma.teacher.create({
       data: {
         ...rest,
+        maxStudents: resolvedMax,
+        isActive: computeTeacherIsActive(resolvedMax, 0),
         classId: classIds[0],
         discordUserId,
         activityDays: activityDays?.length ? JSON.stringify(activityDays) : undefined,

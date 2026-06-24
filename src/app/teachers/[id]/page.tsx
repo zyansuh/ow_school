@@ -11,6 +11,7 @@ import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
 import { getTeacherAssignedStudentRows } from '@/lib/teacher-assigned-students';
 import { formatDate } from '@/lib/utils';
 import { ds } from '@/styles/design-system';
+import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher-recruiting';
 
 export { dynamic } from '@/lib/segment';
 
@@ -37,7 +38,8 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
     getTeacherAssignedStudentRows(teacher.id),
   ]);
 
-  const full = !teacher.isActive || activeCount >= teacher.maxStudents;
+  const recruitStatus = getRecruitmentStatus(teacher.maxStudents, activeCount, teacher.isActive);
+  const full = recruitStatus !== 'open';
   const activityDays = parseDays(teacher.activityDays);
 
   return (
@@ -59,7 +61,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                 <div className="flex flex-wrap gap-2">
                   {teacher.mbti && <Badge variant="outline">MBTI: {teacher.mbti}</Badge>}
                   <Badge variant={full ? 'danger' : 'success'}>
-                    {full ? '모집 마감' : '모집중'} ({activeCount}/{teacher.maxStudents})
+                    {recruitmentStatusLabel(recruitStatus)} ({activeCount}/{teacher.maxStudents})
                   </Badge>
                 </div>
               </div>

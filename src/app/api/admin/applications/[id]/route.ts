@@ -21,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       const teacher = await prisma.teacher.findUnique({ where: { id: app.teacherId } });
       if (teacher) {
         const activeCount = await countActiveStudentsForTeacher(teacher.id);
-        if (activeCount >= teacher.maxStudents) {
+        if (teacher.maxStudents <= 0 || activeCount >= teacher.maxStudents) {
           return NextResponse.json({ error: '선생님 정원이 가득 찼습니다' }, { status: 400 });
         }
       }

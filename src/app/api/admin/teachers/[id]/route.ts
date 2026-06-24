@@ -5,6 +5,8 @@ import { assertDiscordUserIdAvailable } from '@/lib/teacher-auth';
 import { deleteTeacherById } from '@/lib/teacher-delete';
 import { mapTeacherWithClasses, syncTeacherClasses } from '@/lib/teacher-classes';
 import { assertValidTeacherDiscordField } from '@/lib/teacher-discord-field';
+import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
+import { computeTeacherIsActive } from '@/lib/teacher-recruiting';
 import { z } from 'zod';
 
 const updateSchema = z.object({
@@ -22,7 +24,7 @@ const updateSchema = z.object({
   activityDays: z.array(z.string()).optional(),
   activityTimeSlot: z.string().max(64).nullable().optional(),
   isActive: z.boolean().optional(),
-  maxStudents: z.number().int().min(1).max(99).optional(),
+  maxStudents: z.number().int().min(0).max(99).optional(),
   currentStudents: z.number().optional(),
 });
 
@@ -53,6 +55,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const { data, classIds } = serializeTeacherData(body);
+
+    if (body.maxStudents !== undefined) {
+      const activeCount = await countActiveStudentsForTeacher(id);
+      data.isActive = computeTeacherIsActive(body.maxStudents, activeCount);
+    }
+
     const teacher = await prisma.teacher.update({
       where: { id },
       data,
