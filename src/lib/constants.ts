@@ -47,7 +47,7 @@ export const GAME_CLASSES: GameClassCard[] = [
     hoverBorder: "hover:border-blue-400",
     bgGlow: "hover:shadow-blue-500/20",
     laserClass: "",
-    bannerImage: "/images/banners/overwatch.webp",
+    bannerImage: "/images/banners/video-games-overwatch-overwatch-2-tracer-overwatch-hd-wallpaper-preview.png",
     mascotImage: "/images/mascots/otter.webp",
     description: "팀워크와 전략의 정수. 영웅들과 함께 경쟁전·팀플레이를 배우는 오버워치 클래스입니다.",
     linkColor: "text-blue-400 group-hover:text-blue-300",
