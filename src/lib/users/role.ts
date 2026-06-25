@@ -1,7 +1,7 @@
-import { parseRoleNames } from '@/lib/discord-guild';
-import { isStudentByGuildTenure } from '@/lib/guild-tenure';
+import { parseRoleNames } from '@/lib/discord/guild';
+import { isStudentByGuildTenure } from '@/lib/discord/guild-tenure';
 import { prisma } from '@/lib/prisma';
-import { isDiscordSnowflake } from '@/lib/discord-id';
+import { isDiscordSnowflake } from '@/lib/discord/id';
 
 /** Discord 서버 역할명 — 정확히 일치해야 선생님으로 분류 */
 export const TEACHER_DISCORD_ROLE_NAME = '신입반교사';

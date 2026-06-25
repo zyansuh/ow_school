@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
-import { syncTeacherStudentCount } from '@/lib/teacher-counts';
-import { resolveLastStudentAssignment } from '@/lib/student-assignment';
+import { syncTeacherStudentCount } from '@/lib/teacher/counts';
+import { resolveLastStudentAssignment } from '@/lib/students/assignment';
 
 /** 학생을 졸업생으로 전환하고 반·담당 선생님 배정을 해제한다 */
 export async function graduateUser(userId: string) {

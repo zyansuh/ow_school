@@ -4,7 +4,7 @@ import {
   isTeacherUser,
   loadUserRoleContext,
   type UserRoleContext,
-} from '@/lib/user-role';
+} from '@/lib/users/role';
 
 type StudentUserInclude = {
   class: true;

@@ -12,4 +12,4 @@ export function userHeaderSubtitle(user: UserHeaderFields): string {
 }
 
 /** @deprecated user-role.ts 의 hasNewTeacherDiscordRole 사용 */
-export { hasNewTeacherDiscordRole as isTeacherFromDiscordRoles } from '@/lib/user-role';
+export { hasNewTeacherDiscordRole as isTeacherFromDiscordRoles } from '@/lib/users/role';

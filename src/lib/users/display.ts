@@ -1,4 +1,4 @@
-import { isDiscordSnowflake } from '@/lib/discord-id';
+import { isDiscordSnowflake } from '@/lib/discord/id';
 
 /** Discord 닉네임 필드 (DB: discordServerNick, discordNickname, discordUsername) */
 export type UserNickFields = {

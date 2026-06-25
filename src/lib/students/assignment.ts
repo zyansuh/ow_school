@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
-import { syncTeacherStudentCount } from '@/lib/teacher-counts';
-import { isStudentUser, loadUserRoleContext } from '@/lib/user-role';
+import { syncTeacherStudentCount } from '@/lib/teacher/counts';
+import { isStudentUser, loadUserRoleContext } from '@/lib/users/role';
 
 export type StudentAssignment = {
   teacherId: string;
