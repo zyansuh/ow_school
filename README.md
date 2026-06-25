@@ -58,7 +58,7 @@ Next.js App Router 하나로 프론트·API·인증을 처리하고, **Discord O
 - 서버 가입일은 Discord `joined_at` → `User.guildJoinedAt`에 저장됩니다. 미동기화 시 **최초 로그인일**을 보조 기준으로 사용합니다.
 - **학생 관리** 목록·통계는 `student` 역할만 포함합니다 (마을주민 제외).
 
-관련 코드: `src/lib/user-role.ts`, `src/lib/guild-tenure.ts`
+관련 코드: `src/lib/users/role.ts`, `src/lib/discord/guild-tenure.ts`
 
 ```bash
 # 역할 분류 순수 함수 검증 (DB 불필요)
@@ -204,32 +204,47 @@ peaceful_game/
 │   ├── ROADMAP.md
 │   └── assets/
 └── src/
-    ├── app/                     # 페이지 · API Routes
-    │   ├── page.tsx             # 홈
-    │   ├── classes/[slug]/      # 반별
-    │   ├── apply/               # 수강 신청
-    │   ├── interview/           # 졸업면담
-    │   ├── mypage/
-    │   ├── teacher/             # 선생님 전용
-    │   ├── admin/               # 관리자
-    │   └── api/
-    ├── components/              # layout, ui, admin, pages
-    ├── lib/                     # auth, user-role, discord-guild, graduation …
+    ├── app/                     # 페이지 · API Routes (라우팅은 유지)
+    ├── components/
+    │   ├── ui/                  # 공통 UI 프리미티브
+    │   ├── layout/              # 헤더·푸터·레이아웃
+    │   ├── admin/               # 관리자 전용 컴포넌트
+    │   ├── teacher/             # 선생님 UI
+    │   ├── home/                # 홈 콘텐츠
+    │   ├── apply/ · cards/ · interview/
     ├── hooks/
-    └── styles/
+    │   ├── auth/                # Discord 로그인 훅
+    │   ├── admin/ · apply/ · mypage/
+    ├── lib/
+    │   ├── auth/                # NextAuth 설정 · rbac
+    │   ├── admin/               # 관리자·Discord 동기화·포인트
+    │   ├── discord/             # Guild API · 가입일·멤버십
+    │   ├── teacher/             # 선생님 CRUD · 학생·모집
+    │   ├── students/            # 학생 목록 · 배정 · 졸업
+    │   ├── users/               # 역할 · 표시명
+    │   ├── home/                # 홈 통계 · 반 시드
+    │   ├── interviews/          # 면담 접근·유틸
+    │   ├── applications/        # 수강 신청 서비스
+    │   ├── utils/               # cn · formatDate · segment …
+    │   ├── prisma.ts · api-helpers.ts · constants.ts
+    ├── styles/
+    │   ├── design-system.ts     # `ds` 디자인 토큰
+    │   └── admin/               # 관리자 레거시 스타일
 ```
 
 ### 주요 `lib` 모듈
 
-| 파일 | 역할 |
+| 경로 | 역할 |
 |------|------|
-| `user-role.ts` | 사이트 역할 분류 (admin / teacher / student / resident) |
-| `guild-tenure.ts` | 서버 가입 2달 기준 학생 판별 |
-| `discord-guild.ts` | Discord Bot API · 닉·역할·가입일 동기화 |
-| `graduation.ts` | 졸업 · 졸업 취소 · 담당 복원 |
-| `student-users.ts` | 학생 목록 조회 (역할·status 필터) |
-| `student-assignment.ts` | 담당 선생님 배정 · 마지막 담당 복원 |
-| `rbac.ts` | 관리자 권한 확인 · 기본 관리자 부여 |
+| `users/role.ts` | 사이트 역할 (admin / teacher / student / resident) |
+| `discord/guild-tenure.ts` | 서버 가입 2달 기준 학생 판별 |
+| `discord/guild.ts` | Discord Bot API · 닉·역할·가입일 동기화 |
+| `students/graduation.ts` | 졸업 · 졸업 취소 · 담당 복원 |
+| `students/users.ts` | 학생 목록 조회 |
+| `students/assignment.ts` | 담당 선생님 배정 |
+| `auth/rbac.ts` | 관리자 권한 · 기본 관리자 부여 |
+| `teacher/` | 선생님 엔티티 · 모집 · 담당 학생 |
+| `admin/discord-sync.ts` | 관리자 Discord 일괄 동기화 |
 
 ---
 
