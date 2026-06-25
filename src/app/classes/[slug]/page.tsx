@@ -69,9 +69,9 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
         <div>
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
             <div>
-              <h2 className="heading-section text-foreground">{clsInfo.name} 담당 반장</h2>
+              <h2 className="heading-section text-foreground">{clsInfo.name} 담당 선생님</h2>
               <p className="text-sm text-muted-foreground mt-2">
-                {clsInfo.gameKr} 반 담당 반장만 표시됩니다. 반장을 확인한 뒤 수강 신청을 진행하세요.
+                {clsInfo.gameKr} 반 담당 선생님만 표시됩니다. 선생님을 확인한 뒤 수강 신청을 진행하세요.
               </p>
             </div>
             <Button asChild className="shrink-0 w-full sm:w-auto">
@@ -80,7 +80,7 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
           </div>
 
           {teachers.length === 0 ? (
-            <EmptyState title="등록된 반장이 없습니다" description="곧 담당 반장이 등록될 예정입니다." />
+            <EmptyState title="등록된 선생님이 없습니다" description="곧 담당 선생님이 등록될 예정입니다." />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch">
               {teachers.map((teacher) => (

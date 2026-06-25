@@ -73,10 +73,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     if (e instanceof Error) {
       if (e.message === 'GRADUATED') {
-        return NextResponse.json({ error: '졸업생은 반장 배정이 불가합니다. 먼저 졸업 취소를 해주세요.' }, { status: 400 });
+        return NextResponse.json({ error: '졸업생은 선생님 배정이 불가합니다. 먼저 졸업 취소를 해주세요.' }, { status: 400 });
       }
       if (e.message === 'TEACHER_NOT_FOUND') {
-        return NextResponse.json({ error: '반장을 찾을 수 없습니다' }, { status: 404 });
+        return NextResponse.json({ error: '선생님을 찾을 수 없습니다' }, { status: 404 });
       }
     }
     return apiError(e);

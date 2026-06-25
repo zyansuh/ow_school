@@ -230,7 +230,7 @@ export function TeacherFormDialog({
           </section>
 
           <section className="space-y-5">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">반장 소개</h3>
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">선생님 소개</h3>
             <div className="grid sm:grid-cols-3 gap-5">
               <Field label="성별">
                 <Select
@@ -270,7 +270,7 @@ export function TeacherFormDialog({
                 value={form.intro}
                 onChange={(e) => onChange({ ...form, intro: e.target.value })}
                 className="min-h-[120px]"
-                placeholder="반장님 소개를 입력하세요"
+                placeholder="선생님 소개를 입력하세요"
               />
             </Field>
           </section>

@@ -1,4 +1,4 @@
-/** 반장 카드·선택 UI용 표시 헬퍼 */
+/** 선생님 카드·선택 UI용 표시 헬퍼 */
 
 import { type TeacherProfileFields } from '@/lib/teacher/profile';
 

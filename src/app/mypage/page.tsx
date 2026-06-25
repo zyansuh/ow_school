@@ -142,7 +142,7 @@ export default function MyPage() {
             <h2 className="heading-section text-gray-200">수강 정보</h2>
             <div className="grid sm:grid-cols-2 gap-4 text-sm">
               <div><span className="text-gray-500">현재 반</span><p className="text-gray-200 mt-1">{data?.class?.name || '미배정'}</p></div>
-              <div><span className="text-gray-500">담당 반장</span><p className="text-gray-200 mt-1">{data?.teacher?.name || '-'}</p></div>
+              <div><span className="text-gray-500">담당 선생님</span><p className="text-gray-200 mt-1">{data?.teacher?.name || '-'}</p></div>
             </div>
           </div>
         </Card>
@@ -156,7 +156,7 @@ export default function MyPage() {
               <Card key={app.id} className={ds.card}>
                 <div className="card-pad flex justify-between gap-4">
                   <div>
-                    <p className="font-medium">{app.teacher.name} 반장</p>
+                    <p className="font-medium">{app.teacher.name} 선생님</p>
                     <p className="text-sm text-gray-500 mt-1">{formatDate(app.createdAt)}</p>
                   </div>
                   <Badge variant={app.status === 'approved' ? 'success' : app.status === 'rejected' ? 'danger' : 'warning'}>

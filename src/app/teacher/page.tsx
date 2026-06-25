@@ -93,7 +93,7 @@ export default function TeacherDashboardPage() {
     <div className="page-container py-8 sm:py-12 section-gap max-w-5xl mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">반장 마이페이지</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">선생님 마이페이지</h1>
           <p className="text-gray-400 text-sm mt-1">{data.teacher.name} · {data.teacher.className}</p>
         </div>
         <div className="flex gap-3">

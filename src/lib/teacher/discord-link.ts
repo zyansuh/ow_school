@@ -60,7 +60,7 @@ export async function backfillTeacherDiscordUserId(
   });
 }
 
-/** 관리자 동기화: 로그인 이력이 있는 유저 기준으로 미연결 반장 일괄 백필 */
+/** 관리자 동기화: 로그인 이력이 있는 유저 기준으로 미연결 선생님 일괄 백필 */
 export async function backfillAllTeacherDiscordUserIds() {
   const before = await prisma.teacher.count({ where: { discordUserId: null } });
   const users = await prisma.user.findMany({

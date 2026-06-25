@@ -5,7 +5,7 @@ export const teacherPublicInclude = {
   teacherClasses: { include: { class: true } },
 } as const;
 
-/** 반(classId)에 소속된 반장 — 주 담당 반 또는 TeacherClass M:N */
+/** 반(classId)에 소속된 선생님 — 주 담당 반 또는 TeacherClass M:N */
 export function teachersForClassIdWhere(classId: string) {
   return {
     OR: [

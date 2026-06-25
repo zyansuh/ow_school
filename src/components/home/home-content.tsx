@@ -61,10 +61,10 @@ export async function HomeContent() {
 
             <div className="mt-7 sm:mt-10 mx-auto w-full min-w-0 max-w-lg space-y-3.5 sm:space-y-4 text-center px-1">
               <p className="text-body-ko text-muted-foreground">
-                평겜마에서 적응 할 수 있도록 도와주는 분들이 담당 반장입니다.
+                평겜마에서 적응 할 수 있도록 도와주는 분들이 담당 선생님입니다.
               </p>
               <p className="text-body-ko text-foreground/90 font-medium">
-                각 반마다 담당 반장들이 여러분을 기다리고 있습니다
+                각 반마다 담당 선생님들이 여러분을 기다리고 있습니다
               </p>
             </div>
           </div>

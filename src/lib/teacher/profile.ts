@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-/** 반장 소개 — 성별·지역·출생 연도 */
+/** 선생님 소개 — 성별·지역·출생 연도 */
 
 export const TEACHER_GENDER_OPTIONS = [
   { value: '', label: '선택 안 함' },
