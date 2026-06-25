@@ -1,4 +1,4 @@
-import { getGuildConfig } from '@/lib/discord-guild';
+import { getGuildConfig } from '@/lib/discord/guild';
 
 const DISCORD_API = 'https://discord.com/api/v10';
 

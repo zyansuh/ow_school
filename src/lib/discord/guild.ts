@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
-import { parseDiscordJoinedAt } from '@/lib/guild-tenure';
-import { resolveGuildMembershipFromDb } from '@/lib/guild-membership';
+import { parseDiscordJoinedAt } from '@/lib/discord/guild-tenure';
+import { resolveGuildMembershipFromDb } from '@/lib/discord/guild-membership';
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
