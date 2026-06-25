@@ -4,7 +4,7 @@
 
 # 🎮 정착지원국
 
-**평화로운 게임마을** — 게임 멘토링 클래스 · 수강 신청 · 선생님 관리 · 졸업면담
+**평화로운 게임마을** — 게임 멘토링 클래스 · 수강 신청 · 반장 관리 · 졸업면담
 
 > 수달반 🦦 · 사자반 🦁 · 여우반 🦊 — 함께 성장하는 게임 클래스
 
@@ -60,9 +60,9 @@
 
 | 역할 | 대표 경로 | 할 수 있는 것 |
 |------|-----------|----------------|
-| **마을주민** | `/`, `/mypage` | 반·선생님 둘러보기, 커뮤니티 참여 |
-| **학생** | `/apply`, `/interview` | 수강 신청, 졸업면담, 담당 선생님 배정 |
-| **선생님** | `/teacher` | 담당 학생 관리, 통계 |
+| **마을주민** | `/`, `/mypage` | 반·반장 둘러보기, 커뮤니티 참여 |
+| **학생** | `/apply`, `/interview` | 수강 신청, 졸업면담, 담당 반장 배정 |
+| **반장** | `/teacher` | 담당 학생 관리, 통계 |
 | **관리자** | `/admin` | 전체 운영·역할·졸업·Discord 동기화 |
 
 ---
@@ -76,7 +76,7 @@
 | 표시 | DB 값 | 자동 분류 우선순위 |
 |------|-------|-------------------|
 | 관리자 | `admin` | `AdminRole` 테이블 존재 |
-| 선생님 | `teacher` | Discord `신입반교사` 역할 · `Teacher.discordUserId` · Teacher 닉 매칭 |
+| 반장 | `teacher` | Discord `신입반교사` 역할 · `Teacher.discordUserId` · Teacher 닉 매칭 |
 | 학생 | `student` | Discord **서버 가입 2달 미만** (`guildJoinedAt` 기준) |
 | 마을주민 | `resident` | 가입 2달 이상 · 미가입 · 위에 해당 없음 |
 
@@ -88,7 +88,7 @@ flowchart TD
     B -->|예| C[siteRole 그대로 사용]
     B -->|아니오| D{AdminRole?}
     D -->|예| E[admin]
-    D -->|아니오| F{선생님 판별}
+    D -->|아니오| F{반장 판별}
     F -->|예| G[teacher]
     F -->|아니오| H{가입 2달 미만?}
     H -->|예| I[student]
@@ -122,17 +122,17 @@ node scripts/verify-user-role.mjs
 
 | 기능 | 경로 | 설명 |
 |------|------|------|
-| 메인 | `/` | Hero, 반 카드, 담당 선생님 안내, 공지 (ISR `revalidate: 60`) |
+| 메인 | `/` | Hero, 반 카드, 담당 반장 안내, 공지 (ISR `revalidate: 60`) |
 | 반별 | `/classes/[slug]` | `overwatch` · `pubg` · `valorant` — `TeacherCard`, 수강 신청 링크 |
-| 선생님 목록 | `/teachers` | `/#classes`로 리다이렉트 (메인 반 섹션) |
-| 선생님 상세 | `/teachers/[id]` | 프로필, MBTI, 담당 학생, 신청 CTA |
-| 수강 신청 | `/apply?class={slug}` | 닉네임, Discord, 플레이 시간, 담당 선생님 |
+| 반장 목록 | `/teachers` | `/#classes`로 리다이렉트 (메인 반 섹션) |
+| 반장 상세 | `/teachers/[id]` | 프로필, MBTI, 담당 학생, 신청 CTA |
+| 수강 신청 | `/apply?class={slug}` | 닉네임, Discord, 플레이 시간, 담당 반장 |
 | 졸업면담 | `/interview` | 제출·수정, 졸업/동호회 포인트 |
 | 졸업후기 | `/graduation` | 졸업후기 FAB (홈 등) |
 | 마이페이지 | `/mypage` | 프로필, 서버 닉 변경, 신청·면담 내역, Discord 새로고침 |
 | 로그인 | `/login` | Discord OAuth |
 
-### 👨‍🏫 선생님 포털
+### 👨‍🏫 반장 포털
 
 | 기능 | 경로 |
 |------|------|
@@ -148,11 +148,11 @@ node scripts/verify-user-role.mjs
 | 메뉴 | URL | 핵심 기능 |
 |------|-----|-----------|
 | 대시보드 | `/admin` | 월별 차트, 반별 통계, 동기화 요약 |
-| Discord 동기화 | `/admin/discord-sync` | 전체 유저 닉·역할·가입일, 선생님 연결 검증 |
+| Discord 동기화 | `/admin/discord-sync` | 전체 유저 닉·역할·가입일, 반장 연결 검증 |
 | **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/졸업 취소**, 서버 가입일 |
-| 학생 관리 | `/admin/students` | 담당 선생님 변경, 졸업 처리 |
+| 학생 관리 | `/admin/students` | 담당 반장 변경, 졸업 처리 |
 | 졸업생 | `/admin/graduated` | 졸업생 목록, **졸업 취소** |
-| 선생님 관리 | `/admin/teachers` | CRUD, 활동/비활성, 정원, 복수 반 |
+| 반장 관리 | `/admin/teachers` | CRUD, 활동/비활성, 정원, 복수 반 |
 | 신청 관리 | `/admin/applications` | 수강 신청 내역 |
 | 졸업면담 | `/admin/interviews` | 조회·삭제 (감사 로그) |
 | 포인트 | `/admin/points` | 월별 집계, 엑셀 |
@@ -164,7 +164,7 @@ node scripts/verify-user-role.mjs
 
 | 동작 | DB 변경 | 비고 |
 |------|---------|------|
-| **졸업** | `status → graduated`, `classId`/`teacherId` null | 선생님 `currentStudents` 재계산 |
+| **졸업** | `status → graduated`, `classId`/`teacherId` null | 반장 `currentStudents` 재계산 |
 | **졸업 취소** | `status → active`, 마지막 담당·반 복원 | 면담·승인 신청 이력 기준 (`students/assignment.ts`) |
 
 **졸업 취소 UI:** `/admin/graduated`, `/admin/users` (졸업 관리 열), API `PATCH` `statusAction: ungraduate`
@@ -174,7 +174,7 @@ node scripts/verify-user-role.mjs
 | 항목 | 구현 |
 |------|------|
 | 사용자 식별 | `User.discordId` (닉 변경해도 유지) |
-| 학생↔선생님 | `User.teacherId` → `Teacher` |
+| 학생↔반장 | `User.teacherId` → `Teacher` |
 | 일반 표시명 | 서버 닉 → 글로벌 → username |
 | 관리자 표시명 | `displayNickname` → 서버 닉 → … |
 | 길드 동기화 | `lib/discord/guild.ts`, TTL `GUILD_SYNC_TTL_SEC` (기본 300초) |
@@ -284,14 +284,14 @@ peaceful_game/
 | | `points.ts` | 월별 포인트 리포트 |
 | | `role-requests.ts` | 권한 요청·감사 로그 |
 | | `discord-user-lookup.ts` | Discord 유저 조회 |
-| **teacher/** | `identity.ts` | 선생님 엔티티 해석 |
+| **teacher/** | `identity.ts` | 반장 엔티티 해석 |
 | | `auth.ts`, `classes.ts`, `counts.ts` | Discord ID, 반 매핑, 학생 수 |
 | | `students.ts`, `assigned-students.ts` | 담당 학생 API·공개 프로필 |
 | | `recruiting.ts`, `display.ts`, `activity.ts` | 모집 상태, UI 라벨, 활동 시간 |
 | | `discord-field.ts`, `discord-link.ts` | Discord 필드 검증·백필 |
 | | `delete.ts`, `query.ts` | 삭제, 목록 쿼리 |
 | **students/** | `users.ts` | 활성·졸업 학생 조회/카운트 |
-| | `assignment.ts` | 담당 선생님 배정·복원 |
+| | `assignment.ts` | 담당 반장 배정·복원 |
 | | `graduation.ts` | 졸업·졸업 취소 |
 | **users/** | `role.ts`, `display.ts`, `header.ts` | 역할, 표시명, 헤더 라벨 |
 | **home/** | `stats.ts`, `class-stats.ts`, `ensure-classes.ts` | 홈 통계, 반 자동 생성 |
@@ -310,22 +310,22 @@ peaceful_game/
 | `providers/` | `session-provider` | NextAuth SessionProvider |
 | `cards/` | `class-card`, `teacher-card` | 홈·반 카드 |
 | `home/` | `home-content`, `interview-fab` | 메인 페이지 본문 |
-| `apply/` | `teacher-select-card` | 수강 신청 선생님 선택 |
-| `teacher/` | `teacher-activity-fields` | 선생님 폼 활동 시간 |
+| `apply/` | `teacher-select-card` | 수강 신청 반장 선택 |
+| `teacher/` | `teacher-activity-fields` | 반장 폼 활동 시간 |
 | `interview/` | `graduation-review-fab` | 졸업후기 모달 |
 | **admin/** | `admin-nav`, `admin-page-header` | 관리자 레이아웃 |
 | | `user-display-nick-edit`, `user-site-role-edit`, `user-graduation-actions` | 사이트 사용자 관리 |
 | | `discord-user-search`, `discord-sync-panel` | Discord 연동 UI |
 | | `monthly-stats-editor`, `admin-grant-search` | 통계·권한 |
 | **admin/students/** | `student-teacher-assign`, `student-display-nick-edit` | 학생 관리 |
-| **admin/teachers/** | `teacher-table`, `teacher-form-dialog` | 선생님 CRUD |
+| **admin/teachers/** | `teacher-table`, `teacher-form-dialog` | 반장 CRUD |
 
 ### `src/hooks/`
 
 | 경로 | 설명 |
 |------|------|
 | `auth/use-discord-sign-in.ts` | `signInWithDiscord`, 재시도 |
-| `admin/use-admin-teachers.ts` | 선생님 폼·CRUD 상태 |
+| `admin/use-admin-teachers.ts` | 반장 폼·CRUD 상태 |
 | `admin/use-discord-sync.ts` | 동기화 API·리포트 |
 | `apply/use-apply-form.ts` | 수강 신청 폼 |
 | `mypage/use-mypage.ts` | `/api/me` 데이터 |
@@ -344,9 +344,9 @@ peaceful_game/
 | prefix | 인증 | 용도 |
 |--------|------|------|
 | `/api/auth/*` | — | NextAuth, 쿠키 리셋 |
-| `/api/health`, `/api/classes`, `/api/teachers` | 공개/선택 | 헬스, 반, 선생님 |
+| `/api/health`, `/api/classes`, `/api/teachers` | 공개/선택 | 헬스, 반, 반장 |
 | `/api/me`, `/api/applications`, `/api/interviews` | 로그인 | 마이페이지, 신청, 면담 |
-| `/api/teacher/*` | 선생님 | 담당 학생·통계·프로필 |
+| `/api/teacher/*` | 반장 | 담당 학생·통계·프로필 |
 | `/api/admin/*` | 관리자 | 전체 운영 API |
 | `/api/cron/discord-sync` | `CRON_SECRET` | Vercel Cron |
 
@@ -424,7 +424,7 @@ npm run dev         # http://localhost:3000
 | `20250623150000_teacher_discord_user_id` | `Teacher.discordUserId` |
 | `20250623210000_admin_role_requests` | 관리자 권한 요청 |
 | `20250623220000_drop_site_display_name` | 레거시 필드 제거 |
-| `20250623230000_teacher_multi_class` | 선생님 복수 반 |
+| `20250623230000_teacher_multi_class` | 반장 복수 반 |
 | `20250624100000_user_display_nickname` | `displayNickname` |
 | `20250625120000_user_site_role` | `siteRole` |
 | `20250625140000_user_guild_joined_at` | `guildJoinedAt` |
@@ -504,8 +504,8 @@ sequenceDiagram
 |--------|------|------|
 | GET | `/api/health` | DB·Auth·Bot 상태 |
 | GET | `/api/classes` | 반 목록·모집 인원 |
-| GET | `/api/teachers` | 활성 선생님 목록 |
-| GET | `/api/teachers/[id]` | 선생님 상세 |
+| GET | `/api/teachers` | 활성 반장 목록 |
+| GET | `/api/teachers/[id]` | 반장 상세 |
 | GET | `/api/notices` | 공지 |
 | GET | `/api/me` | 내 프로필 (`?refresh=1` 강제 sync) |
 | PATCH | `/api/me/guild-nick` | 서버 닉 변경 |
@@ -514,7 +514,7 @@ sequenceDiagram
 | GET | `/api/interviews/mine` | 내 면담 |
 | GET/POST | `/api/graduation-reviews` | 졸업후기 |
 
-### 선생님 (`requireTeacherUser`)
+### 반장 (`requireTeacherUser`)
 
 | Method | Path |
 |--------|------|
@@ -531,7 +531,7 @@ sequenceDiagram
 | PATCH | `/api/admin/site-users/[id]` | `displayNickname`, `siteRole`, `statusAction` |
 | GET/PATCH | `/api/admin/students`, `[id]` | 학생·졸업·담당 |
 | GET | `/api/admin/graduated` | 졸업생 |
-| GET/POST/PATCH/DELETE | `/api/admin/teachers`, `[id]` | 선생님 CRUD |
+| GET/POST/PATCH/DELETE | `/api/admin/teachers`, `[id]` | 반장 CRUD |
 | GET | `/api/admin/applications`, `[id]` | 신청 |
 | GET/DELETE | `/api/admin/interviews`, `[id]` | 면담 |
 | GET | `/api/admin/points` | 포인트 |
@@ -565,7 +565,7 @@ sequenceDiagram
 | `guildJoinedAt` | 서버 가입 시각 |
 | `isInGuild` | 길드 가입 여부 (DB 기준) |
 | `status` | `active` \| `graduated` |
-| `classId` / `teacherId` | 반 · 담당 선생님 |
+| `classId` / `teacherId` | 반 · 담당 반장 |
 
 ### 전체 모델
 
@@ -609,7 +609,7 @@ import { ds } from '@/styles/design-system';
 | P3009 failed migration | `prisma migrate resolve` — **백업 후** 진행 |
 | 역할·가입일 불일치 | `/admin/discord-sync` |
 | 졸업 취소 실패 | `status === graduated'` 확인, `/admin/users` 사용 |
-| 선생님 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 |
+| 반장 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 |
 | Bot 닉 403 | 역할 순위 · MANAGE_NICKNAMES |
 | Windows EPERM prisma | node 프로세스 종료 후 재시도 |
 
