@@ -54,6 +54,9 @@ model Teacher {
   name             String
   profileImage     String?
   mbti             String?
+  gender           String?
+  region           String?
+  birthYear        Int?
   intro            String?
   discord          String?
   discordUserId    String?        @unique
