@@ -1,11 +1,12 @@
 import type { NextAuthConfig } from 'next-auth';
 import Discord from 'next-auth/providers/discord';
+import { getDiscordClientId, getDiscordClientSecret, normalizeEnvValue } from '@/lib/auth/env';
 import { ensureAuthUrlEnv } from '@/lib/auth/url';
 
 ensureAuthUrlEnv();
 
 function authSecret() {
-  return process.env.AUTH_SECRET?.trim() || process.env.NEXTAUTH_SECRET?.trim();
+  return normalizeEnvValue(process.env.AUTH_SECRET) || normalizeEnvValue(process.env.NEXTAUTH_SECRET);
 }
 
 export const DISCORD_OAUTH_SCOPES = 'identify guilds guilds.members.read';
@@ -15,8 +16,8 @@ export const authConfig = {
   secret: authSecret(),
   providers: [
     Discord({
-      clientId: process.env.DISCORD_CLIENT_ID!.trim(),
-      clientSecret: process.env.DISCORD_CLIENT_SECRET!.trim(),
+      clientId: getDiscordClientId(),
+      clientSecret: getDiscordClientSecret(),
       authorization: { params: { scope: DISCORD_OAUTH_SCOPES } },
     }),
   ],
