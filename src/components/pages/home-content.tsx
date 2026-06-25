@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import Image from 'next/image';
 import { unstable_cache } from 'next/cache';
 import { Megaphone, Users, GraduationCap, UserCheck } from 'lucide-react';
@@ -8,7 +7,6 @@ import { DEFAULT_NOTICES } from '@/lib/db-fallbacks';
 import { getHomeClassStats } from '@/lib/home-class-stats';
 import { getHomeSiteStats } from '@/lib/home-stats';
 import { SITE_NAME, SITE_TAGLINE } from '@/lib/site-brand';
-import { Button } from '@/components/ui/button';
 import { Card, PageCardBody } from '@/components/ui/card';
 import { StatCard } from '@/components/ui/stat-card';
 import { ClassCard } from '@/components/cards';
@@ -70,15 +68,6 @@ export async function HomeContent() {
               <p className="text-body-ko text-foreground/90 font-medium">
                 각 반마다 담당 선생님들이 여러분을 기다리고 있습니다
               </p>
-            </div>
-
-            <div className="mt-8 sm:mt-11 mx-auto w-full max-w-[min(100%,20rem)] sm:max-w-none grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 sm:justify-center sm:w-auto sm:inline-grid">
-              <Button asChild size="lg" className="w-full sm:min-w-[9.5rem] h-12 text-base">
-                <Link href="/apply">수강 신청</Link>
-              </Button>
-              <Button asChild size="lg" variant="secondary" className="w-full sm:min-w-[9.5rem] h-12 text-base">
-                <Link href="/teachers">선생님 보기</Link>
-              </Button>
             </div>
           </div>
         </div>

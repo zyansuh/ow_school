@@ -14,6 +14,7 @@ export function useApplyForm() {
   const router = useRouter();
   const params = useSearchParams();
   const preTeacher = params.get('teacher');
+  const classSlug = params.get('class');
 
   const [teachers, setTeachers] = useState<TeacherSelectItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,10 +26,13 @@ export function useApplyForm() {
   });
 
   useEffect(() => {
-    fetch('/api/teachers')
+    const url = classSlug
+      ? `/api/teachers?slug=${encodeURIComponent(classSlug)}`
+      : '/api/teachers';
+    fetch(url)
       .then((r) => r.json())
       .then((data) => setTeachers(Array.isArray(data) ? data : []));
-  }, []);
+  }, [classSlug]);
 
   useEffect(() => {
     if (session?.user) {

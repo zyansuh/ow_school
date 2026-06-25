@@ -12,6 +12,7 @@ type TeacherCardData = {
   mbti?: string | null;
   intro?: string | null;
   maxStudents: number;
+  isActive?: boolean;
   activityTimeSlot?: string | null;
   class: { name: string; gameKr: string };
   teacherClasses?: Array<{ class: { name: string; gameKr: string } }>;
@@ -20,10 +21,12 @@ type TeacherCardData = {
 type Props = {
   teacher: TeacherCardData;
   activeCount: number;
+  isActive?: boolean;
 };
 
-export function TeacherCard({ teacher, activeCount }: Props) {
-  const status = getRecruitmentStatus(teacher.maxStudents, activeCount);
+export function TeacherCard({ teacher, activeCount, isActive }: Props) {
+  const teacherActive = isActive ?? teacher.isActive ?? true;
+  const status = getRecruitmentStatus(teacher.maxStudents, activeCount, teacherActive);
   const full = status !== 'open';
 
   return (
