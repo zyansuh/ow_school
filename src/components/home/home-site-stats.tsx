@@ -25,7 +25,7 @@ export function HomeStatsSection({ siteStats, classStats }: Props) {
         <div className="text-center mb-8 sm:mb-12 max-w-2xl mx-auto px-1 min-w-0">
           <h2 className="heading-section text-foreground tracking-tight break-keep">클래스 소개</h2>
           <p className="text-sm sm:text-[15px] text-muted-foreground leading-relaxed text-balance break-keep mt-3">
-            오버워치 · PUBG · 발로란트 — 게임별 반을 선택하고 담당 반장을 만나보세요
+            오버워치 · PUBG · 발로란트 — 게임별 반을 선택하고 담당 선생님을 만나보세요
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7 items-stretch">
