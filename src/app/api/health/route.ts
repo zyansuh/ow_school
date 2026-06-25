@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resolveAuthUrl } from '@/lib/auth/url';
+import {
+  checkDiscordOAuthCredentials,
+  discordApplicationIdFromBotToken,
+  getDiscordClientId,
+  normalizeEnvValue,
+} from '@/lib/auth/env';
 import { isBotInGuild } from '@/lib/discord/guild';
 
 export const dynamic = 'force-dynamic';
@@ -9,12 +15,18 @@ export async function GET() {
   const rawNextAuthUrl = process.env.NEXTAUTH_URL ?? 'missing';
   const effectiveAuthUrl = resolveAuthUrl();
   const oauthRedirectUri = `${effectiveAuthUrl}/api/auth/callback/discord`;
+  const discordClientId = getDiscordClientId();
+  const botApplicationId = discordApplicationIdFromBotToken(
+    normalizeEnvValue(process.env.DISCORD_BOT_TOKEN),
+  );
 
   const checks: Record<string, string> = {
     DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'missing',
+    DIRECT_URL: process.env.DIRECT_URL ? 'set' : 'missing',
     AUTH_SECRET: process.env.AUTH_SECRET ? 'set' : 'missing',
-    DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID ? 'set' : 'missing',
+    DISCORD_CLIENT_ID: discordClientId || 'missing',
     DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET ? 'set' : 'missing',
+    DISCORD_BOT_APPLICATION_ID: botApplicationId ?? 'unknown',
     DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID ? 'set' : 'missing',
     DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN ? 'set' : 'missing',
     NEXTAUTH_URL: rawNextAuthUrl,
@@ -26,6 +38,29 @@ export async function GET() {
 
   if (!process.env.DISCORD_CLIENT_SECRET) {
     warnings.push('DISCORD_CLIENT_SECRET이 없습니다. Discord OAuth 로그인이 실패합니다.');
+  }
+  if (!process.env.DIRECT_URL && process.env.VERCEL) {
+    warnings.push(
+      'DIRECT_URL이 없습니다. Vercel 빌드 시 P1002(migrate timeout)가 날 수 있습니다. Neon Direct URL을 추가하세요.',
+    );
+  }
+  if (discordClientId && botApplicationId && discordClientId !== botApplicationId) {
+    warnings.push(
+      `DISCORD_CLIENT_ID(${discordClientId})와 봇 토큰 앱 ID(${botApplicationId})가 다릅니다. 같은 Discord 앱의 Client ID·Secret·Bot Token을 사용하세요.`,
+    );
+  }
+
+  let oauthCredentials: Awaited<ReturnType<typeof checkDiscordOAuthCredentials>> | null = null;
+  if (discordClientId && process.env.DISCORD_CLIENT_SECRET) {
+    oauthCredentials = await checkDiscordOAuthCredentials(oauthRedirectUri);
+    checks.DISCORD_OAUTH_CREDENTIALS = oauthCredentials.status;
+    if (oauthCredentials.status === 'invalid_client') {
+      warnings.push(
+        'Discord가 Client ID·Secret을 거부했습니다(invalid_client). Developer Portal에서 Secret을 재발급하고 DISCORD_CLIENT_ID와 같은 앱인지 확인하세요.',
+      );
+    } else if (oauthCredentials.status === 'likely_valid' && 'hint' in oauthCredentials) {
+      checks.DISCORD_OAUTH_HINT = oauthCredentials.hint;
+    }
   }
   if (!process.env.AUTH_SECRET && !process.env.NEXTAUTH_SECRET) {
     warnings.push('AUTH_SECRET이 없습니다. 세션/JWT 서명이 실패합니다.');
@@ -63,10 +98,11 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    ok: db.startsWith('ok'),
+    ok: db.startsWith('ok') && oauthCredentials?.status !== 'invalid_client',
     db,
     env: checks,
     oauthRedirectUri,
+    oauthCredentials,
     warnings,
   });
 }
