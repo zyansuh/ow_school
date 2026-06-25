@@ -63,10 +63,10 @@ export async function HomeContent() {
 
             <div className="mt-7 sm:mt-10 mx-auto w-full min-w-0 max-w-lg space-y-3.5 sm:space-y-4 text-center px-1">
               <p className="text-body-ko text-muted-foreground">
-                평겜마에서 적응 할 수 있도록 도와주는 분들이 담당선생님입니다.
+                평겜마에서 적응 할 수 있도록 도와주는 분들이 담당 반장입니다.
               </p>
               <p className="text-body-ko text-foreground/90 font-medium">
-                각 반마다 담당 선생님들이 여러분을 기다리고 있습니다
+                각 반마다 담당 반장들이 여러분을 기다리고 있습니다
               </p>
             </div>
           </div>
@@ -77,7 +77,7 @@ export async function HomeContent() {
       <section className="page-container -mt-5 sm:-mt-8 relative z-20">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <StatCard label="학생 수" value={siteStats.students} suffix="명" icon={Users} />
-          <StatCard label="선생님 수" value={siteStats.teachers} suffix="명" icon={UserCheck} />
+          <StatCard label="반장 수" value={siteStats.teachers} suffix="명" icon={UserCheck} />
           <StatCard label="졸업생 수" value={siteStats.graduated} suffix="명" icon={GraduationCap} />
         </div>
       </section>
@@ -87,7 +87,7 @@ export async function HomeContent() {
         <div className="text-center mb-8 sm:mb-12 max-w-2xl mx-auto px-1 min-w-0">
           <h2 className="heading-section text-foreground mb-3 tracking-tight break-keep">클래스 소개</h2>
           <p className="text-sm sm:text-[15px] text-muted-foreground leading-relaxed text-balance break-keep">
-            오버워치 · PUBG · 발로란트 — 게임별 반을 선택하고 담당 선생님을 만나보세요
+            오버워치 · PUBG · 발로란트 — 게임별 반을 선택하고 담당 반장을 만나보세요
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7 items-stretch">

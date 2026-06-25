@@ -222,7 +222,7 @@ export default function InterviewPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <InfoTile label="작성자" value={authorName} />
               <InfoTile label="반" value={resolveClassName(me)} />
-              <InfoTile label="담당 선생님" value={resolveTeacherName(me)} />
+              <InfoTile label="담당 반장" value={resolveTeacherName(me)} />
               <InfoTile label="Discord User ID" value={authorDiscordId} mono />
             </div>
           </div>
@@ -245,7 +245,7 @@ export default function InterviewPage() {
             <QuestionBlock
               number={2}
               title="최근 함께한 사람 중 인상 깊거나 좋았던 분이 있으실까요?"
-              hint="담당 선생님은 제외해 주세요."
+              hint="담당 반장은 제외해 주세요."
             >
               <Textarea
                 required

@@ -45,8 +45,8 @@ function ApplyForm() {
           </Select>
         </div>
         <div className="space-y-3">
-          <Label>희망 선생님 *</Label>
-          <p className="text-xs text-muted-foreground">선생님 이름 · 담당 반 · 주 활동시간을 확인하고 선택하세요</p>
+          <Label>희망 반장 *</Label>
+          <p className="text-xs text-muted-foreground">반장 이름 · 담당 반 · 주 활동시간을 확인하고 선택하세요</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {teachers.map((t) => (
               <TeacherSelectCard
@@ -58,7 +58,7 @@ function ApplyForm() {
             ))}
           </div>
           {teachers.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-6">모집 중인 선생님이 없습니다</p>
+            <p className="text-sm text-muted-foreground text-center py-6">모집 중인 반장이 없습니다</p>
           )}
         </div>
         <Button type="submit" disabled={loading || !form.teacherId} className="w-full">

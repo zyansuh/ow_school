@@ -19,7 +19,7 @@ function buildNav(isTeacher?: boolean) {
     { href: '/interview', label: '졸업면담' },
     { href: '/mypage', label: '마이페이지' },
   ];
-  if (isTeacher) items.push({ href: '/teacher', label: '선생님 페이지' });
+  if (isTeacher) items.push({ href: '/teacher', label: '반장 페이지' });
   return items;
 }
 

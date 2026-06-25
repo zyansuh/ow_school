@@ -8,7 +8,7 @@ const siteUrl = process.env.NEXTAUTH_URL || 'https://ow-school.vercel.app';
 
 export const metadata: Metadata = {
   title: `${SITE_NAME} | ${SITE_TAGLINE}`,
-  description: '게임 멘토링 클래스 · 수강 신청 · 선생님 관리 · 졸업면담',
+  description: '게임 멘토링 클래스 · 수강 신청 · 반장 관리 · 졸업면담',
   icons: { icon: '/images/logo/logo-peaceful-gaming-village.webp', apple: '/images/logo/logo-peaceful-gaming-village.webp' },
   openGraph: {
     title: `${SITE_NAME} | ${SITE_TAGLINE}`,
