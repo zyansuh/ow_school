@@ -54,7 +54,7 @@
   }
 
   .admin-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6;
+    @apply max-w-7xl mx-auto px-5 sm:px-8 lg:px-10;
   }
 
   .heading-section {
