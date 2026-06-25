@@ -29,7 +29,7 @@ async function downloadExcel(report: Report) {
   const XLSX = await import('xlsx');
   const sheetRows = report.rows.map((r) => ({
     서버닉네임: r.serverNick,
-    '담당 선생님': r.teacherName,
+    '담당 반장': r.teacherName,
     '졸업 포인트': r.graduationPoint,
     '동호회 포인트': r.clubPoint,
     '기타 포인트': r.otherPoint,
@@ -117,7 +117,7 @@ export default function AdminPointsPage() {
             emptyTitle={`${year}년 ${month}월 포인트 내역이 없습니다`}
             columns={[
               { key: 'nick', header: '서버닉네임', cell: (r) => r.serverNick },
-              { key: 'teacher', header: '담당 선생님', cell: (r) => r.teacherName },
+              { key: 'teacher', header: '담당 반장', cell: (r) => r.teacherName },
               {
                 key: 'grad',
                 header: '졸업 포인트',

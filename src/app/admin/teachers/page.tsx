@@ -73,8 +73,8 @@ export default function AdminTeachersPage() {
   return (
     <div className={ds.pageGap}>
       <AdminPageHeader
-        title="선생님 관리"
-        description="선생님 등록·수정 및 활동 상태를 관리합니다. 한 선생님이 여러 반을 담당할 수 있습니다."
+        title="반장 관리"
+        description="반장 등록·수정 및 활동 상태를 관리합니다. 한 반장이 여러 반을 담당할 수 있습니다."
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="h-4 w-4" /> 추가
@@ -96,12 +96,12 @@ export default function AdminTeachersPage() {
       {loading ? (
         <SkeletonTable rows={5} />
       ) : teachers.length === 0 ? (
-        <EmptyState title="선생님이 없습니다" description="「추가」 버튼으로 선생님을 등록하세요." />
+        <EmptyState title="반장이 없습니다" description="「추가」 버튼으로 반장을 등록하세요." />
       ) : (
         <DataTable
           data={teachers}
           keyExtractor={(t) => t.id}
-          emptyTitle="선생님이 없습니다"
+          emptyTitle="반장이 없습니다"
           columns={[
             { key: 'name', header: '이름', cell: (t) => <span className="font-medium">{t.name}</span> },
             {
@@ -157,7 +157,7 @@ export default function AdminTeachersPage() {
                           t.currentStudents > 0
                             ? `\n담당 학생 ${t.currentStudents}명은 미배정으로 전환됩니다.`
                             : '';
-                        if (!confirm(`이 선생님을 삭제하시겠습니까?${extra}`)) return;
+                        if (!confirm(`이 반장을 삭제하시겠습니까?${extra}`)) return;
                         void remove(t.id);
                       }}
                       className="text-danger border-danger/30"

@@ -59,7 +59,7 @@ export default function AdminGraduatedPage() {
     <div>
       <AdminPageHeader
         title="졸업생 목록"
-        description="졸업 취소 시 active로 복구되며 마지막 담당 선생님·반이 복원됩니다."
+        description="졸업 취소 시 active로 복구되며 마지막 담당 반장·반이 복원됩니다."
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/students">학생 관리</Link>
@@ -77,7 +77,7 @@ export default function AdminGraduatedPage() {
             { key: 'nick', header: '표시 이름', cell: (u) => u.nickname },
             { key: 'guild', header: '길드 닉', cell: (u) => u.guildNickname ?? '-' },
             { key: 'class', header: '반', cell: (u) => u.className },
-            { key: 'teacher', header: '담당 선생님', cell: (u) => u.teacherName },
+            { key: 'teacher', header: '담당 반장', cell: (u) => u.teacherName },
             { key: 'date', header: '졸업 처리일', cell: (u) => formatDate(u.graduatedAt) },
             {
               key: 'action',

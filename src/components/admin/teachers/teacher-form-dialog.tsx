@@ -115,7 +115,7 @@ export function TeacherFormDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
-          <DialogTitle>{editing ? '선생님 수정' : '새 선생님 등록'}</DialogTitle>
+          <DialogTitle>{editing ? '반장 수정' : '새 반장 등록'}</DialogTitle>
           <DialogDescription>
             담당 반은 여러 개 선택할 수 있습니다. Discord 정보는 검색·ID로 선택한 대상 유저 기준입니다.
           </DialogDescription>

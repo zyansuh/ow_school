@@ -43,7 +43,7 @@ export function DiscordSyncPanel({ onSynced }: { onSynced?: () => void }) {
       <div className={`${adminStyles.cardPad} space-y-3`}>
         <h2 className="font-semibold">Discord 동기화</h2>
         <p className={adminStyles.muted}>
-          서버 닉네임·역할 최신화, 담당 학생 수 재계산, 선생님 연결 검증
+          서버 닉네임·역할 최신화, 담당 학생 수 재계산, 반장 연결 검증
         </p>
 
         {ops && (
@@ -57,7 +57,7 @@ export function DiscordSyncPanel({ onSynced }: { onSynced?: () => void }) {
             <Badge variant={ops.discord.guildConfigured ? 'success' : 'warning'}>Guild 연동</Badge>
             <Badge variant={ops.discord.webhookConfigured ? 'success' : 'outline'}>웹훅</Badge>
             {ops.teachersMissingDiscordUserId > 0 && (
-              <Badge variant="warning">ID 미연결 선생님 {ops.teachersMissingDiscordUserId}명</Badge>
+              <Badge variant="warning">ID 미연결 반장 {ops.teachersMissingDiscordUserId}명</Badge>
             )}
           </div>
         )}
@@ -69,7 +69,7 @@ export function DiscordSyncPanel({ onSynced }: { onSynced?: () => void }) {
         {report && (
           <div className={`${adminStyles.muted} space-y-3 pt-2 border-t border-gray-800`}>
             <p>동기화 성공: {report.usersSynced}명 · 실패: {report.usersFailed}명</p>
-            <p>선생님 Discord ID 연결: {report.teachersDiscordLinked}명 · 학생 수 재계산: {report.teachersRecounted}명</p>
+            <p>반장 Discord ID 연결: {report.teachersDiscordLinked}명 · 학생 수 재계산: {report.teachersRecounted}명</p>
 
             {report.studentCountMismatches.length > 0 && (
               <p className={adminStyles.warning}>
@@ -79,7 +79,7 @@ export function DiscordSyncPanel({ onSynced }: { onSynced?: () => void }) {
 
             {report.teachersMissingDiscordUserId.length > 0 && (
               <div>
-                <p className={adminStyles.warning}>discordUserId 미연결 선생님 {report.teachersMissingDiscordUserId.length}명</p>
+                <p className={adminStyles.warning}>discordUserId 미연결 반장 {report.teachersMissingDiscordUserId.length}명</p>
                 <ul className="text-xs space-y-1 mt-1">
                   {report.teachersMissingDiscordUserId.map((t) => (
                     <li key={t.teacherId}>{t.teacherName} (@{t.discordUsername ?? '미설정'})</li>

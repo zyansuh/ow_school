@@ -35,12 +35,12 @@ type SiteUser = {
   createdAt: string;
 };
 
-const ROLE_FILTERS = ['전체', '마을주민', '학생', '선생님', '관리자'] as const;
+const ROLE_FILTERS = ['전체', '마을주민', '학생', '반장', '관리자'] as const;
 const ROLE_FILTER_MAP: Record<(typeof ROLE_FILTERS)[number], SiteUserRole | null> = {
   전체: null,
   마을주민: 'resident',
   학생: 'student',
-  선생님: 'teacher',
+  반장: 'teacher',
   관리자: 'admin',
 };
 
@@ -127,6 +127,7 @@ export default function AdminSiteUsersPage() {
         <SkeletonTable rows={8} />
       ) : (
         <DataTable
+          className="max-w-full"
           data={filtered}
           keyExtractor={(u) => u.id}
           emptyTitle="사용자가 없습니다"
@@ -149,7 +150,7 @@ export default function AdminSiteUsersPage() {
               key: 'discordId',
               header: 'Discord ID',
               cell: (u) => (
-                <span className="font-mono text-xs text-muted-foreground break-all">{u.discordId}</span>
+                <span className="font-mono text-xs text-muted-foreground">{u.discordId}</span>
               ),
               hideOnMobile: true,
             },
@@ -170,13 +171,13 @@ export default function AdminSiteUsersPage() {
             {
               key: 'class',
               header: '반',
-              cell: (u) => u.className,
+              cell: (u) => <span>{u.className}</span>,
               hideOnMobile: true,
             },
             {
               key: 'teacher',
-              header: '담당 선생님',
-              cell: (u) => u.teacherName,
+              header: '담당 반장',
+              cell: (u) => <span>{u.teacherName}</span>,
               hideOnMobile: true,
             },
             {
