@@ -1,15 +1,14 @@
 import Image from 'next/image';
 import { unstable_cache } from 'next/cache';
-import { Megaphone, Users, GraduationCap, UserCheck } from 'lucide-react';
-import { GAME_CLASSES } from '@/lib/constants';
+import { Megaphone } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { DEFAULT_NOTICES } from '@/lib/db-fallbacks';
 import { getHomeClassStats } from '@/lib/home/class-stats';
 import { getHomeSiteStats } from '@/lib/home/stats';
 import { SITE_NAME, SITE_TAGLINE } from '@/lib/site-brand';
+import { auth } from '@/lib/auth';
 import { Card, PageCardBody } from '@/components/ui/card';
-import { StatCard } from '@/components/ui/stat-card';
-import { ClassCard } from '@/components/cards';
+import { HomeStatsSection } from '@/components/home/home-site-stats';
 import { ds } from '@/styles/design-system';
 
 const getNotices = unstable_cache(
@@ -28,11 +27,13 @@ const getNotices = unstable_cache(
 );
 
 export async function HomeContent() {
-  const [stats, notices, siteStats] = await Promise.all([
+  const [stats, notices, siteStats, session] = await Promise.all([
     getHomeClassStats(),
     getNotices(),
     getHomeSiteStats(),
+    auth(),
   ]);
+  const isAdmin = !!session?.user?.isAdmin;
 
   return (
     <div className="section-gap pb-24 sm:pb-28 page-enter">
@@ -73,29 +74,7 @@ export async function HomeContent() {
         </div>
       </section>
 
-      {/* Site stats */}
-      <section className="page-container -mt-5 sm:-mt-8 relative z-20">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <StatCard label="학생 수" value={siteStats.students} suffix="명" icon={Users} />
-          <StatCard label="반장 수" value={siteStats.teachers} suffix="명" icon={UserCheck} />
-          <StatCard label="졸업생 수" value={siteStats.graduated} suffix="명" icon={GraduationCap} />
-        </div>
-      </section>
-
-      {/* Classes */}
-      <section id="classes" className="page-container section-gap pt-6 sm:pt-8">
-        <div className="text-center mb-8 sm:mb-12 max-w-2xl mx-auto px-1 min-w-0">
-          <h2 className="heading-section text-foreground mb-3 tracking-tight break-keep">클래스 소개</h2>
-          <p className="text-sm sm:text-[15px] text-muted-foreground leading-relaxed text-balance break-keep">
-            오버워치 · PUBG · 발로란트 — 게임별 반을 선택하고 담당 반장을 만나보세요
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7 items-stretch">
-          {GAME_CLASSES.map((cls, i) => (
-            <ClassCard key={cls.slug} cls={cls} stats={stats[cls.slug]} priority={i === 0} />
-          ))}
-        </div>
-      </section>
+      <HomeStatsSection siteStats={siteStats} classStats={stats} isAdmin={isAdmin} />
 
       {/* Notices */}
       <section className="page-container">
