@@ -7,7 +7,9 @@ import { SkeletonTable } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { UserDisplayNickEdit } from '@/components/admin/user-display-nick-edit';
+import { UserSiteRoleEdit } from '@/components/admin/user-site-role-edit';
 import { formatDate, cn } from '@/lib/utils';
+import { type SiteUserRole } from '@/lib/user-role';
 import { ds } from '@/styles/design-system';
 import { toast } from 'sonner';
 
@@ -18,8 +20,10 @@ type SiteUser = {
   displayName: string;
   guildNickname: string;
   discordUsername: string;
-  role: 'admin' | 'teacher' | 'student';
+  role: SiteUserRole;
   roleLabel: string;
+  siteRole: SiteUserRole | null;
+  inferredRole: SiteUserRole;
   isInGuild: boolean;
   className: string;
   teacherName: string;
@@ -29,19 +33,14 @@ type SiteUser = {
   createdAt: string;
 };
 
-const ROLE_FILTERS = ['전체', '관리자', '선생님', '학생'] as const;
-const ROLE_FILTER_MAP: Record<(typeof ROLE_FILTERS)[number], SiteUser['role'] | null> = {
+const ROLE_FILTERS = ['전체', '마을주민', '학생', '선생님', '관리자'] as const;
+const ROLE_FILTER_MAP: Record<(typeof ROLE_FILTERS)[number], SiteUserRole | null> = {
   전체: null,
-  관리자: 'admin',
-  선생님: 'teacher',
+  마을주민: 'resident',
   학생: 'student',
+  선생님: 'teacher',
+  관리자: 'admin',
 };
-
-function roleBadgeVariant(role: SiteUser['role']) {
-  if (role === 'admin') return 'default' as const;
-  if (role === 'teacher') return 'outline' as const;
-  return 'info' as const;
-}
 
 export default function AdminSiteUsersPage() {
   const [users, setUsers] = useState<SiteUser[]>([]);
@@ -88,7 +87,7 @@ export default function AdminSiteUsersPage() {
     <div className={ds.pageGap}>
       <AdminPageHeader
         title="사이트 사용자"
-        description="Discord로 로그인한 적이 있는 전체 계정입니다. 표시 닉네임은 관리자 화면용이며 Discord 서버 닉은 변경되지 않습니다."
+        description="Discord로 로그인한 적이 있는 전체 계정입니다. 사이트 역할(마을주민·학생·선생님·관리자)은 관리자가 지정할 수 있으며, 자동은 Discord·담당 정보 기준입니다."
       />
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -154,8 +153,17 @@ export default function AdminSiteUsersPage() {
             },
             {
               key: 'role',
-              header: '역할',
-              cell: (u) => <Badge variant={roleBadgeVariant(u.role)}>{u.roleLabel}</Badge>,
+              header: '사이트 역할',
+              cell: (u) => (
+                <UserSiteRoleEdit
+                  userId={u.id}
+                  saveUrl={`/api/admin/site-users/${u.id}`}
+                  role={u.role}
+                  siteRole={u.siteRole}
+                  inferredRole={u.inferredRole}
+                  onSaved={() => void load()}
+                />
+              ),
             },
             {
               key: 'class',
