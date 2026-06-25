@@ -2,14 +2,25 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { AUTH_BOT_VS_LOGIN_NOTE, AUTH_ERROR_MESSAGES } from '@/lib/auth/errors';
 import { MainLayout } from '@/components/layout/main-layout';
-import { AUTH_ERROR_MESSAGES } from '@/lib/auth/errors';
 import { retryDiscordSignIn, signInWithDiscord } from '@/hooks/auth/use-discord-sign-in';
 import { SITE_NAME } from '@/lib/site-brand';
 
 const RETRY_ERRORS = new Set(['Configuration', 'InvalidCheck', 'OAuthCallbackError', 'OAuthSignin']);
+
+type HealthDiscordSetup = {
+  botInviteUrl?: string;
+  oauthRedirectUri?: string;
+};
+
+type HealthPayload = {
+  env?: { DISCORD_BOT_IN_GUILD?: string; DISCORD_OAUTH_CREDENTIALS?: string };
+  discordSetup?: HealthDiscordSetup;
+};
 
 function isMobileDevice() {
   if (typeof navigator === 'undefined') return false;
@@ -23,10 +34,19 @@ function LoginContent() {
   const message = error ? (AUTH_ERROR_MESSAGES[error] ?? `로그인 오류 (${error})`) : null;
   const [pending, setPending] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [health, setHealth] = useState<HealthPayload | null>(null);
 
   useEffect(() => {
     setIsMobile(isMobileDevice());
   }, []);
+
+  useEffect(() => {
+    if (!error || !RETRY_ERRORS.has(error)) return;
+    void fetch('/api/health')
+      .then((r) => r.json())
+      .then((data: HealthPayload) => setHealth(data))
+      .catch(() => setHealth(null));
+  }, [error]);
 
   async function handleDiscordSignIn() {
     setPending(true);
@@ -41,6 +61,10 @@ function LoginContent() {
     }
   }
 
+  const botMissing = health?.env?.DISCORD_BOT_IN_GUILD === 'no';
+  const botInviteUrl = health?.discordSetup?.botInviteUrl;
+  const oauthInvalid = health?.env?.DISCORD_OAUTH_CREDENTIALS === 'invalid_client';
+
   return (
     <MainLayout>
       <div className="page-container py-20 flex justify-center">
@@ -53,9 +77,38 @@ function LoginContent() {
               PC·모바일 모두 Discord에 이미 로그인되어 있으면 별도 입력 없이 연결됩니다.
             </p>
             {message && (
-              <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-left">
-                {message}
-              </p>
+              <div className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-left space-y-3">
+                <p>{message}</p>
+                {(error === 'Configuration' || error === 'OAuthCallbackError' || error === 'OAuthSignin') && (
+                  <p className="text-xs text-amber-300/90 leading-relaxed">{AUTH_BOT_VS_LOGIN_NOTE}</p>
+                )}
+                {oauthInvalid && (
+                  <p className="text-xs text-red-300/90">
+                    서버 점검: Client ID·Secret이 Discord에서 거부되고 있습니다. Vercel Production 환경 변수를
+                    확인한 뒤 Redeploy하세요.
+                  </p>
+                )}
+                {botMissing && botInviteUrl && (
+                  <p className="text-xs text-amber-200/90">
+                    봇이 아직 서버에 없습니다.{' '}
+                    <a
+                      href={botInviteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline font-medium hover:text-amber-100"
+                    >
+                      Discord에서 봇 초대하기
+                    </a>
+                    {' '}후 아래 버튼으로 본인 계정 로그인을 시도하세요.
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  <Link href="/api/health" className="underline hover:text-foreground" target="_blank">
+                    /api/health
+                  </Link>
+                  에서 OAuth·봇 상태를 확인할 수 있습니다.
+                </p>
+              </div>
             )}
             <Button
               className="w-full"
