@@ -16,6 +16,7 @@ function buildNav(isTeacher?: boolean) {
   const items = [
     { href: '/', label: '홈' },
     { href: '/#classes', label: '클래스 소개' },
+    { href: '/contents', label: '컨텐츠 소개' },
     { href: '/interview', label: '졸업면담' },
     { href: '/mypage', label: '마이페이지' },
   ];
