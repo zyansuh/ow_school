@@ -112,6 +112,7 @@ node scripts/verify-user-role.mjs
 
 - `guildJoinedAt`은 Discord Member API `joined_at` 동기화 값. 없으면 **최초 로그인일(`createdAt`)** 을 보조 기준으로 사용.
 - **학생 관리**(`/admin/students`)·홈 통계의 “학생 수”는 `student` 역할만 집계 (마을주민 제외).
+- **메인 홈 통계**(학생 수·반장 수·졸업생 수·클래스 카드 인원)는 DB 실제 값과 **표시용 오버라이드**를 분리합니다. 관리자가 메인에서 수정한 숫자는 `SiteSetting`에만 저장되며, `User`·`Teacher` 등 운영 데이터는 변경되지 않습니다.
 - 관리자로 `siteRole=admin` 지정 시 `AdminRole` 부여, 다른 역할로 변경 시 `AdminRole` 해제.
 
 ---
@@ -122,7 +123,7 @@ node scripts/verify-user-role.mjs
 
 | 기능 | 경로 | 설명 |
 |------|------|------|
-| 메인 | `/` | Hero, 반 카드, 담당 반장 안내, 공지 (ISR `revalidate: 60`) |
+| 메인 | `/` | Hero, 반 카드, 담당 반장 안내, 공지 (ISR `revalidate: 60`) · **관리자: 통계 카드 클릭 수정** |
 | 반별 | `/classes/[slug]` | `overwatch` · `pubg` · `valorant` — `TeacherCard`, 수강 신청 링크 |
 | 반장 목록 | `/teachers` | `/#classes`로 리다이렉트 (메인 반 섹션) |
 | 반장 상세 | `/teachers/[id]` | 프로필, MBTI, 담당 학생, 신청 CTA |
@@ -147,7 +148,7 @@ node scripts/verify-user-role.mjs
 
 | 메뉴 | URL | 핵심 기능 |
 |------|-----|-----------|
-| 대시보드 | `/admin` | 월별 차트, 반별 통계, 동기화 요약 |
+| 대시보드 | `/admin` | 월별 차트, 반별 통계, 동기화 요약 · 메인 홈 표시 통계 안내 |
 | Discord 동기화 | `/admin/discord-sync` | 전체 유저 닉·역할·가입일, 반장 연결 검증 |
 | **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/졸업 취소**, 서버 가입일 |
 | 학생 관리 | `/admin/students` | 담당 반장 변경, 졸업 처리 |
@@ -294,7 +295,7 @@ peaceful_game/
 | | `assignment.ts` | 담당 반장 배정·복원 |
 | | `graduation.ts` | 졸업·졸업 취소 |
 | **users/** | `role.ts`, `display.ts`, `header.ts` | 역할, 표시명, 헤더 라벨 |
-| **home/** | `stats.ts`, `class-stats.ts`, `ensure-classes.ts` | 홈 통계, 반 자동 생성 |
+| **home/** | `stats.ts`, `class-stats.ts`, `site-stats-override.ts`, `ensure-classes.ts` | 홈 통계, 표시 오버라이드, 반 자동 생성 |
 | **interviews/** | `access.ts`, `utils.ts` | 면담 권한, 동아리명 파싱 |
 | **applications/** | `policy.ts`, `service.ts`, `status.ts` | 신청 정책·생성·상태 변경 |
 | **notifications/** | `application-submitted.ts`, `interview-submitted.ts` | Discord 알림 |
@@ -309,7 +310,7 @@ peaceful_game/
 | `layout/` | `main-layout`, `site-header`, `site-footer`, `space-background` | 전역 레이아웃 |
 | `providers/` | `session-provider` | NextAuth SessionProvider |
 | `cards/` | `class-card`, `teacher-card` | 홈·반 카드 |
-| `home/` | `home-content`, `interview-fab` | 메인 페이지 본문 |
+| `home/` | `home-content`, `home-site-stats` (`HomeStatsSection`), `interview-fab` | 메인 페이지 본문 · 관리자 통계 편집 |
 | `apply/` | `teacher-select-card` | 수강 신청 반장 선택 |
 | `teacher/` | `teacher-activity-fields` | 반장 폼 활동 시간 |
 | `interview/` | `graduation-review-fab` | 졸업후기 모달 |
@@ -428,6 +429,77 @@ npm run dev         # http://localhost:3000
 | `20250624100000_user_display_nickname` | `displayNickname` |
 | `20250625120000_user_site_role` | `siteRole` |
 | `20250625140000_user_guild_joined_at` | `guildJoinedAt` |
+| `20250625200000_content_posts` | `ContentPost` · `ContentImage` (컨텐츠 소개) |
+
+> 메인 홈 통계 오버라이드는 **기존 `SiteSetting` 테이블**만 사용합니다. 별도 마이그레이션 없음.
+
+---
+
+## 📊 메인 홈 통계 수정 (관리자)
+
+메인 페이지(`/`)의 **학생 수 · 반장 수 · 졸업생 수**와 **클래스 카드 인원**(현재/정원)은 기본적으로 DB에서 자동 집계됩니다. 운영상 화면에만 다른 숫자를 보여줘야 할 때 관리자가 **표시값**을 지정할 수 있습니다.
+
+### 동작 원리
+
+| 구분 | 설명 |
+|------|------|
+| **DB 집계값** | `User`·`Teacher`·담당 배정 등 실제 데이터 기준 자동 계산 |
+| **표시 오버라이드** | `SiteSetting` 키 `homeSiteStatsOverride` · `homeClassStatsOverride` (JSON) |
+| **화면 표시** | 오버라이드가 있으면 해당 값, 없으면 DB 집계값 |
+
+**중요:** 오버라이드는 **표시용**입니다. 학생 배정·반장 정원·졸업 처리 등 **운영 데이터는 절대 수정하지 않습니다.**
+
+### 관리자 UI (메인 홈)
+
+1. Discord 로그인 + 관리자 권한(`AdminRole`)으로 `/` 접속
+2. 상단 통계 카드(학생 수·반장 수·졸업생 수) **클릭** 또는 우측 **「통계 수정」** 버튼
+3. 클래스 섹션의 **「클래스 인원 수정」** 버튼으로 동일 모달 진입
+4. 각 항목에서 **「DB 자동」** 체크 시 실제 집계값 사용, 해제 후 숫자 입력 시 표시값 고정
+5. 저장 후 `revalidateTag`로 홈 캐시 갱신 (최대 1~2분 ISR과 병행)
+
+### 반장(선생님)별 정원·담당 학생 수
+
+| 수정 대상 | 경로 | 비고 |
+|-----------|------|------|
+| **반장 최대 정원** (`maxStudents`) | `/admin/teachers` → 수정 → 「최대 인원」 | DB `Teacher.maxStudents` 변경 |
+| **담당 학생 수** (실제) | 학생 배정·졸업·신청 승인으로 자동 반영 | `User.teacherId` + 역할 필터 집계 |
+| **메인 카드 인원** (표시만) | 메인 홈 통계 수정 모달 | 클래스별 current/max 오버라이드 |
+
+반장 카드의 `담당 학생 X/Y명`은 **실시간 DB 집계**(`getActiveStudentCountsByTeacher`)를 사용합니다. 메인 클래스 카드의 `X/Y명`만 오버라이드와 병합됩니다.
+
+### API
+
+```http
+GET /api/admin/stats/home
+Authorization: (관리자 세션)
+
+PUT /api/admin/stats/home
+Content-Type: application/json
+
+{
+  "site": {
+    "students": 42,    // null = DB 자동
+    "teachers": null,
+    "graduated": 10
+  },
+  "classes": {
+    "overwatch": { "current": 5, "max": 20 },
+    "pubg": { "current": null, "max": null }
+  }
+}
+```
+
+응답에는 `computed`(DB 집계)·`override`(저장값)·`display`(화면 표시)가 모두 포함됩니다.
+
+### 구현 파일
+
+| 파일 | 역할 |
+|------|------|
+| `src/lib/home/site-stats-override.ts` | SiteSetting 읽기/쓰기·병합 |
+| `src/lib/home/stats.ts` | 상단 3종 통계 집계 + 오버라이드 |
+| `src/lib/home/class-stats.ts` | 반별 인원 집계 + 오버라이드 |
+| `src/components/home/home-site-stats.tsx` | `HomeStatsSection` — 클릭 편집 UI |
+| `src/app/api/admin/stats/home/route.ts` | 관리자 API |
 
 ---
 
@@ -536,6 +608,7 @@ sequenceDiagram
 | GET/DELETE | `/api/admin/interviews`, `[id]` | 면담 |
 | GET | `/api/admin/points` | 포인트 |
 | GET | `/api/admin/stats`, `/stats/monthly` | 통계 |
+| GET/PUT | `/api/admin/stats/home` | 메인 홈 표시 통계 오버라이드 (DB 집계값 유지) |
 | POST | `/api/admin/discord-sync` | 일괄 동기화 |
 | POST | `/api/admin/discord-sync/fix-link` | 연결 수정 |
 | GET | `/api/admin/ops-status` | 스키마 점검 |
@@ -569,7 +642,9 @@ sequenceDiagram
 
 ### 전체 모델
 
-`User` · `Class` · `Teacher` · `TeacherClass` · `Application` · `Interview` · `PointHistory` · `InterviewDeletionLog` · `GraduationReview` · `AdminRole` · `AdminRoleRequest` · `AdminRoleAuditLog` · `SiteSetting`
+`User` · `Class` · `Teacher` · `TeacherClass` · `Application` · `Interview` · `PointHistory` · `InterviewDeletionLog` · `GraduationReview` · `AdminRole` · `AdminRoleRequest` · `AdminRoleAuditLog` · `SiteSetting` · `ContentPost` · `ContentImage`
+
+`SiteSetting` 키 예: `notices`, `statsMonthlyApplicationsOverride`, `homeSiteStatsOverride`, `homeClassStatsOverride`
 
 스키마: `prisma/schema.prisma`
 
@@ -609,7 +684,9 @@ import { ds } from '@/styles/design-system';
 | P3009 failed migration | `prisma migrate resolve` — **백업 후** 진행 |
 | 역할·가입일 불일치 | `/admin/discord-sync` |
 | 졸업 취소 실패 | `status === graduated'` 확인, `/admin/users` 사용 |
-| 반장 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 |
+| 반장 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 · 카드/상세는 `getActiveStudentCountsByTeacher` 통일 |
+| 메인 홈 통계 수정 안 됨 | 관리자 로그인 여부 확인 · `/api/admin/stats/home` PUT 응답 확인 · 저장 후 새로고침 |
+| 메인 숫자와 DB 불일치 | 의도된 **표시 오버라이드**일 수 있음 — 메인 통계 모달에서 「DB 자동」 복원 |
 | Bot 닉 403 | 역할 순위 · MANAGE_NICKNAMES |
 | Windows EPERM prisma | node 프로세스 종료 후 재시도 |
 
