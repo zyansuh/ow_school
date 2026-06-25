@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
-import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
-import { parseClubNames } from '@/lib/interview-utils';
-import { filterStudentUsers, isStudentUser, loadUserRoleContext } from '@/lib/user-role';
+import { normalizeNickFields, userDisplayName } from '@/lib/users/display';
+import { parseClubNames } from '@/lib/interviews/utils';
+import { filterStudentUsers, isStudentUser, loadUserRoleContext } from '@/lib/users/role';
 
 export type TeacherStudentRow = {
   id: string;

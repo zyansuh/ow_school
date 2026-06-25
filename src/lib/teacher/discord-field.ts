@@ -1,4 +1,4 @@
-import { isDiscordSnowflake } from '@/lib/discord-id';
+import { isDiscordSnowflake } from '@/lib/discord/id';
 
 /** Teacher.discord 저장 전 검증 — snowflake(User ID) 금지 */
 export function assertValidTeacherDiscordField(discord: string | undefined | null) {

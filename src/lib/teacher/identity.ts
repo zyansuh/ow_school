@@ -1,11 +1,11 @@
-import { parseRoleNames } from '@/lib/discord-guild';
-import { findTeacherByDiscordUserId } from '@/lib/teacher-auth';
+import { parseRoleNames } from '@/lib/discord/guild';
+import { findTeacherByDiscordUserId } from '@/lib/teacher/auth';
 import {
   getUserRole,
   isTeacherDiscordRole,
   loadUserRoleContext,
   type UserRoleContext,
-} from '@/lib/user-role';
+} from '@/lib/users/role';
 
 export type TeacherUserRef = {
   id: string;

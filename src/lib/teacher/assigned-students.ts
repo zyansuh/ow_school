@@ -1,6 +1,6 @@
-import { findAssignedStudentsForTeacher } from '@/lib/student-users';
-import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
-import { parseClubNames } from '@/lib/interview-utils';
+import { findAssignedStudentsForTeacher } from '@/lib/students/users';
+import { normalizeNickFields, userDisplayName } from '@/lib/users/display';
+import { parseClubNames } from '@/lib/interviews/utils';
 
 export type TeacherAssignedStudentRow = {
   id: string;

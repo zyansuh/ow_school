@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
-import { filterStudentUsers, loadUserRoleContext } from '@/lib/user-role';
-import { computeTeacherIsActive } from '@/lib/teacher-recruiting';
+import { filterStudentUsers, loadUserRoleContext } from '@/lib/users/role';
+import { computeTeacherIsActive } from '@/lib/teacher/recruiting';
 
 /** teacherId 기준 활성 담당 학생 (Discord userId로 User 연결) */
 export function activeAssignedStudentWhere(teacherId: string) {
