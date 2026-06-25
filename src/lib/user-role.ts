@@ -1,4 +1,5 @@
 import { parseRoleNames } from '@/lib/discord-guild';
+import { isStudentByGuildTenure } from '@/lib/guild-tenure';
 import { prisma } from '@/lib/prisma';
 import { isDiscordSnowflake } from '@/lib/discord-id';
 
@@ -17,6 +18,9 @@ export const SITE_ROLE_LABELS: Record<SiteUserRole, string> = {
 
 export type UserRoleFields = {
   siteRole?: string | null;
+  isInGuild?: boolean;
+  guildJoinedAt?: Date | null;
+  createdAt?: Date;
   adminRole?: unknown | null;
   discordRoleNames?: string | null;
   discordId?: string;
@@ -78,13 +82,14 @@ export function isTeacherByTeacherRecordName(
   return false;
 }
 
-/** siteRole 미설정 시 Discord·Teacher·AdminRole 기준 자동 분류 */
+/** siteRole 미설정 시 Discord·Teacher·AdminRole·서버 가입 기간 기준 자동 분류 */
 export function inferUserRole(user: UserRoleFields, ctx: UserRoleContext): SiteUserRole {
   if (isAdminUser(user)) return 'admin';
   if (isTeacherDiscordRole(user)) return 'teacher';
   if (isTeacherByDiscordUserId(user.discordId, ctx)) return 'teacher';
   if (isTeacherByTeacherRecordName(user, ctx)) return 'teacher';
-  return 'student';
+  if (isStudentByGuildTenure(user)) return 'student';
+  return 'resident';
 }
 
 /**

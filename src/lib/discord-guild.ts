@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { parseDiscordJoinedAt } from '@/lib/guild-tenure';
 import { resolveGuildMembershipFromDb } from '@/lib/guild-membership';
 
 const DISCORD_API = 'https://discord.com/api/v10';
@@ -15,6 +16,7 @@ export type GuildMemberInfo = {
 type DiscordMember = {
   nick?: string | null;
   roles: string[];
+  joined_at?: string;
   user: { id: string; username: string; global_name?: string | null; avatar?: string | null };
 };
 
@@ -252,6 +254,8 @@ async function persistGuildInfo(
       ? `https://cdn.discordapp.com/avatars/${discordUserId}/${member.user.avatar}.png`
       : existing?.discordAvatar ?? null;
 
+  const parsedJoin = member ? parseDiscordJoinedAt(member.joined_at) : null;
+
   await prisma.user.update({
     where: { discordId: discordUserId },
     data: {
@@ -265,6 +269,9 @@ async function persistGuildInfo(
           ? JSON.stringify(info.roleNames)
           : (existing?.discordRoleNames ?? '[]')
         : '[]',
+      guildJoinedAt: info.isInGuild
+        ? parsedJoin ?? existing?.guildJoinedAt ?? null
+        : null,
       guildSyncedAt: new Date(),
     },
   });
