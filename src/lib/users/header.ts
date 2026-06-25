@@ -7,7 +7,7 @@ export type UserHeaderFields = {
 
 export function userHeaderSubtitle(user: UserHeaderFields): string {
   if (user.isAdmin) return '관리자';
-  if (user.isTeacher) return '선생님';
+  if (user.isTeacher) return '반장';
   return `현재 반 : ${user.className || '미배정'}`;
 }
 

@@ -3,7 +3,7 @@ import { isStudentByGuildTenure } from '@/lib/discord/guild-tenure';
 import { prisma } from '@/lib/prisma';
 import { isDiscordSnowflake } from '@/lib/discord/id';
 
-/** Discord 서버 역할명 — 정확히 일치해야 선생님으로 분류 */
+/** Discord 서버 역할명 — 정확히 일치해야 반장으로 분류 */
 export const TEACHER_DISCORD_ROLE_NAME = '신입반교사';
 
 export const SITE_USER_ROLES = ['resident', 'student', 'teacher', 'admin'] as const;
@@ -12,7 +12,7 @@ export type SiteUserRole = (typeof SITE_USER_ROLES)[number];
 export const SITE_ROLE_LABELS: Record<SiteUserRole, string> = {
   resident: '마을주민',
   student: '학생',
-  teacher: '선생님',
+  teacher: '반장',
   admin: '관리자',
 };
 
@@ -31,7 +31,7 @@ export type UserRoleFields = {
 
 export type UserRoleContext = {
   teacherDiscordUserIds: Set<string>;
-  /** Teacher.discord 필드(서버 닉 등) — discordUserId 미연결 선생님 보조 매칭 */
+  /** Teacher.discord 필드(서버 닉 등) — discordUserId 미연결 반장 보조 매칭 */
   teacherDiscordNames: Set<string>;
 };
 
