@@ -26,111 +26,159 @@
 
 ---
 
+## 목차
+
+1. [프로젝트 소개](#-이-프로젝트는)
+2. [사이트 이용자 역할](#-사이트-이용자-역할)
+3. [주요 기능](#-주요-기능)
+4. [사용 기술](#-사용-기술-tech-stack)
+5. [아키텍처 · 소스 구조](#️-아키텍처)
+6. [빠른 시작](#-빠른-시작)
+7. [배포 · CI](#-vercel-배포)
+8. [Discord 연동](#-discord-서버-연동)
+9. [포인트 · 반 안내](#-포인트-시스템)
+10. [API 레퍼런스](#-api-레퍼런스)
+11. [데이터 모델](#️-데이터-모델)
+12. [개발 규칙](#-개발-규칙)
+13. [트러블슈팅](#-트러블슈팅)
+
+---
+
 ## 📖 이 프로젝트는?
 
-**정착지원국**(평화로운 게임마을)은 Discord 커뮤니티 기반 **게임 멘토링 프로그램**을 운영하기 위한 풀스택 웹 애플리케이션입니다.
+**정착지원국**(브랜드명: **평화로운 게임마을**, `SITE_NAME` / `SITE_TAGLINE`)은 Discord 커뮤니티 기반 **게임 멘토링 프로그램** 운영용 풀스택 웹 앱입니다.
 
-Next.js App Router 하나로 프론트·API·인증을 처리하고, **Discord OAuth**로 로그인하며 **PostgreSQL(Neon)** 에 데이터를 저장합니다.
+| 구분 | 설명 |
+|------|------|
+| **프론트** | Next.js App Router · React 19 · Tailwind (다크 테마 고정) |
+| **백엔드** | 동일 Next.js 프로젝트의 Route Handlers (`app/api/`) |
+| **인증** | NextAuth.js v5 + Discord OAuth2 |
+| **DB** | PostgreSQL (Neon) + Prisma ORM |
+| **배포** | Vercel (Cron으로 Discord 일괄 동기화) |
 
-| 👤 대상 | 🛠️ 할 수 있는 것 |
-|--------|------------------|
-| **마을주민 · 학생** | 반별 담당 선생님 둘러보기 · 수강 신청 · 마이페이지 · 서버 닉 변경 · 졸업면담 |
-| **선생님** | 담당 학생 목록 · 학생 상세 · 통계 대시보드 |
-| **관리자** | 사이트 역할 지정 · 학생/선생님 CRUD · 졸업·졸업 취소 · Discord 동기화 · 포인트 관리 |
+### 이용자별 기능
 
-다크 테마 UI · 모바일 반응형 · Discord 서버 연동까지 갖춘 **실제 운영**을 염두에 둔 프로젝트입니다.
+| 역할 | 대표 경로 | 할 수 있는 것 |
+|------|-----------|----------------|
+| **마을주민** | `/`, `/mypage` | 반·선생님 둘러보기, 커뮤니티 참여 |
+| **학생** | `/apply`, `/interview` | 수강 신청, 졸업면담, 담당 선생님 배정 |
+| **선생님** | `/teacher` | 담당 학생 관리, 통계 |
+| **관리자** | `/admin` | 전체 운영·역할·졸업·Discord 동기화 |
 
 ---
 
 ## 👥 사이트 이용자 역할
 
-관리자는 `/admin/users`에서 역할을 **수동 지정**할 수 있고, 미지정 시 아래 규칙으로 **자동 분류**됩니다.
+관리자는 [`/admin/users`](https://ow-school.vercel.app/admin/users)에서 역할을 **수동 지정**할 수 있습니다. `User.siteRole`이 비어 있으면 **자동 분류**가 적용됩니다.
 
-| 역할 | 값 | 자동 분류 기준 |
-|------|-----|----------------|
-| **관리자** | `admin` | `AdminRole` 보유 |
-| **선생님** | `teacher` | Discord `신입반교사` 역할 · `Teacher.discordUserId` 연결 · Teacher 닉 매칭 |
-| **학생** | `student` | 디스코드 **서버 가입 2달 미만** 회원 |
-| **마을주민** | `resident` | 서버 가입 2달 이상 · 서버 미가입 · 그 외 일반 회원 |
+### 역할 정의
 
-- 수동 지정(`User.siteRole`)이 있으면 자동 규칙보다 **우선**합니다.
-- **「자동 (추론)」** 선택 시 `siteRole`을 비워 기존 규칙으로 되돌립니다.
-- 서버 가입일은 Discord `joined_at` → `User.guildJoinedAt`에 저장됩니다. 미동기화 시 **최초 로그인일**을 보조 기준으로 사용합니다.
-- **학생 관리** 목록·통계는 `student` 역할만 포함합니다 (마을주민 제외).
+| 표시 | DB 값 | 자동 분류 우선순위 |
+|------|-------|-------------------|
+| 관리자 | `admin` | `AdminRole` 테이블 존재 |
+| 선생님 | `teacher` | Discord `신입반교사` 역할 · `Teacher.discordUserId` · Teacher 닉 매칭 |
+| 학생 | `student` | Discord **서버 가입 2달 미만** (`guildJoinedAt` 기준) |
+| 마을주민 | `resident` | 가입 2달 이상 · 미가입 · 위에 해당 없음 |
 
-관련 코드: `src/lib/users/role.ts`, `src/lib/discord/guild-tenure.ts`
+### 역할 해석 흐름
+
+```mermaid
+flowchart TD
+    A[User] --> B{siteRole 수동 지정?}
+    B -->|예| C[siteRole 그대로 사용]
+    B -->|아니오| D{AdminRole?}
+    D -->|예| E[admin]
+    D -->|아니오| F{선생님 판별}
+    F -->|예| G[teacher]
+    F -->|아니오| H{가입 2달 미만?}
+    H -->|예| I[student]
+    H -->|아니오| J[resident]
+```
+
+### 구현 · 검증
+
+| 파일 | 역할 |
+|------|------|
+| `src/lib/users/role.ts` | `getUserRole`, `inferUserRole`, `isStudentUser` |
+| `src/lib/discord/guild-tenure.ts` | `guildJoinedAt`, 2달 기준 `isStudentByGuildTenure` |
+| `src/lib/users/display.ts` | 관리자 화면 `displayNickname` 우선 표시 |
 
 ```bash
-# 역할 분류 순수 함수 검증 (DB 불필요)
+# DB 없이 역할 분류 순수 함수 검증
 node scripts/verify-user-role.mjs
 ```
+
+**참고**
+
+- `guildJoinedAt`은 Discord Member API `joined_at` 동기화 값. 없으면 **최초 로그인일(`createdAt`)** 을 보조 기준으로 사용.
+- **학생 관리**(`/admin/students`)·홈 통계의 “학생 수”는 `student` 역할만 집계 (마을주민 제외).
+- 관리자로 `siteRole=admin` 지정 시 `AdminRole` 부여, 다른 역할로 변경 시 `AdminRole` 해제.
 
 ---
 
 ## ✨ 주요 기능
 
-### 🌟 사용자 페이지
+### 🌟 공개 · 일반 사용자
 
 | 기능 | 경로 | 설명 |
 |------|------|------|
-| 🏠 **메인** | `/` | Hero · 반(클래스) 소개 · 담당 선생님 안내 · 공지 (ISR 60초) |
-| 📚 **반별 페이지** | `/classes/[slug]` | 해당 반 담당 선생님 · `TeacherCard` · 수강 신청 링크 |
-| 👨‍🏫 **선생님** | `/teachers` → `/#classes` | 선생님 목록은 메인 반 섹션으로 안내 |
-| 👨‍🏫 **선생님 상세** | `/teachers/[id]` | 프로필 · MBTI · 담당 학생 · 신청 버튼 |
-| 📝 **수강 신청** | `/apply` | 닉네임 · 디스코드 · 플레이 시간 · 담당 선생님 선택 |
-| 💬 **졸업면담** | `/interview` | 졸업면담 제출 · 포인트 자동 지급 |
-| 👤 **마이페이지** | `/mypage` | 서버 닉·역할 · 신청/면담 내역 · 닉 변경 · Discord 새로고침 |
+| 메인 | `/` | Hero, 반 카드, 담당 선생님 안내, 공지 (ISR `revalidate: 60`) |
+| 반별 | `/classes/[slug]` | `overwatch` · `pubg` · `valorant` — `TeacherCard`, 수강 신청 링크 |
+| 선생님 목록 | `/teachers` | `/#classes`로 리다이렉트 (메인 반 섹션) |
+| 선생님 상세 | `/teachers/[id]` | 프로필, MBTI, 담당 학생, 신청 CTA |
+| 수강 신청 | `/apply?class={slug}` | 닉네임, Discord, 플레이 시간, 담당 선생님 |
+| 졸업면담 | `/interview` | 제출·수정, 졸업/동호회 포인트 |
+| 졸업후기 | `/graduation` | 졸업후기 FAB (홈 등) |
+| 마이페이지 | `/mypage` | 프로필, 서버 닉 변경, 신청·면담 내역, Discord 새로고침 |
+| 로그인 | `/login` | Discord OAuth |
 
-### 👨‍🏫 선생님 페이지
+### 👨‍🏫 선생님 포털
 
-| 기능 | 경로 | 설명 |
-|------|------|------|
-| 📊 **선생님 대시보드** | `/teacher` | 담당 학생 수 · 월별 통계 |
-| 📋 **학생 관리** | `/teacher/students` | 담당 학생 목록 · 졸업 여부 · 면담 요약 |
+| 기능 | 경로 |
+|------|------|
+| 대시보드 | `/teacher` |
+| 담당 학생 | `/teacher/students` |
 
-### 🔐 관리자 페이지 (`/admin`)
+세션 `isTeacher`는 `getUserRole === 'teacher'` 기준 (JWT 갱신).
 
-> **Discord 로그인** + `AdminRole` 권한 필요
+### 🔐 관리자 (`/admin`)
 
-| 메뉴 | URL | 하이라이트 |
+> Discord 로그인 + `AdminRole` + `middleware.ts`에서 `token.isAdmin` 검사
+
+| 메뉴 | URL | 핵심 기능 |
 |------|-----|-----------|
-| 📊 **대시보드** | `/admin` | 월별 차트 · 반별 통계 · Discord 동기화 요약 |
-| 🔗 **Discord 동기화** | `/admin/discord-sync` | 일괄 동기화 · 불일치 상세 · 연결 검증 |
-| 👤 **사이트 사용자** | `/admin/users` | 전체 로그인 계정 · **역할 지정** · **표시 닉네임** · **졸업/졸업 취소** · 서버 가입일 |
-| 👥 **학생 관리** | `/admin/students` | 담당 선생님 변경 · 졸업 처리 |
-| 🎓 **졸업생** | `/admin/graduated` | 졸업생 목록 · **졸업 취소(재학 복구)** |
-| 👨‍🏫 **선생님 관리** | `/admin/teachers` | 등록/수정/삭제 · 활동/비활성 · 정원 · 담당 반 복수 선택 |
-| 📋 **신청 관리** | `/admin/applications` | 수강 신청 내역 |
-| 💬 **졸업면담** | `/admin/interviews` | 조회 · 삭제 (감사 로그) |
-| 💰 **포인트 관리** | `/admin/points` | 월별 표 · 엑셀 다운로드 |
-| ⭐ **졸업후기** | `/admin/graduation-reviews` | 졸업후기 조회 |
-| 🛡️ **관리자 목록** | `/admin/admins` | 관리자 권한 부여·해제 |
-| 📨 **권한 요청** | `/admin/roles` | 관리자 권한 요청 승인·거절 |
+| 대시보드 | `/admin` | 월별 차트, 반별 통계, 동기화 요약 |
+| Discord 동기화 | `/admin/discord-sync` | 전체 유저 닉·역할·가입일, 선생님 연결 검증 |
+| **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/졸업 취소**, 서버 가입일 |
+| 학생 관리 | `/admin/students` | 담당 선생님 변경, 졸업 처리 |
+| 졸업생 | `/admin/graduated` | 졸업생 목록, **졸업 취소** |
+| 선생님 관리 | `/admin/teachers` | CRUD, 활동/비활성, 정원, 복수 반 |
+| 신청 관리 | `/admin/applications` | 수강 신청 내역 |
+| 졸업면담 | `/admin/interviews` | 조회·삭제 (감사 로그) |
+| 포인트 | `/admin/points` | 월별 집계, 엑셀 |
+| 졸업후기 | `/admin/graduation-reviews` | 조회 |
+| 관리자 목록 | `/admin/admins` | 권한 부여·해제 |
+| 권한 요청 | `/admin/roles` | `AdminRoleRequest` 승인·거절 |
 
 ### 🎓 졸업 · 졸업 취소
 
-| 동작 | 처리 내용 |
-|------|----------|
-| **졸업** | `status` → `graduated` · 반·담당 선생님 배정 해제 · 선생님 인원 수 갱신 |
-| **졸업 취소** | `status` → `active` · 마지막 담당 선생님·반 복원 (면담·신청 이력 기준) |
+| 동작 | DB 변경 | 비고 |
+|------|---------|------|
+| **졸업** | `status → graduated`, `classId`/`teacherId` null | 선생님 `currentStudents` 재계산 |
+| **졸업 취소** | `status → active`, 마지막 담당·반 복원 | 면담·승인 신청 이력 기준 (`students/assignment.ts`) |
 
-졸업 취소는 다음에서 가능합니다.
+**졸업 취소 UI:** `/admin/graduated`, `/admin/users` (졸업 관리 열), API `PATCH` `statusAction: ungraduate`
 
-- `/admin/graduated` — 졸업생 전용 목록
-- `/admin/users` — 사이트 사용자 **졸업 관리** 열
-- `/admin/students` — 졸업 취소 API 지원 (역할과 무관하게 `status` 기준)
+### 🔗 Discord 연동 요약
 
-### 🔗 Discord 연동 핵심
-
-| 항목 | 방식 |
+| 항목 | 구현 |
 |------|------|
-| **사용자 식별** | `discordId` (Discord User ID) — 닉 변경해도 데이터 유지 |
-| **학생↔선생님** | `User.teacherId` |
-| **화면 표시 (일반)** | 서버 닉 → 글로벌 표시 이름 → 유저네임 |
-| **화면 표시 (관리자)** | `displayNickname` → 서버 닉 → 글로벌 → 유저네임 |
-| **서버 가입일** | Discord Member `joined_at` → `guildJoinedAt` |
-| **관리자 동기화** | 서버 닉·역할·가입일 갱신 · 학생 수 재계산 · 선생님 연결 검증 |
-| **성능** | `/api/me` DB 즉시 반환 + stale 시 백그라운드 sync |
+| 사용자 식별 | `User.discordId` (닉 변경해도 유지) |
+| 학생↔선생님 | `User.teacherId` → `Teacher` |
+| 일반 표시명 | 서버 닉 → 글로벌 → username |
+| 관리자 표시명 | `displayNickname` → 서버 닉 → … |
+| 길드 동기화 | `lib/discord/guild.ts`, TTL `GUILD_SYNC_TTL_SEC` (기본 300초) |
+| 일괄 동기화 | `lib/admin/discord-sync.ts`, Cron `0 4 * * *` UTC |
 
 ---
 
@@ -138,113 +186,169 @@ node scripts/verify-user-role.mjs
 
 | 분류 | 기술 | 비고 |
 |------|------|------|
-| **프레임워크** | Next.js 15 | App Router, SSR/ISR, API Routes |
-| **언어** | TypeScript 5.5 | `npm run lint` = `tsc --noEmit` |
-| **UI** | React 19 | Server & Client Components |
-| **스타일** | Tailwind CSS 3.4 | 다크 테마 고정 |
-| **UI 컴포넌트** | Radix UI + CVA | Dialog, Select, Label … |
-| **인증** | NextAuth.js v5 | Discord OAuth2 |
-| **ORM** | Prisma 6.5 | PostgreSQL (Neon) |
-| **검증** | Zod | API 입력 검증 |
-| **토스트** | Sonner | 사용자 피드백 |
-| **엑셀** | xlsx | 관리자 포인트 다운로드 |
-| **이미지** | sharp | WebP 최적화 |
-| **배포** | Vercel | Cron: 매일 Discord 동기화 |
+| 프레임워크 | Next.js 15 | App Router, SSR/ISR, Middleware |
+| UI | React 19 | RSC + Client Components |
+| 언어 | TypeScript 5.5 | `npm run lint` = `tsc --noEmit` |
+| 스타일 | Tailwind 3.4 | `styles/design-system.ts` (`ds` 토큰) |
+| 컴포넌트 | Radix UI + CVA | Dialog, Select, Dropdown … |
+| 인증 | NextAuth v5 beta | Discord Provider, JWT 세션 |
+| ORM | Prisma 6.5 | `migrate deploy` (Vercel 빌드) |
+| DB | Neon PostgreSQL | Pooled + Direct URL |
+| 검증 | Zod | API body/query |
+| 알림 | Sonner | 토스트 |
+| 엑셀 | xlsx | 포인트 다운로드 |
+| 이미지 | sharp | WebP (`npm run images:optimize`) |
+| CI | GitHub Actions | lint + build |
 
 ---
 
 ## 🏗️ 아키텍처
 
 ```mermaid
-flowchart LR
-    subgraph Browser["🌐 브라우저"]
-        UI["Next.js App\n(React 19)"]
+flowchart TB
+    subgraph Client["브라우저"]
+        P[Pages app/]
+        C[Components]
     end
-
-    subgraph Next["⚡ Next.js 15"]
-        Pages["app/ — 페이지"]
-        API["app/api/ — REST API"]
-        Auth["NextAuth\nDiscord OAuth"]
+    subgraph Server["Next.js Server"]
+        API[app/api Route Handlers]
+        AUTH[lib/auth.ts NextAuth]
+        LIB[lib/* 도메인 모듈]
     end
-
-    subgraph External["🔗 외부"]
-        Discord["Discord API\nOAuth + Bot"]
+    subgraph External["외부"]
+        DISCORD[Discord OAuth + Bot API]
     end
-
-    subgraph DB["💾 Database"]
-        PG["PostgreSQL\n(Neon)"]
+    subgraph Data["데이터"]
+        NEON[(Neon PostgreSQL)]
     end
-
-    UI --> Pages
-    UI --> API
-    UI --> Auth
-    Auth --> Discord
-    API --> PG
-    Pages --> PG
-    API --> Discord
+    P --> C
+    P --> API
+    API --> LIB
+    AUTH --> DISCORD
+    LIB --> NEON
+    API --> DISCORD
+    AUTH --> NEON
 ```
 
-### 디렉터리 구조
+### 저장소 루트
 
 ```
 peaceful_game/
 ├── package.json
 ├── README.md
-├── vercel.json                  # Cron: /api/cron/discord-sync
+├── vercel.json              # Cron: /api/cron/discord-sync
+├── .env.example
+├── .github/workflows/ci.yml
 ├── scripts/
-│   ├── vercel-build.mjs         # migrate deploy + next build
-│   ├── verify-user-role.mjs     # 역할 분류 검증
+│   ├── vercel-build.mjs     # prisma generate → migrate deploy → next build
+│   ├── verify-user-role.mjs # 역할 분류 단위 검증
+│   ├── refactor-imports.mjs # import 경로 일괄 치환 (리팩터용)
 │   └── optimize-images.mjs
 ├── prisma/
 │   ├── schema.prisma
 │   ├── seed.ts
-│   └── migrations/
-├── public/images/               # 로고, 배너, 마스코트
-├── docs/
-│   ├── ROADMAP.md
-│   └── assets/
+│   └── migrations/          # 버전별 SQL (아래 마이그레이션 목록)
+├── public/images/           # 배너·마스코트·로고
+├── docs/ROADMAP.md
 └── src/
-    ├── app/                     # 페이지 · API Routes (라우팅은 유지)
-    ├── components/
-    │   ├── ui/                  # 공통 UI 프리미티브
-    │   ├── layout/              # 헤더·푸터·레이아웃
-    │   ├── admin/               # 관리자 전용 컴포넌트
-    │   ├── teacher/             # 선생님 UI
-    │   ├── home/                # 홈 콘텐츠
-    │   ├── apply/ · cards/ · interview/
-    ├── hooks/
-    │   ├── auth/                # Discord 로그인 훅
-    │   ├── admin/ · apply/ · mypage/
-    ├── lib/
-    │   ├── auth/                # NextAuth 설정 · rbac
-    │   ├── admin/               # 관리자·Discord 동기화·포인트
-    │   ├── discord/             # Guild API · 가입일·멤버십
-    │   ├── teacher/             # 선생님 CRUD · 학생·모집
-    │   ├── students/            # 학생 목록 · 배정 · 졸업
-    │   ├── users/               # 역할 · 표시명
-    │   ├── home/                # 홈 통계 · 반 시드
-    │   ├── interviews/          # 면담 접근·유틸
-    │   ├── applications/        # 수강 신청 서비스
-    │   ├── utils/               # cn · formatDate · segment …
-    │   ├── prisma.ts · api-helpers.ts · constants.ts
-    ├── styles/
-    │   ├── design-system.ts     # `ds` 디자인 토큰
-    │   └── admin/               # 관리자 레거시 스타일
+    ├── middleware.ts        # /admin/* → isAdmin JWT 검사
+    ├── app/                 # 라우팅 (변경 최소화)
+    ├── components/          # UI · 도메인 컴포넌트
+    ├── hooks/               # 클라이언트 훅
+    ├── lib/                 # 서버·공유 비즈니스 로직
+    ├── styles/              # Tailwind 디자인 토큰
+    └── types/
 ```
 
-### 주요 `lib` 모듈
+### `src/lib/` — 도메인별 모듈 맵
 
-| 경로 | 역할 |
+> import 예: `@/lib/teacher/auth`, `@/lib/users/role`
+
+| 폴더 | 파일 | 설명 |
+|------|------|------|
+| **루트** | `auth.ts` | NextAuth handlers · 세션 JWT 동기화 |
+| | `prisma.ts` | Prisma 클라이언트 싱글톤 |
+| | `api-helpers.ts` | `requireUser` / `requireAdminUser` / `requireTeacherUser` |
+| | `constants.ts` | `GAME_CLASSES`, `DEFAULT_ADMIN_USERNAMES` |
+| | `site-brand.ts` | `SITE_NAME`, `SITE_TAGLINE` |
+| | `points.ts` | 졸업·동호회 포인트 상수 |
+| | `monthly-stats.ts` | 관리자 월별 통계 오버라이드 |
+| | `db-fallbacks.ts` | DB 실패 시 기본값 |
+| **auth/** | `config.ts`, `url.ts`, `errors.ts`, `rbac.ts` | OAuth 설정, URL, 오류, 관리자 RBAC |
+| **discord/** | `guild.ts` | Bot API · 닉·역할·가입일 sync |
+| | `id.ts` | Snowflake 검증 |
+| | `guild-membership.ts` | DB `isInGuild` 단일 기준 |
+| | `guild-tenure.ts` | 2달 학생 판별 |
+| | `notify.ts` | 웹훅 · DM |
+| **admin/** | `discord-sync.ts` | 관리자 일괄 동기화 리포트 |
+| | `points.ts` | 월별 포인트 리포트 |
+| | `role-requests.ts` | 권한 요청·감사 로그 |
+| | `discord-user-lookup.ts` | Discord 유저 조회 |
+| **teacher/** | `identity.ts` | 선생님 엔티티 해석 |
+| | `auth.ts`, `classes.ts`, `counts.ts` | Discord ID, 반 매핑, 학생 수 |
+| | `students.ts`, `assigned-students.ts` | 담당 학생 API·공개 프로필 |
+| | `recruiting.ts`, `display.ts`, `activity.ts` | 모집 상태, UI 라벨, 활동 시간 |
+| | `discord-field.ts`, `discord-link.ts` | Discord 필드 검증·백필 |
+| | `delete.ts`, `query.ts` | 삭제, 목록 쿼리 |
+| **students/** | `users.ts` | 활성·졸업 학생 조회/카운트 |
+| | `assignment.ts` | 담당 선생님 배정·복원 |
+| | `graduation.ts` | 졸업·졸업 취소 |
+| **users/** | `role.ts`, `display.ts`, `header.ts` | 역할, 표시명, 헤더 라벨 |
+| **home/** | `stats.ts`, `class-stats.ts`, `ensure-classes.ts` | 홈 통계, 반 자동 생성 |
+| **interviews/** | `access.ts`, `utils.ts` | 면담 권한, 동아리명 파싱 |
+| **applications/** | `policy.ts`, `service.ts`, `status.ts` | 신청 정책·생성·상태 변경 |
+| **notifications/** | `application-submitted.ts`, `interview-submitted.ts` | Discord 알림 |
+| **utils/** | `index.ts` | `cn`, `formatDate`, `STATUS_LABELS` |
+| | `async.ts`, `segment.ts`, `form-options.ts`, `mbti.ts` | 병렬 처리, dynamic export, 폼 옵션 |
+
+### `src/components/` — 컴포넌트 맵
+
+| 폴더 | 주요 파일 | 용도 |
+|------|-----------|------|
+| `ui/` | `button`, `badge`, `card`, `input`, `dialog`, `data-table`, `stat-card`, `skeleton` | 공통 UI (shadcn 스타일) |
+| `layout/` | `main-layout`, `site-header`, `site-footer`, `space-background` | 전역 레이아웃 |
+| `providers/` | `session-provider` | NextAuth SessionProvider |
+| `cards/` | `class-card`, `teacher-card` | 홈·반 카드 |
+| `home/` | `home-content`, `interview-fab` | 메인 페이지 본문 |
+| `apply/` | `teacher-select-card` | 수강 신청 선생님 선택 |
+| `teacher/` | `teacher-activity-fields` | 선생님 폼 활동 시간 |
+| `interview/` | `graduation-review-fab` | 졸업후기 모달 |
+| **admin/** | `admin-nav`, `admin-page-header` | 관리자 레이아웃 |
+| | `user-display-nick-edit`, `user-site-role-edit`, `user-graduation-actions` | 사이트 사용자 관리 |
+| | `discord-user-search`, `discord-sync-panel` | Discord 연동 UI |
+| | `monthly-stats-editor`, `admin-grant-search` | 통계·권한 |
+| **admin/students/** | `student-teacher-assign`, `student-display-nick-edit` | 학생 관리 |
+| **admin/teachers/** | `teacher-table`, `teacher-form-dialog` | 선생님 CRUD |
+
+### `src/hooks/`
+
+| 경로 | 설명 |
 |------|------|
-| `users/role.ts` | 사이트 역할 (admin / teacher / student / resident) |
-| `discord/guild-tenure.ts` | 서버 가입 2달 기준 학생 판별 |
-| `discord/guild.ts` | Discord Bot API · 닉·역할·가입일 동기화 |
-| `students/graduation.ts` | 졸업 · 졸업 취소 · 담당 복원 |
-| `students/users.ts` | 학생 목록 조회 |
-| `students/assignment.ts` | 담당 선생님 배정 |
-| `auth/rbac.ts` | 관리자 권한 · 기본 관리자 부여 |
-| `teacher/` | 선생님 엔티티 · 모집 · 담당 학생 |
-| `admin/discord-sync.ts` | 관리자 Discord 일괄 동기화 |
+| `auth/use-discord-sign-in.ts` | `signInWithDiscord`, 재시도 |
+| `admin/use-admin-teachers.ts` | 선생님 폼·CRUD 상태 |
+| `admin/use-discord-sync.ts` | 동기화 API·리포트 |
+| `apply/use-apply-form.ts` | 수강 신청 폼 |
+| `mypage/use-mypage.ts` | `/api/me` 데이터 |
+
+### `src/styles/`
+
+| 파일 | 설명 |
+|------|------|
+| `design-system.ts` | `ds` — `pageGap`, `sectionTitle`, 카드 패딩 등 |
+| `admin/index.ts` | 레거시 `adminStyles` (신규 코드는 `ds` 권장) |
+
+글로벌 CSS: `src/app/globals.css`
+
+### `src/app/api/` — 라우트 개요
+
+| prefix | 인증 | 용도 |
+|--------|------|------|
+| `/api/auth/*` | — | NextAuth, 쿠키 리셋 |
+| `/api/health`, `/api/classes`, `/api/teachers` | 공개/선택 | 헬스, 반, 선생님 |
+| `/api/me`, `/api/applications`, `/api/interviews` | 로그인 | 마이페이지, 신청, 면담 |
+| `/api/teacher/*` | 선생님 | 담당 학생·통계·프로필 |
+| `/api/admin/*` | 관리자 | 전체 운영 API |
+| `/api/cron/discord-sync` | `CRON_SECRET` | Vercel Cron |
 
 ---
 
@@ -252,138 +356,111 @@ peaceful_game/
 
 ### 사전 준비
 
-| 프로그램 | 버전 | 확인 |
-|---------|------|------|
-| **Node.js** | 18+ | `node -v` |
-| **npm** | 9+ | `npm -v` |
-| **PostgreSQL** | — | [Neon](https://neon.tech) 권장 |
-| **Discord App** | — | [Developer Portal](https://discord.com/developers/applications) |
+Node.js 18+, npm 9+, [Neon](https://neon.tech) DB, [Discord Application](https://discord.com/developers/applications)
 
-### 1️⃣ 클론 & 설치
+### 설치
 
 ```bash
 git clone https://github.com/zyansuh/ow_school.git peaceful_game
 cd peaceful_game
 npm install
-```
-
-### 2️⃣ 환경 변수
-
-```bash
 cp .env.example .env
+# .env 값 채운 뒤
+npm run db:setup    # 로컬 최초: db push + seed
+npm run dev         # http://localhost:3000
 ```
+
+### 환경 변수
 
 | 변수 | 필수 | 설명 |
 |------|:----:|------|
-| `DATABASE_URL` | ✅ | Neon **Pooled** 연결 (`postgresql://...pooler...`) |
-| `DIRECT_URL` | ⭐ | Neon **Direct** 연결 — `migrate deploy`용 (Vercel 권장) |
+| `DATABASE_URL` | ✅ | Neon **Pooled** (`...-pooler...`) |
+| `DIRECT_URL` | ⭐ | Neon **Direct** — `migrate deploy`용 |
 | `AUTH_SECRET` | ✅ | `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | ✅ | 로컬: `http://localhost:3000` |
-| `DISCORD_CLIENT_ID` | ✅ | Discord OAuth 앱 ID |
-| `DISCORD_CLIENT_SECRET` | ✅ | OAuth 시크릿 |
-| `DISCORD_GUILD_ID` | ⭐ | 디스코드 서버 ID |
-| `DISCORD_BOT_TOKEN` | ⭐ | 봇 토큰 (닉 변경·동기화) |
-| `GUILD_SYNC_TTL_SEC` | — | Guild 캐시 TTL(초). 기본 300 |
-| `DEFAULT_ADMIN_DISCORD_IDS` | — | 쉼표 구분 Discord ID — 기본 관리자 |
-| `DISCORD_WEBHOOK_URL` | — | 면담·관리자 알림 |
-| `CRON_SECRET` | — | Vercel Cron 인증 |
-| `RUN_DB_SEED` | — | Vercel 빌드 시 seed 실행 (`true`일 때만) |
+| `NEXTAUTH_URL` | ✅ | 로컬 `http://localhost:3000` |
+| `DISCORD_CLIENT_ID` / `SECRET` | ✅ | OAuth |
+| `DISCORD_GUILD_ID` | ⭐ | 서버 ID (미가입 로그인 차단) |
+| `DISCORD_BOT_TOKEN` | ⭐ | 닉 변경·동기화 |
+| `GUILD_SYNC_TTL_SEC` | — | 캐시 TTL (기본 300) |
+| `DEFAULT_ADMIN_DISCORD_IDS` | — | 쉼표 구분 기본 관리자 ID |
+| `DISCORD_WEBHOOK_URL` | — | 면담·권한 알림 |
+| `CRON_SECRET` | — | Cron 인증 |
+| `RUN_DB_SEED` | — | Vercel 빌드 시 seed (`true`만) |
 
-> ⭐ Guild/Bot 미설정 시 일반 Discord 로그인만 동작합니다.
+**Redirect URI:** `{NEXTAUTH_URL}/api/auth/callback/discord`
 
-**Discord Redirect URI**
-
-- 로컬: `http://localhost:3000/api/auth/callback/discord`
-- 프로덕션: `https://ow-school.vercel.app/api/auth/callback/discord`
-
-### 3️⃣ DB 초기화 (로컬·최초 1회)
-
-```bash
-# 스키마 반영 + 시드 (반·선생님 목 데이터)
-npm run db:setup
-```
-
-프로덕션 DB에 **이미 운영 데이터가 있는 경우** seed는 실행하지 마세요. Vercel에서는 `RUN_DB_SEED=true`를 설정하지 않는 것이 기본입니다.
-
-```bash
-# 마이그레이션만 적용 (운영 DB)
-npx prisma migrate deploy
-```
-
-### 4️⃣ 개발 서버
-
-```bash
-npm run dev
-```
-
-| 서비스 | 주소 |
-|--------|------|
-| 앱 | http://localhost:3000 |
-| 헬스체크 | http://localhost:3000/api/health |
-
----
-
-## 📜 npm 스크립트
+### npm 스크립트
 
 | 명령 | 설명 |
 |------|------|
-| `npm run dev` | 개발 서버 (`:3000`) |
-| `npm run build` | Prisma generate → migrate deploy → next build |
-| `npm run start` | 프로덕션 서버 |
-| `npm run lint` | TypeScript 검사 |
-| `npm run db:push` | 스키마 → DB (`prisma db push`) |
-| `npm run db:seed` | 시드 데이터 |
-| `npm run db:setup` | `db:push` + `db:seed` |
-| `npm run images:optimize` | 이미지 WebP 변환 |
+| `npm run dev` | 개발 서버 |
+| `npm run build` | `scripts/vercel-build.mjs` (migrate + next build) |
+| `npm run lint` | `tsc --noEmit` |
+| `npm run db:push` / `db:seed` / `db:setup` | Prisma |
+| `npm run images:optimize` | WebP 변환 |
 
 ---
 
 ## 🌍 Vercel 배포
 
-1. [Neon](https://neon.tech) 프로젝트 생성
-2. **Pooled** URL → `DATABASE_URL`
-3. **Direct** URL → `DIRECT_URL` (마이그레이션 안정성)
-4. Vercel Environment Variables 설정 (따옴표 없이)
+1. Neon에서 Pooled → `DATABASE_URL`, Direct → `DIRECT_URL`
+2. Vercel Environment Variables (따옴표 없이)
+3. `NEXTAUTH_URL=https://ow-school.vercel.app`
+4. Redeploy → 빌드 시 `prisma migrate deploy` (실패 시에도 Next 빌드는 계속, 로그 확인)
+5. **`RUN_DB_SEED` 설정하지 않음** (운영 데이터 보존)
+6. 배포 후 `/admin/discord-sync` 1회 실행
 
-| 변수 | Production 예시 |
-|------|----------------|
-| `DATABASE_URL` | `postgresql://...@ep-xxx-pooler....neon.tech/neondb?sslmode=require` |
-| `DIRECT_URL` | `postgresql://...@ep-xxx....neon.tech/neondb?sslmode=require` |
-| `AUTH_SECRET` | 랜덤 시크릿 |
-| `DISCORD_*` | OAuth + Guild + Bot |
-| `NEXTAUTH_URL` | `https://ow-school.vercel.app` |
+### CI (GitHub Actions)
 
-5. **Redeploy** — 빌드 시 `prisma migrate deploy` 자동 실행
-6. 배포 후 `/admin/discord-sync`에서 **Discord 동기화 1회** 권장 (가입일·닉·역할 반영)
+`push`/`PR` → `main`에서 `npm run lint` + `npm run build` (CI용 더미 `DATABASE_URL`)
 
-> ⚠️ 운영 DB: `RUN_DB_SEED`는 기본 **미설정**. 시드는 로컬·초기 환경에만 사용하세요.
+### Prisma 마이그레이션 이력
+
+| 마이그레이션 | 내용 |
+|-------------|------|
+| `20250623115959_baseline` | 초기 스키마 |
+| `20250623120000_interview_points_system` | 면담·포인트 |
+| `20250623140000_interview_audit_nick_fix` | 감사·닉 수정 |
+| `20250623150000_teacher_discord_user_id` | `Teacher.discordUserId` |
+| `20250623210000_admin_role_requests` | 관리자 권한 요청 |
+| `20250623220000_drop_site_display_name` | 레거시 필드 제거 |
+| `20250623230000_teacher_multi_class` | 선생님 복수 반 |
+| `20250624100000_user_display_nickname` | `displayNickname` |
+| `20250625120000_user_site_role` | `siteRole` |
+| `20250625140000_user_guild_joined_at` | `guildJoinedAt` |
 
 ---
 
 ## 🔌 Discord 서버 연동
 
-### 봇 설정
-
-1. Developer Portal → **Bot** → Token → `DISCORD_BOT_TOKEN`
-2. **Server Members Intent** 활성화
-3. 봇 권한: **닉네임 관리(MANAGE_NICKNAMES)** 포함해 서버 초대
+### 봇 초대
 
 ```
 https://discord.com/api/oauth2/authorize?client_id=CLIENT_ID&permissions=134217728&scope=bot
 ```
 
+- **Server Members Intent** ON
+- **MANAGE_NICKNAMES** 권한, 봇 역할을 대상 유저보다 위에 배치
+
 ### OAuth 스코프
 
 `identify` · `guilds` · `guilds.members.read`
 
-### 운영 팁
+### 로그인 흐름
 
-- 로그인 시 서버 미가입이면 로그인 거부 (Guild ID 설정 시)
-- 마이페이지: 서버 닉·역할 표시 및 닉네임 변경
-- 관리자 **Discord 동기화**: 전체 유저 닉·역할·**가입일** 갱신 + 학생 수 재계산
-- Vercel Cron: 매일 04:00 UTC 자동 동기화 (`vercel.json`)
-- 선생님 **비활성** → 신규 수강 신청 대상에서 제외
-- 학생 **담당 선생님 변경** → `/admin/students`
+```mermaid
+sequenceDiagram
+    participant U as 사용자
+    participant N as NextAuth
+    participant D as Discord
+    participant DB as PostgreSQL
+    U->>N: /login Discord
+    N->>D: OAuth
+    D-->>N: profile + access token
+    N->>DB: User upsert
+    N->>D: guild member sync (비동기)
+    N-->>U: JWT (isAdmin, isTeacher, …)
+```
 
 ---
 
@@ -391,83 +468,134 @@ https://discord.com/api/oauth2/authorize?client_id=CLIENT_ID&permissions=1342177
 
 | 유형 | 포인트 | 조건 |
 |------|--------|------|
-| 🎓 졸업면담 | 15,000P | 졸업면담 최초 제출 |
-| 🎪 동호회 가입 | 5,000P | 면담에서 동호회 가입 선택 |
+| 졸업면담 | **15,000P** | 최초 제출 (`GRADUATION_POINT`) |
+| 동호회 가입 | **5,000P** | 면담에서 동호회 선택 (`CLUB_POINT`) |
 
-- `PointHistory`에 `userId` 기준 저장 → 닉 변경해도 유지
-- `/admin/points`에서 월별 조회 · 엑셀 다운로드
+- `PointHistory.userId` 기준 — 닉 변경 후에도 유지
+- 관리자 `/admin/points` · 엑셀 다운로드
 
 ---
 
 ## 🦦🦁🦊 반(클래스) 안내
 
-| 반 | 마스코트 | 게임 | slug |
-|----|---------|------|------|
-| 🦦 **수달반** | 수달 | Overwatch (오버워치) | `overwatch` |
-| 🦁 **사자반** | 사자 | PUBG (배틀그라운드) | `pubg` |
-| 🦊 **여우반** | 여우 | Valorant (발로란트) | `valorant` |
+| 반 | slug | 게임 | 설명 (요약) |
+|----|------|------|-------------|
+| 🦦 수달반 | `overwatch` | 오버워치 | 팀워크와 전략 |
+| 🦁 사자반 | `pubg` | 배틀그라운드 | 서바이벌 |
+| 🦊 여우반 | `valorant` | 발로란트 | 전술 FPS |
+
+정의: `src/lib/constants.ts` → `GAME_CLASSES`. DB `Class`는 `ensure-classes` / seed / `/api/classes`로 보장.
 
 ---
 
 ## 🛡️ 기본 관리자
 
-최초 Discord 로그인 시 아래 **Username** 또는 `DEFAULT_ADMIN_DISCORD_IDS`에 등록된 ID는 자동으로 관리자 권한이 부여됩니다.
+최초 로그인 시 `DEFAULT_ADMIN_USERNAMES` 또는 `DEFAULT_ADMIN_DISCORD_IDS`와 일치하면 `AdminRole` 자동 부여 (`lib/auth/rbac.ts`).
 
 `sweet__rain` · `alpha_rein.` · `hanbyeol2497` · `pastel_purete` · `teamgod804` · `antares_s` · `minozizi` · `sperospera1`
 
-(전체: `src/lib/constants.ts` → `DEFAULT_ADMIN_USERNAMES`)
+---
+
+## 📚 API 레퍼런스
+
+### 공개 · 인증
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/api/health` | DB·Auth·Bot 상태 |
+| GET | `/api/classes` | 반 목록·모집 인원 |
+| GET | `/api/teachers` | 활성 선생님 목록 |
+| GET | `/api/teachers/[id]` | 선생님 상세 |
+| GET | `/api/notices` | 공지 |
+| GET | `/api/me` | 내 프로필 (`?refresh=1` 강제 sync) |
+| PATCH | `/api/me/guild-nick` | 서버 닉 변경 |
+| GET/POST | `/api/applications` | 신청 조회·생성 |
+| GET/POST/PATCH | `/api/interviews` | 면담 |
+| GET | `/api/interviews/mine` | 내 면담 |
+| GET/POST | `/api/graduation-reviews` | 졸업후기 |
+
+### 선생님 (`requireTeacherUser`)
+
+| Method | Path |
+|--------|------|
+| GET | `/api/teacher/students` |
+| GET | `/api/teacher/students/[id]` |
+| GET | `/api/teacher/stats` |
+| GET/PATCH | `/api/teacher/profile` |
+
+### 관리자 (`requireAdminUser`)
+
+| Method | Path | 비고 |
+|--------|------|------|
+| GET | `/api/admin/site-users` | 전체 사용자 |
+| PATCH | `/api/admin/site-users/[id]` | `displayNickname`, `siteRole`, `statusAction` |
+| GET/PATCH | `/api/admin/students`, `[id]` | 학생·졸업·담당 |
+| GET | `/api/admin/graduated` | 졸업생 |
+| GET/POST/PATCH/DELETE | `/api/admin/teachers`, `[id]` | 선생님 CRUD |
+| GET | `/api/admin/applications`, `[id]` | 신청 |
+| GET/DELETE | `/api/admin/interviews`, `[id]` | 면담 |
+| GET | `/api/admin/points` | 포인트 |
+| GET | `/api/admin/stats`, `/stats/monthly` | 통계 |
+| POST | `/api/admin/discord-sync` | 일괄 동기화 |
+| POST | `/api/admin/discord-sync/fix-link` | 연결 수정 |
+| GET | `/api/admin/ops-status` | 스키마 점검 |
+| GET/POST | `/api/admin/roles`, `/role-requests` | 관리자 권한 |
+| GET/POST/DELETE | `/api/admin/admins` | 관리자 목록 |
+| GET | `/api/admin/users`, `/users/lookup` | Discord 검색 |
+| GET | `/api/admin/graduation-reviews` | 졸업후기 |
+
+### Cron
+
+| Method | Path | Header |
+|--------|------|--------|
+| GET | `/api/cron/discord-sync` | `Authorization: Bearer ${CRON_SECRET}` |
 
 ---
 
-## 📚 주요 API 엔드포인트
+## 🗄️ 데이터 모델
 
-### 공개 · 로그인 사용자
+### `User` 주요 필드
 
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| `GET` | `/api/health` | 헬스체크 |
-| `GET` | `/api/me` | 내 프로필 (`?refresh=1` 강제 동기화) |
-| `PATCH` | `/api/me/guild-nick` | 서버 닉네임 변경 |
-| `POST` | `/api/applications` | 수강 신청 |
-| `POST` | `/api/interviews` | 졸업면담 제출 |
-| `GET` | `/api/classes` | 반 목록 (없으면 자동 생성) |
-| `GET` | `/api/teachers` | 선생님 목록 |
-
-### 선생님
-
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| `GET` | `/api/teacher/students` | 담당 학생 목록 |
-| `GET` | `/api/teacher/stats` | 통계 |
-
-### 관리자
-
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| `GET` | `/api/admin/site-users` | 전체 사이트 사용자 |
-| `PATCH` | `/api/admin/site-users/[id]` | 표시 닉 · **siteRole** · **졸업/졸업취소** |
-| `PATCH` | `/api/admin/students/[id]` | 졸업 · 졸업 취소 · 담당 선생님 · 표시 닉 |
-| `GET` | `/api/admin/graduated` | 졸업생 목록 |
-| `POST` | `/api/admin/discord-sync` | Discord 일괄 동기화 |
-| `GET` | `/api/admin/ops-status` | 스키마·연동 상태 |
-| `GET` | `/api/admin/points` | 포인트 월별 조회 |
-| `GET` | `/api/admin/roles` | 관리자 권한 · 요청 목록 |
-
----
-
-## 🗄️ 데이터 모델 요약
-
-| 모델 | 설명 |
+| 필드 | 설명 |
 |------|------|
-| `User` | Discord 계정 · `siteRole` · `displayNickname` · `guildJoinedAt` · `status` |
-| `Class` | 반 (수달/사자/여우) |
-| `Teacher` | 선생님 · `discordUserId` · 복수 반 (`TeacherClass`) |
-| `Application` | 수강 신청 |
-| `Interview` | 졸업면담 |
-| `PointHistory` | 포인트 지급 이력 |
-| `AdminRole` | 관리자 권한 |
-| `AdminRoleRequest` | 관리자 권한 요청 |
-| `GraduationReview` | 졸업후기 |
+| `discordId` | Discord User ID (unique) |
+| `discordServerNick` / `discordNickname` | 서버 닉 · 글로벌 표시명 |
+| `displayNickname` | 관리자 화면용 오버라이드 (Discord 닉 변경 아님) |
+| `siteRole` | `resident` \| `student` \| `teacher` \| `admin` \| null |
+| `guildJoinedAt` | 서버 가입 시각 |
+| `isInGuild` | 길드 가입 여부 (DB 기준) |
+| `status` | `active` \| `graduated` |
+| `classId` / `teacherId` | 반 · 담당 선생님 |
+
+### 전체 모델
+
+`User` · `Class` · `Teacher` · `TeacherClass` · `Application` · `Interview` · `PointHistory` · `InterviewDeletionLog` · `GraduationReview` · `AdminRole` · `AdminRoleRequest` · `AdminRoleAuditLog` · `SiteSetting`
+
+스키마: `prisma/schema.prisma`
+
+---
+
+## 📐 개발 규칙
+
+### Import alias
+
+```ts
+import { getUserRole } from '@/lib/users/role';
+import { syncUserGuildData } from '@/lib/discord/guild';
+import { graduateUser } from '@/lib/students/graduation';
+import { cn, formatDate } from '@/lib/utils';
+import { signInWithDiscord } from '@/hooks/auth/use-discord-sign-in';
+import { ds } from '@/styles/design-system';
+```
+
+- `app/` 라우트 경로는 URL과 1:1 — **페이지 파일 위치는 가급적 유지**
+- 비즈니스 로직은 `lib/{도메인}/`에 추가
+- UI는 `components/{도메인}/`, 클라이언트 상태는 `hooks/{도메인}/`
+- DB 스키마 변경 시 `prisma/migrations/`에 **nullable·additive** 우선 (운영 데이터 보존)
+
+### 동적 라우트
+
+일부 페이지: `export { dynamic } from '@/lib/utils/segment'` (`force-dynamic`)
 
 ---
 
@@ -475,18 +603,17 @@ https://discord.com/api/oauth2/authorize?client_id=CLIENT_ID&permissions=1342177
 
 | 증상 | 해결 |
 |------|------|
-| 로그인 실패 / Configuration | `AUTH_SECRET` · `DISCORD_CLIENT_*` · DB 연결 확인 |
-| 서버 미가입 로그인 거부 | Discord 서버 가입 · `DISCORD_GUILD_ID` 확인 |
-| P1002 migrate timeout | Vercel에 `DIRECT_URL` 설정 후 `npx prisma migrate deploy` |
-| P3009 failed migration | `prisma migrate resolve` 후 재배포 (운영 데이터 백업 권장) |
-| 역할·가입일이 안 맞음 | `/admin/discord-sync` 실행 |
-| 졸업 취소 안 됨 | `/admin/users` 또는 `/admin/graduated` 사용 · `status=graduated` 확인 |
-| 선생님 인원 불일치 | Discord 동기화로 `currentStudents` 재계산 |
-| 봇 닉 변경 403 | 봇 역할 순위 · MANAGE_NICKNAMES 권한 |
-| `prisma generate` EPERM (Windows) | node 프로세스 종료 후 재시도 |
-| 빌드 시 DB 실패 | `DATABASE_URL`·`DIRECT_URL` Neon URL 확인 |
+| 로그인 Configuration 오류 | `AUTH_SECRET`, Discord OAuth, **DB 연결** (테이블 없음도 동일 메시지) |
+| 서버 미가입 | Discord 서버 가입, `DISCORD_GUILD_ID` |
+| P1002 migrate timeout | `DIRECT_URL` 설정 후 `npx prisma migrate deploy` |
+| P3009 failed migration | `prisma migrate resolve` — **백업 후** 진행 |
+| 역할·가입일 불일치 | `/admin/discord-sync` |
+| 졸업 취소 실패 | `status === graduated'` 확인, `/admin/users` 사용 |
+| 선생님 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 |
+| Bot 닉 403 | 역할 순위 · MANAGE_NICKNAMES |
+| Windows EPERM prisma | node 프로세스 종료 후 재시도 |
 
-### 수동 마이그레이션 (컬럼만 추가할 때)
+### 운영 DB 컬럼 수동 추가 (예시)
 
 ```sql
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "displayNickname" TEXT;
@@ -498,10 +625,9 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "guildJoinedAt" TIMESTAMP(3);
 
 ## 🎨 UI / UX
 
-- 다크 테마 고정 · 우주풍 그라데이션
-- 모바일 반응형 · 관리자 테이블 카드 뷰
-- Sonner 토스트 · WebP 이미지
-- 홈 ISR 60초 · Discord 백그라운드 sync
+- 다크 테마 · 우주 배경 (`space-background`)
+- 모바일: Sheet 메뉴, `DataTable` 카드 뷰
+- Sonner 토스트 · WebP 이미지 · 홈 ISR 60초
 
 ---
 
@@ -509,10 +635,10 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "guildJoinedAt" TIMESTAMP(3);
 
 | 문서 | 내용 |
 |------|------|
-| [로드맵 & TODO](docs/ROADMAP.md) | 향후 작업 · 배포 체크리스트 |
+| [ROADMAP.md](docs/ROADMAP.md) | 향후 작업 · 체크리스트 |
 | [.env.example](.env.example) | 환경 변수 템플릿 |
 
-버그 제보 · 기능 제안은 Issue / PR 환영합니다.
+버그 제보 · PR 환영합니다.
 
 ---
 
@@ -520,7 +646,7 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "guildJoinedAt" TIMESTAMP(3);
 
 **Made with Next.js · React · TypeScript · Prisma · Discord**
 
-🦦 수달반 · 🦁 사자반 · 🦊 여우반 — **정착지원국**과 함께
+🦦 수달반 · 🦁 사자반 · 🦊 여우반 — **정착지원국**
 
 [ow-school.vercel.app](https://ow-school.vercel.app)
 
