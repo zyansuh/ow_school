@@ -5,8 +5,8 @@ import { apiError, requireUser } from '@/lib/api-helpers';
 import {
   syncUserGuildDataIfStale,
   runGuildSyncIfStale,
-  resolveMembershipForSession,
 } from '@/lib/discord-guild';
+import { resolveGuildMembershipFromDb } from '@/lib/guild-membership';
 import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 
 export async function GET(req: NextRequest) {
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
       displayName: userDisplayName(normalizeNickFields(dbUser)),
       serverNickname: dbUser.discordServerNick,
       globalDisplayName: dbUser.discordNickname,
-      isInGuild: resolveMembershipForSession(dbUser.isInGuild),
+      isInGuild: resolveGuildMembershipFromDb(dbUser.isInGuild),
     });
   } catch (e) {
     return apiError(e);

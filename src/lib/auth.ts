@@ -11,7 +11,7 @@ import {
 } from '@/lib/discord-guild';
 import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
 import { resolveTeacherEntityForUser } from '@/lib/teacher/identity';
-import { getUserRole, loadUserRoleContext } from '@/lib/user-role';
+import { getUserRole, loadUserRoleContext, type UserRoleContext } from '@/lib/user-role';
 import { backfillTeacherDiscordUserId } from '@/lib/teacher-discord-link';
 
 type DiscordProfile = {
@@ -58,7 +58,7 @@ async function syncTokenFromUser(userId: string, token: Record<string, unknown>)
   if (!user) return token;
 
   const roleNames = parseRoleNames(user.discordRoleNames);
-  let roleCtx = { teacherDiscordUserIds: new Set<string>() };
+  let roleCtx: UserRoleContext = { teacherDiscordUserIds: new Set(), teacherDiscordNames: new Set() };
   try {
     roleCtx = await loadUserRoleContext();
   } catch (e) {

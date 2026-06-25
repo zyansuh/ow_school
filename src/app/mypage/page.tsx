@@ -67,7 +67,9 @@ export default function MyPage() {
           <div className={`${ds.cardPad} space-y-4`}>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className={ds.sectionTitle}>디스코드 서버 정보</h2>
-              <Badge variant="success">서버 가입</Badge>
+              <Badge variant={data?.isInGuild ? 'success' : 'warning'}>
+                {data?.isInGuild ? '서버 가입' : '미가입'}
+              </Badge>
               <Button
                 type="button"
                 variant="outline"
@@ -113,7 +115,7 @@ export default function MyPage() {
               </div>
             </div>
 
-            {(data?.isInGuild ?? true) && (
+            {data?.isInGuild === true && (
               <form onSubmit={saveNick} className="pt-2 border-t border-gray-800 space-y-3">
                 <div>
                   <Label htmlFor="server-nick">서버 닉네임 변경</Label>

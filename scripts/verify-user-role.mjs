@@ -40,7 +40,7 @@ function isStudentUser(user, ctx) {
   return getUserRole(user, ctx) === 'student';
 }
 
-const emptyCtx = { teacherDiscordUserIds: new Set() };
+const emptyCtx = { teacherDiscordUserIds: new Set(), teacherDiscordNames: new Set() };
 
 const cases = [
   {

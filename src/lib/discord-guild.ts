@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { resolveGuildMembershipFromDb } from '@/lib/guild-membership';
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
@@ -30,9 +31,9 @@ export function getGuildConfig() {
   return { guildId, botToken };
 }
 
-/** 로그인 게이트를 통과한 사용자는 길드 가입으로 간주 */
+/** @deprecated resolveGuildMembershipFromDb 사용 — DB isInGuild 그대로 반환 */
 export function resolveMembershipForSession(dbIsInGuild: boolean): boolean {
-  return getGuildConfig() ? true : dbIsInGuild;
+  return resolveGuildMembershipFromDb(dbIsInGuild);
 }
 
 export async function isUserInGuildViaOAuth(
@@ -203,7 +204,7 @@ function guildInfoFromDbUser(user: {
   discordRoleNames: string | null;
 }): GuildMemberInfo {
   return {
-    isInGuild: resolveMembershipForSession(user.isInGuild),
+    isInGuild: resolveGuildMembershipFromDb(user.isInGuild),
     guildNickname: user.discordServerNick,
     globalDisplayName: user.discordNickname,
     username: user.discordUsername,
@@ -215,7 +216,7 @@ async function guildInfoFromDb(discordUserId: string): Promise<GuildMemberInfo> 
   const existing = await prisma.user.findUnique({ where: { discordId: discordUserId } });
   if (!existing) {
     return {
-      isInGuild: resolveMembershipForSession(false),
+      isInGuild: false,
       guildNickname: null,
       globalDisplayName: null,
       username: '',
@@ -259,9 +260,11 @@ async function persistGuildInfo(
       discordNickname: info.globalDisplayName ?? existing?.discordNickname ?? null,
       discordUsername: member?.user.username ?? existing?.discordUsername,
       discordAvatar: avatar,
-      discordRoleNames: info.roleNames.length
-        ? JSON.stringify(info.roleNames)
-        : existing?.discordRoleNames ?? '[]',
+      discordRoleNames: info.isInGuild
+        ? info.roleNames.length
+          ? JSON.stringify(info.roleNames)
+          : (existing?.discordRoleNames ?? '[]')
+        : '[]',
       guildSyncedAt: new Date(),
     },
   });
