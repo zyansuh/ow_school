@@ -8,6 +8,8 @@ import {
   normalizeEnvValue,
 } from '@/lib/auth/env';
 import { isBotInGuild } from '@/lib/discord/guild';
+import { buildDiscordBotInviteUrl } from '@/lib/discord/bot-invite';
+import { DISCORD_OAUTH_SCOPES } from '@/lib/auth/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,10 +94,23 @@ export async function GET() {
     checks.DISCORD_BOT_IN_GUILD = botOk ? 'yes' : 'no';
     if (!botOk) {
       warnings.push(
-        '봇이 DISCORD_GUILD_ID 서버에 없거나 서버 ID가 틀렸습니다. 디스코드 서버에 OW_School 봇을 초대하세요.',
+        '봇이 DISCORD_GUILD_ID 서버에 없습니다. 아래 discordSetup.botInviteUrl 로 봇을 초대하세요. (사이트 로그인 버튼과는 별개입니다.)',
       );
     }
   }
+
+  const guildId = normalizeEnvValue(process.env.DISCORD_GUILD_ID);
+  const discordSetup = discordClientId
+    ? {
+        requiredOAuthScopes: DISCORD_OAUTH_SCOPES,
+        oauthRedirectUri,
+        botInviteUrl: buildDiscordBotInviteUrl({
+          clientId: discordClientId,
+          guildId: guildId || undefined,
+        }),
+        note: 'botInviteUrl은 서버에 봇 초대용입니다. 사용자 로그인은 /login 의 Discord로 계속하기를 사용하세요.',
+      }
+    : null;
 
   return NextResponse.json({
     ok: db.startsWith('ok') && oauthCredentials?.status !== 'invalid_client',
@@ -103,6 +118,7 @@ export async function GET() {
     env: checks,
     oauthRedirectUri,
     oauthCredentials,
+    discordSetup,
     warnings,
   });
 }

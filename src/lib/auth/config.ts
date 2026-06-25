@@ -11,6 +11,8 @@ function authSecret() {
 
 export const DISCORD_OAUTH_SCOPES = 'identify guilds guilds.members.read';
 
+export const DISCORD_OAUTH_REDIRECT_PATH = '/api/auth/callback/discord';
+
 export const authConfig = {
   trustHost: true,
   secret: authSecret(),
