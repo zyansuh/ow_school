@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { parseRoleNames } from '@/lib/discord-guild';
 import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields } from '@/lib/user-display';
+import { resolveGuildJoinedAt } from '@/lib/guild-tenure';
 import {
   getUserRole,
   inferUserRole,
@@ -32,6 +33,7 @@ export async function GET() {
         const inferredRole = inferUserRole(u, roleCtx);
         const role = getUserRole(u, roleCtx);
         const siteRoleOverride = isSiteUserRole(u.siteRole) ? u.siteRole : null;
+        const guildJoinedAt = resolveGuildJoinedAt(u);
         return {
           id: u.id,
           discordId: u.discordId,
@@ -45,6 +47,7 @@ export async function GET() {
           roleLabel: SITE_ROLE_LABELS[role],
           discordRoleNames: parseRoleNames(u.discordRoleNames),
           isInGuild: u.isInGuild,
+          guildJoinedAt: guildJoinedAt?.toISOString() ?? null,
           className: u.class?.name ?? '미배정',
           teacherName: u.teacher?.name ?? '-',
           status: u.status,
