@@ -11,7 +11,7 @@ import { getTeacherAssignedStudentRows } from '@/lib/teacher/assigned-students';
 import { formatDate } from '@/lib/utils';
 import { ds } from '@/styles/design-system';
 import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher/recruiting';
-import { formatMainActivityTime, teacherRoleLabel } from '@/lib/teacher/display';
+import { formatMainActivityTime, teacherProfileMetaLine, teacherRoleLabel } from '@/lib/teacher/display';
 
 export { dynamic } from '@/lib/utils/segment';
 
@@ -41,6 +41,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
   const recruitStatus = getRecruitmentStatus(teacher.maxStudents, activeCount, teacher.isActive);
   const full = recruitStatus !== 'open';
   const activityDays = parseDays(teacher.activityDays);
+  const profileMeta = teacherProfileMetaLine(teacher);
 
   return (
     <MainLayout>
@@ -72,6 +73,13 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
             {activityDays.length > 0 && (
               <div className="text-sm text-muted-foreground">
                 <p>활동 요일: {activityDays.join(', ')}</p>
+              </div>
+            )}
+
+            {profileMeta && (
+              <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <p className="text-xs text-muted-foreground mb-1">프로필</p>
+                <p className="text-sm text-foreground">{profileMeta}</p>
               </div>
             )}
 

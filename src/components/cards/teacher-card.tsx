@@ -3,13 +3,16 @@ import { Users, Clock } from 'lucide-react';
 import { PageCard, PageCardHeader, PageCardBody, PageCardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatMainActivityTime, teacherRoleLabel } from '@/lib/teacher/display';
+import { formatMainActivityTime, teacherProfileMetaLine, teacherRoleLabel } from '@/lib/teacher/display';
 import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher/recruiting';
 
 type TeacherCardData = {
   id: string;
   name: string;
   mbti?: string | null;
+  gender?: string | null;
+  region?: string | null;
+  birthYear?: number | null;
   intro?: string | null;
   maxStudents: number;
   isActive?: boolean;
@@ -28,6 +31,7 @@ export function TeacherCard({ teacher, activeCount, isActive }: Props) {
   const teacherActive = isActive ?? teacher.isActive ?? true;
   const status = getRecruitmentStatus(teacher.maxStudents, activeCount, teacherActive);
   const full = status !== 'open';
+  const profileMeta = teacherProfileMetaLine(teacher);
 
   return (
     <PageCard hover className="min-h-[280px]">
@@ -49,6 +53,9 @@ export function TeacherCard({ teacher, activeCount, isActive }: Props) {
             {formatMainActivityTime(teacher.activityTimeSlot)}
           </p>
         </div>
+        {profileMeta && (
+          <p className="text-sm text-muted-foreground">{profileMeta}</p>
+        )}
         {teacher.intro?.trim() && (
           <p className="text-sm text-muted-foreground line-clamp-2">{teacher.intro.trim()}</p>
         )}
