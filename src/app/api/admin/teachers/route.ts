@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '디스코드 서버 닉네임에 User ID를 넣을 수 없습니다' }, { status: 400 });
     }
     if (e instanceof Error && e.message.startsWith('DISCORD_USER_ID_TAKEN')) {
-      return NextResponse.json({ error: '이미 다른 선생님에 연결된 Discord User ID입니다' }, { status: 409 });
+      return NextResponse.json({ error: '이미 다른 반장에 연결된 Discord User ID입니다' }, { status: 409 });
     }
     return apiError(e);
   }

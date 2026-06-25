@@ -12,7 +12,7 @@ export async function applyApplicationStatusChange(app: AppWithTeacher, oldStatu
     if (!teacher) return;
     const activeCount = await countActiveStudentsForTeacher(teacher.id);
     if (activeCount >= teacher.maxStudents) {
-      throw new Error('선생님 정원이 가득 찼습니다');
+      throw new Error('반장 정원이 가득 찼습니다');
     }
 
     if (app.userId) {

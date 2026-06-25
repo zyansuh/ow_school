@@ -31,7 +31,7 @@ export async function resolveLastStudentAssignment(userId: string): Promise<Stud
   return null;
 }
 
-/** 관리자: 담당 선생님 변경 (정원·비활성 선생님도 허용) */
+/** 관리자: 담당 반장 변경 (정원·비활성 반장도 허용) */
 export async function assignStudentTeacher(userId: string, teacherId: string | null) {
   const user = await prisma.user.findUnique({ where: { id: userId }, include: { adminRole: true } });
   const ctx = await loadUserRoleContext();

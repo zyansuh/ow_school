@@ -36,7 +36,7 @@ export async function notifyInterviewSubmitted(payload: InterviewNotifyPayload) 
       `**[${SITE_NAME}] 졸업면담 제출**`,
       `학생: ${studentName}`,
       `반: ${payload.className}`,
-      `담당 선생님: ${user.teacher?.name ?? '미배정'}`,
+      `담당 반장: ${user.teacher?.name ?? '미배정'}`,
     ].join('\n');
 
     await Promise.allSettled([

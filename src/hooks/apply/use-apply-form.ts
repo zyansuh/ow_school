@@ -58,7 +58,7 @@ export function useApplyForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.teacherId) {
-      toast.error('희망 선생님을 선택해 주세요');
+      toast.error('희망 반장을 선택해 주세요');
       return;
     }
     setLoading(true);

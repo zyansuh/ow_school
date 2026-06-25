@@ -1,8 +1,8 @@
 import { prisma } from '@/lib/prisma';
 
 /**
- * 선생님 삭제 — 담당 학생·신청·면담 참조를 정리한 뒤 레코드 삭제.
- * 반에 선생님이 없어져도 Class 자체는 유지됩니다.
+ * 반장 삭제 — 담당 학생·신청·면담 참조를 정리한 뒤 레코드 삭제.
+ * 반에 반장이 없어져도 Class 자체는 유지됩니다.
  */
 export async function deleteTeacherById(teacherId: string) {
   const teacher = await prisma.teacher.findUnique({ where: { id: teacherId } });

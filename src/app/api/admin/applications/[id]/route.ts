@@ -22,7 +22,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (teacher) {
         const activeCount = await countActiveStudentsForTeacher(teacher.id);
         if (teacher.maxStudents <= 0 || activeCount >= teacher.maxStudents) {
-          return NextResponse.json({ error: '선생님 정원이 가득 찼습니다' }, { status: 400 });
+          return NextResponse.json({ error: '반장 정원이 가득 찼습니다' }, { status: 400 });
         }
       }
     }

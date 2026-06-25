@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { syncTeacherStudentCount } from '@/lib/teacher/counts';
 import { resolveLastStudentAssignment } from '@/lib/students/assignment';
 
-/** 학생을 졸업생으로 전환하고 반·담당 선생님 배정을 해제한다 */
+/** 학생을 졸업생으로 전환하고 반·담당 반장 배정을 해제한다 */
 export async function graduateUser(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -24,7 +24,7 @@ export async function graduateUser(userId: string) {
   return prisma.user.findUnique({ where: { id: userId } });
 }
 
-/** 졸업 취소 — active로 복구, 마지막 담당 선생님·반 복원 */
+/** 졸업 취소 — active로 복구, 마지막 담당 반장·반 복원 */
 export async function restoreGraduatedUser(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || user.status !== 'graduated') return user;

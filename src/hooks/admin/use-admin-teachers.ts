@@ -76,7 +76,7 @@ export function useAdminTeachers() {
         );
       })
       .catch(() => {
-        toast.error('선생님 목록을 불러오지 못했습니다');
+        toast.error('반장 목록을 불러오지 못했습니다');
         setTeachers([]);
       })
       .finally(() => setLoading(false));

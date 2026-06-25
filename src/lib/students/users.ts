@@ -31,7 +31,7 @@ export async function findActiveStudentUsers(
   return filterStudentUsers(users, roleCtx);
 }
 
-/** 졸업 처리된 일반 이용자 (관리자·선생님 제외) */
+/** 졸업 처리된 일반 이용자 (관리자·반장 제외) */
 export async function findGraduatedStudentUsers(ctx?: UserRoleContext) {
   const roleCtx = ctx ?? (await loadUserRoleContext());
   const users = await prisma.user.findMany({
@@ -62,7 +62,7 @@ export async function countActiveStudents(ctx?: UserRoleContext): Promise<number
   return filterStudentUsers(users, roleCtx).length;
 }
 
-/** 담당 선생님이 배정된 활성 학생 수 (teacher·admin 제외) */
+/** 담당 반장이 배정된 활성 학생 수 (teacher·admin 제외) */
 export async function countActiveStudentsWithTeacher(ctx?: UserRoleContext): Promise<number> {
   const roleCtx = ctx ?? (await loadUserRoleContext());
   const users = await prisma.user.findMany({

@@ -36,7 +36,7 @@ export function useDiscordSync() {
       toast.error('연결 수정 실패');
       return false;
     }
-    toast.success('선생님 연결이 수정되었습니다');
+    toast.success('반장 연결이 수정되었습니다');
     return true;
   };
 

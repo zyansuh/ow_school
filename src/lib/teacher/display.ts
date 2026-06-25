@@ -1,4 +1,4 @@
-/** 선생님 카드·선택 UI용 표시 헬퍼 */
+/** 반장 카드·선택 UI용 표시 헬퍼 */
 
 type ClassRef = { name: string; gameKr: string };
 

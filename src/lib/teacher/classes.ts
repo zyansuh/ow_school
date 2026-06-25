@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 
-/** 선생님 담당 반 목록 동기화 (classId = 첫 번째 반, 기존 FK 호환) */
+/** 반장 담당 반 목록 동기화 (classId = 첫 번째 반, 기존 FK 호환) */
 export async function syncTeacherClasses(teacherId: string, classIds: string[]) {
   const unique = [...new Set(classIds.filter(Boolean))];
   if (unique.length === 0) {
