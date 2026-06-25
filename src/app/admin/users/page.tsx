@@ -127,7 +127,7 @@ export default function AdminSiteUsersPage() {
         <SkeletonTable rows={8} />
       ) : (
         <DataTable
-          className="max-w-full"
+          className="mx-1 sm:mx-2"
           data={filtered}
           keyExtractor={(u) => u.id}
           emptyTitle="사용자가 없습니다"
@@ -135,6 +135,7 @@ export default function AdminSiteUsersPage() {
             {
               key: 'name',
               header: '표시 이름',
+              width: '11rem',
               cell: (u) => (
                 <UserDisplayNickEdit
                   userId={u.id}
@@ -149,14 +150,19 @@ export default function AdminSiteUsersPage() {
             {
               key: 'discordId',
               header: 'Discord ID',
+              width: '10.5rem',
+              cellClassName: 'font-mono text-xs text-muted-foreground',
               cell: (u) => (
-                <span className="font-mono text-xs text-muted-foreground">{u.discordId}</span>
+                <span className="block truncate" title={u.discordId}>
+                  {u.discordId}
+                </span>
               ),
               hideOnMobile: true,
             },
             {
               key: 'role',
               header: '사이트 역할',
+              width: '12.5rem',
               cell: (u) => (
                 <UserSiteRoleEdit
                   userId={u.id}
@@ -171,18 +177,21 @@ export default function AdminSiteUsersPage() {
             {
               key: 'class',
               header: '반',
-              cell: (u) => <span>{u.className}</span>,
+              width: '5.5rem',
+              cell: (u) => <span className="block truncate">{u.className}</span>,
               hideOnMobile: true,
             },
             {
               key: 'teacher',
               header: '담당 선생님',
-              cell: (u) => <span>{u.teacherName}</span>,
+              width: '7rem',
+              cell: (u) => <span className="block truncate">{u.teacherName}</span>,
               hideOnMobile: true,
             },
             {
               key: 'status',
               header: '상태',
+              width: '4.5rem',
               cell: (u) => (
                 <Badge variant={u.status === 'graduated' ? 'outline' : 'success'}>
                   {u.status === 'graduated' ? '졸업' : '활동'}
@@ -192,6 +201,7 @@ export default function AdminSiteUsersPage() {
             {
               key: 'graduation',
               header: '졸업 관리',
+              width: '7.5rem',
               mobileFooter: true,
               cell: (u) => (
                 <UserGraduationActions
@@ -207,6 +217,7 @@ export default function AdminSiteUsersPage() {
             {
               key: 'guild',
               header: '서버',
+              width: '4.5rem',
               cell: (u) => (
                 <Badge variant={u.isInGuild ? 'success' : 'warning'}>
                   {u.isInGuild ? '가입' : '미가입'}
@@ -217,8 +228,9 @@ export default function AdminSiteUsersPage() {
             {
               key: 'guildJoin',
               header: '서버 가입일',
+              width: '6.5rem',
               cell: (u) => (
-                <span className="text-muted-foreground text-xs">
+                <span className="text-muted-foreground text-xs whitespace-nowrap">
                   {u.guildJoinedAt ? formatDate(u.guildJoinedAt) : u.isInGuild ? '동기화 대기' : '-'}
                 </span>
               ),
@@ -227,7 +239,10 @@ export default function AdminSiteUsersPage() {
             {
               key: 'joined',
               header: '최초 로그인',
-              cell: (u) => <span className="text-muted-foreground">{formatDate(u.createdAt)}</span>,
+              width: '6.5rem',
+              cell: (u) => (
+                <span className="text-muted-foreground text-xs whitespace-nowrap">{formatDate(u.createdAt)}</span>
+              ),
               hideOnMobile: true,
             },
           ]}
