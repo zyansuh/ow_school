@@ -62,8 +62,8 @@ export function UserDisplayNickEdit({
 
   return (
     <>
-      <div className="flex items-center gap-3 min-w-0 py-0.5">
-        <span className="truncate flex-1 min-w-0">{currentDisplay}</span>
+      <div className="inline-flex items-center gap-2 py-0.5">
+        <span className="whitespace-nowrap">{currentDisplay}</span>
         <Button
           type="button"
           size="icon"

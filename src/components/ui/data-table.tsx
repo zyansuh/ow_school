@@ -43,11 +43,14 @@ export function DataTable<T>({
     <div className={cn('rounded-xl border border-border bg-card shadow-card overflow-hidden', className)}>
       {/* Desktop table */}
       <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-max min-w-full text-sm table-auto">
           <thead>
             <tr className="border-b border-border bg-muted/30">
               {columns.map((col) => (
-                <th key={col.key} className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th
+                  key={col.key}
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground whitespace-nowrap"
+                >
                   {col.header}
                 </th>
               ))}
@@ -57,7 +60,7 @@ export function DataTable<T>({
             {data.map((row) => (
               <tr key={keyExtractor(row)} className="border-b border-border/50 hover:bg-card-hover/60 transition-colors">
                 {columns.map((col) => (
-                  <td key={col.key} className="px-4 py-3 text-foreground align-middle">
+                  <td key={col.key} className="px-4 py-3 text-foreground align-middle whitespace-nowrap">
                     {col.cell(row)}
                   </td>
                 ))}
@@ -72,9 +75,9 @@ export function DataTable<T>({
         {data.map((row) => (
           <div key={keyExtractor(row)} className="p-4 space-y-3">
             {mobileColumns.map((col) => (
-              <div key={col.key} className="flex justify-between gap-3 text-sm">
-                <span className="text-muted-foreground shrink-0">{col.mobileLabel ?? col.header}</span>
-                <span className="text-foreground text-right min-w-0">{col.cell(row)}</span>
+              <div key={col.key} className="flex justify-between items-center gap-3 text-sm min-w-0">
+                <span className="text-muted-foreground shrink-0 whitespace-nowrap">{col.mobileLabel ?? col.header}</span>
+                <span className="text-foreground text-right min-w-0 whitespace-nowrap overflow-x-auto">{col.cell(row)}</span>
               </div>
             ))}
             {footerColumns.length > 0 && (

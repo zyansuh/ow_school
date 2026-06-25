@@ -70,8 +70,8 @@ export function UserSiteRoleEdit({
   };
 
   return (
-    <div className="flex flex-col gap-2 min-w-[9rem]">
-      <Badge variant={roleBadgeVariant(role)} className="w-fit">
+    <div className="inline-flex flex-wrap items-center gap-2 max-w-none">
+      <Badge variant={roleBadgeVariant(role)} className="shrink-0">
         {SITE_ROLE_LABELS[role]}
       </Badge>
       <Select
@@ -79,7 +79,7 @@ export function UserSiteRoleEdit({
         disabled={saving}
         onChange={(e) => void save(e.target.value)}
         aria-label={`${userId} 사이트 역할 변경`}
-        className="h-10 text-xs"
+        className="h-9 min-w-[9.5rem] w-auto max-w-none text-xs shrink-0"
       >
         <option value={AUTO_VALUE}>
           자동 ({SITE_ROLE_LABELS[inferredRole]})
