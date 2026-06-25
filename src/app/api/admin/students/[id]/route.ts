@@ -19,20 +19,34 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = patchSchema.parse(await req.json());
 
     const user = await prisma.user.findUnique({ where: { id }, include: { adminRole: true } });
-    const ctx = await loadUserRoleContext();
-    if (!user || !isStudentUser(user, ctx)) {
-      return NextResponse.json({ error: '학생을 찾을 수 없습니다' }, { status: 404 });
+    if (!user) {
+      return NextResponse.json({ error: '사용자를 찾을 수 없습니다' }, { status: 404 });
     }
 
+    if (body.action === 'ungraduate') {
+      if (user.status !== 'graduated') {
+        return NextResponse.json({ error: '졸업생이 아닙니다' }, { status: 400 });
+      }
+      const updated = await restoreGraduatedUser(id);
+      return NextResponse.json(updated);
+    }
+
+    const ctx = await loadUserRoleContext();
+
     if (body.action === 'graduate') {
+      if (!isStudentUser(user, ctx)) {
+        return NextResponse.json({ error: '학생만 졸업 처리할 수 있습니다' }, { status: 400 });
+      }
+      if (user.status === 'graduated') {
+        return NextResponse.json({ error: '이미 졸업 처리된 사용자입니다' }, { status: 400 });
+      }
       await graduateUser(id);
       const updated = await prisma.user.findUnique({ where: { id } });
       return NextResponse.json(updated);
     }
 
-    if (body.action === 'ungraduate') {
-      const updated = await restoreGraduatedUser(id);
-      return NextResponse.json(updated);
+    if (!isStudentUser(user, ctx)) {
+      return NextResponse.json({ error: '학생을 찾을 수 없습니다' }, { status: 404 });
     }
 
     if (body.teacherId !== undefined) {

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import {
   filterStudentUsers,
+  isTeacherUser,
   loadUserRoleContext,
   type UserRoleContext,
 } from '@/lib/user-role';
@@ -30,7 +31,7 @@ export async function findActiveStudentUsers(
   return filterStudentUsers(users, roleCtx);
 }
 
-/** 졸업생 중 학생만 (teacher·admin 제외) */
+/** 졸업 처리된 일반 이용자 (관리자·선생님 제외) */
 export async function findGraduatedStudentUsers(ctx?: UserRoleContext) {
   const roleCtx = ctx ?? (await loadUserRoleContext());
   const users = await prisma.user.findMany({
@@ -48,7 +49,7 @@ export async function findGraduatedStudentUsers(ctx?: UserRoleContext) {
     },
     orderBy: { updatedAt: 'desc' },
   });
-  return filterStudentUsers(users, roleCtx);
+  return users.filter((u) => !isTeacherUser(u, roleCtx));
 }
 
 /** 활성 학생 수 (teacher·admin 제외) */
@@ -71,14 +72,14 @@ export async function countActiveStudentsWithTeacher(ctx?: UserRoleContext): Pro
   return filterStudentUsers(users, roleCtx).length;
 }
 
-/** 졸업 학생 수 (teacher·admin 제외) */
+/** 졸업 이용자 수 (teacher·admin 제외) */
 export async function countGraduatedStudents(ctx?: UserRoleContext): Promise<number> {
   const roleCtx = ctx ?? (await loadUserRoleContext());
   const users = await prisma.user.findMany({
     where: { status: 'graduated', adminRole: null },
     include: { adminRole: true },
   });
-  return filterStudentUsers(users, roleCtx).length;
+  return users.filter((u) => !isTeacherUser(u, roleCtx)).length;
 }
 
 /** 담당 배정된 활성 학생만 (teacherId 기준, 비학생 제외) */
