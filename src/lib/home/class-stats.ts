@@ -2,10 +2,6 @@ import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { defaultClassStats } from '@/lib/db-fallbacks';
 import { getActiveStudentCountsByTeacher } from '@/lib/teacher/counts';
-import {
-  mergeHomeClassStats,
-  readHomeClassStatsOverride,
-} from '@/lib/home/site-stats-override';
 
 export type HomeClassStats = Record<string, { recruiting: boolean; current: number; max: number }>;
 
@@ -72,12 +68,11 @@ export async function getHomeClassStatsComputed(): Promise<HomeClassStats> {
   }
 }
 
+/** DB 실시간 집계 — SiteSetting 오버라이드 없이 자동 표시 */
 export const getHomeClassStats = unstable_cache(
   async (): Promise<HomeClassStats> => {
     try {
-      const computed = await computeHomeClassStats();
-      const override = await readHomeClassStatsOverride();
-      return mergeHomeClassStats(computed, override);
+      return await computeHomeClassStats();
     } catch (e) {
       console.error('[home] getClassStats failed:', e);
       return defaultClassStats();

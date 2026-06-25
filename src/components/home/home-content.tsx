@@ -6,7 +6,6 @@ import { DEFAULT_NOTICES } from '@/lib/db-fallbacks';
 import { getHomeClassStats } from '@/lib/home/class-stats';
 import { getHomeSiteStats } from '@/lib/home/stats';
 import { SITE_NAME, SITE_TAGLINE } from '@/lib/site-brand';
-import { auth } from '@/lib/auth';
 import { Card, PageCardBody } from '@/components/ui/card';
 import { HomeStatsSection } from '@/components/home/home-site-stats';
 import { ds } from '@/styles/design-system';
@@ -27,13 +26,11 @@ const getNotices = unstable_cache(
 );
 
 export async function HomeContent() {
-  const [stats, notices, siteStats, session] = await Promise.all([
+  const [stats, notices, siteStats] = await Promise.all([
     getHomeClassStats(),
     getNotices(),
     getHomeSiteStats(),
-    auth(),
   ]);
-  const isAdmin = !!session?.user?.isAdmin;
 
   return (
     <div className="section-gap pb-24 sm:pb-28 page-enter">
@@ -95,7 +92,7 @@ export async function HomeContent() {
       </section>
 
       {/* 클래스 소개 + 하단 인원 통계 */}
-      <HomeStatsSection siteStats={siteStats} classStats={stats} isAdmin={isAdmin} />
+      <HomeStatsSection siteStats={siteStats} classStats={stats} />
     </div>
   );
 }

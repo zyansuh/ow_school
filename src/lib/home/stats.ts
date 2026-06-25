@@ -1,10 +1,6 @@
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { countActiveStudentsWithTeacher, countGraduatedStudents } from '@/lib/students/users';
-import {
-  mergeHomeSiteStats,
-  readHomeSiteStatsOverride,
-} from '@/lib/home/site-stats-override';
 
 export type HomeSiteStats = {
   students: number;
@@ -30,12 +26,11 @@ export async function getHomeSiteStatsComputed(): Promise<HomeSiteStats> {
   }
 }
 
+/** DB 실시간 집계 — SiteSetting 오버라이드 없이 자동 표시 */
 export const getHomeSiteStats = unstable_cache(
   async (): Promise<HomeSiteStats> => {
     try {
-      const computed = await computeHomeSiteStats();
-      const override = await readHomeSiteStatsOverride();
-      return mergeHomeSiteStats(computed, override);
+      return await computeHomeSiteStats();
     } catch (e) {
       console.error('[home] site stats failed:', e);
       return { students: 0, teachers: 0, graduated: 0 };
