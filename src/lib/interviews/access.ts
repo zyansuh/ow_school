@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
-import { requireAdmin } from '@/lib/rbac';
-import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
+import { requireAdmin } from '@/lib/auth/rbac';
+import { normalizeNickFields, userDisplayName } from '@/lib/users/display';
 
 export async function canAccessInterview(
   interviewUserId: string,

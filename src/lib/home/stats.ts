@@ -1,6 +1,6 @@
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { countActiveStudentsWithTeacher, countGraduatedStudents } from '@/lib/student-users';
+import { countActiveStudentsWithTeacher, countGraduatedStudents } from '@/lib/students/users';
 
 export type HomeSiteStats = {
   students: number;

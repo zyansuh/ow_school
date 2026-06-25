@@ -1,7 +1,7 @@
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { defaultClassStats } from '@/lib/db-fallbacks';
-import { getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
+import { getActiveStudentCountsByTeacher } from '@/lib/teacher/counts';
 
 export type HomeClassStats = Record<string, { recruiting: boolean; current: number; max: number }>;
 

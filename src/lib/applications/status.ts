@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { syncTeacherStudentCount, countActiveStudentsForTeacher } from '@/lib/teacher-counts';
+import { syncTeacherStudentCount, countActiveStudentsForTeacher } from '@/lib/teacher/counts';
 
 type AppWithTeacher = Prisma.ApplicationGetPayload<{ include: { teacher: true } }>;
 
