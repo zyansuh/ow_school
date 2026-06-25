@@ -1,11 +1,11 @@
 import { prisma } from '@/lib/prisma';
-import { syncUserGuildDataBestEffort } from '@/lib/discord-guild';
-import { syncAllTeacherStudentCounts, getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
-import { mapWithConcurrency } from '@/lib/async-utils';
+import { syncUserGuildDataBestEffort } from '@/lib/discord/guild';
+import { syncAllTeacherStudentCounts, getActiveStudentCountsByTeacher } from '@/lib/teacher/counts';
+import { mapWithConcurrency } from '@/lib/utils/async';
 import { resolveTeacherEntityForUser } from '@/lib/teacher/identity';
-import { backfillAllTeacherDiscordUserIds } from '@/lib/teacher-discord-link';
-import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
-import { isTeacherUser, loadUserRoleContext } from '@/lib/user-role';
+import { backfillAllTeacherDiscordUserIds } from '@/lib/teacher/discord-link';
+import { adminUserDisplayName, normalizeNickFields } from '@/lib/users/display';
+import { isTeacherUser, loadUserRoleContext } from '@/lib/users/role';
 
 export type TeacherLinkMismatch = {
   userId: string;

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
+import { adminUserDisplayName, normalizeNickFields } from '@/lib/users/display';
 
 export type MonthlyPointRow = {
   userId: string;
