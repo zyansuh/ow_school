@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { UserDisplayNickEdit } from '@/components/admin/user-display-nick-edit';
 import { UserSiteRoleEdit } from '@/components/admin/user-site-role-edit';
+import { UserGraduationActions } from '@/components/admin/user-graduation-actions';
 import { formatDate, cn } from '@/lib/utils';
 import { type SiteUserRole } from '@/lib/user-role';
 import { ds } from '@/styles/design-system';
@@ -25,6 +26,7 @@ type SiteUser = {
   siteRole: SiteUserRole | null;
   inferredRole: SiteUserRole;
   isInGuild: boolean;
+  guildJoinedAt: string | null;
   className: string;
   teacherName: string;
   status: string;
@@ -87,7 +89,7 @@ export default function AdminSiteUsersPage() {
     <div className={ds.pageGap}>
       <AdminPageHeader
         title="사이트 사용자"
-        description="Discord로 로그인한 적이 있는 전체 계정입니다. 사이트 역할(마을주민·학생·선생님·관리자)은 관리자가 지정할 수 있으며, 자동은 Discord·담당 정보 기준입니다."
+        description="Discord 로그인 계정 전체 목록입니다. 자동 역할: 서버 가입 2달 미만은 학생, 그 외 일반 회원은 마을주민입니다. 졸업·졸업 취소는 관리자가 처리할 수 있습니다."
       />
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -187,12 +189,37 @@ export default function AdminSiteUsersPage() {
               ),
             },
             {
+              key: 'graduation',
+              header: '졸업 관리',
+              mobileFooter: true,
+              cell: (u) => (
+                <UserGraduationActions
+                  userId={u.id}
+                  displayName={u.displayName}
+                  status={u.status}
+                  saveUrl={`/api/admin/site-users/${u.id}`}
+                  canGraduate={u.role === 'student'}
+                  onSaved={() => void load()}
+                />
+              ),
+            },
+            {
               key: 'guild',
               header: '서버',
               cell: (u) => (
                 <Badge variant={u.isInGuild ? 'success' : 'warning'}>
                   {u.isInGuild ? '가입' : '미가입'}
                 </Badge>
+              ),
+              hideOnMobile: true,
+            },
+            {
+              key: 'guildJoin',
+              header: '서버 가입일',
+              cell: (u) => (
+                <span className="text-muted-foreground text-xs">
+                  {u.guildJoinedAt ? formatDate(u.guildJoinedAt) : u.isInGuild ? '동기화 대기' : '-'}
+                </span>
               ),
               hideOnMobile: true,
             },
