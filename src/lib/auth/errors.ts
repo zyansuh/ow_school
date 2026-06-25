@@ -5,7 +5,7 @@ export const AUTH_ERROR_MESSAGES: Record<string, string> = {
   InvalidCheck:
     '로그인 세션이 만료되었습니다. 주소창의 callback URL로 직접 들어가지 말고, 아래 버튼으로 다시 로그인해 주세요. (모바일 인앱 브라우저는 Safari·Chrome에서 열어 주세요.)',
   OAuthCallbackError:
-    'Discord Client ID 또는 Client Secret이 올바르지 않습니다. Developer Portal에서 Secret을 재발급하고 .env·Vercel에 동일하게 설정하세요.',
+    'Discord OAuth 콜백이 실패했습니다. Client ID·Secret이 같은 앱인지, OAuth2 Redirects에 콜백 URL이 등록됐는지 확인하세요. /api/health 에서 자격 증명·봇 앱 ID 불일치를 점검할 수 있습니다.',
   OAuthSignin: 'Discord 로그인을 시작할 수 없습니다. 환경 변수를 확인해 주세요.',
   NotInGuild:
     '평화로운 게임마을 디스코드 서버에 가입한 Discord 계정으로 로그인해 주세요. 다른 계정이면 로그아웃 후 다시 시도하세요.',

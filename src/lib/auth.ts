@@ -89,7 +89,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error(error) {
       console.error('[auth]', error);
       const cause = error instanceof Error ? error.cause : undefined;
-      if (cause) console.error('[auth] cause:', cause);
+      if (cause) {
+        console.error('[auth] cause:', cause);
+        if (cause instanceof Error && cause.message) {
+          console.error('[auth] cause message:', cause.message);
+        }
+      }
+      if (error && typeof error === 'object' && 'type' in error) {
+        console.error('[auth] error type:', (error as { type?: string }).type);
+      }
     },
     warn(code) {
       console.warn('[auth]', code);
