@@ -2,37 +2,97 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
+import { logAdminRoleAction } from '@/lib/admin/role-requests';
 import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields } from '@/lib/user-display';
+import {
+  getUserRole,
+  inferUserRole,
+  isSiteUserRole,
+  loadUserRoleContext,
+  SITE_ROLE_LABELS,
+} from '@/lib/user-role';
 
 const patchSchema = z.object({
-  displayNickname: z.string().max(32).nullable(),
+  displayNickname: z.string().max(32).nullable().optional(),
+  siteRole: z.enum(['resident', 'student', 'teacher', 'admin']).nullable().optional(),
 });
 
-/** 표시 닉네임만 수정 — 다른 User 필드는 변경하지 않음 */
+/** 표시 닉네임·사이트 역할만 수정 — 다른 User 필드는 변경하지 않음 */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdminUser();
+    const actor = await requireAdminUser();
     const { id } = await params;
     const body = patchSchema.parse(await req.json());
 
-    const existing = await prisma.user.findUnique({ where: { id } });
+    if (body.displayNickname === undefined && body.siteRole === undefined) {
+      return NextResponse.json({ error: '변경할 항목이 없습니다' }, { status: 400 });
+    }
+
+    const existing = await prisma.user.findUnique({
+      where: { id },
+      include: { adminRole: true },
+    });
     if (!existing) {
       return NextResponse.json({ error: '사용자를 찾을 수 없습니다' }, { status: 404 });
     }
 
-    const updated = await prisma.user.update({
-      where: { id },
-      data: {
-        displayNickname: body.displayNickname?.trim() || null,
-      },
+    const roleCtx = await loadUserRoleContext();
+    const inferredRole = inferUserRole(existing, roleCtx);
+
+    if (body.siteRole !== undefined && body.siteRole !== null && !isSiteUserRole(body.siteRole)) {
+      return NextResponse.json({ error: '유효하지 않은 역할입니다' }, { status: 400 });
+    }
+
+    const hadAdmin = !!existing.adminRole;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.update({
+        where: { id },
+        data: {
+          ...(body.displayNickname !== undefined
+            ? { displayNickname: body.displayNickname?.trim() || null }
+            : {}),
+          ...(body.siteRole !== undefined ? { siteRole: body.siteRole } : {}),
+        },
+        include: { adminRole: true },
+      });
+
+      if (body.siteRole === 'admin') {
+        await tx.adminRole.upsert({
+          where: { userId: id },
+          create: { userId: id, grantedById: actor.id },
+          update: { grantedById: actor.id },
+        });
+      } else if (body.siteRole !== undefined && body.siteRole !== null && hadAdmin) {
+        await tx.adminRole.delete({ where: { userId: id } });
+      }
+
+      return user;
     });
 
+    if (body.siteRole === 'admin' && !hadAdmin) {
+      await logAdminRoleAction('grant', id, actor.id);
+    } else if (
+      body.siteRole !== undefined &&
+      body.siteRole !== null &&
+      body.siteRole !== 'admin' &&
+      hadAdmin
+    ) {
+      await logAdminRoleAction('revoke', id, actor.id);
+    }
+
     const fields = normalizeNickFields(updated);
+    const role = getUserRole(updated, roleCtx);
+
     return NextResponse.json({
       id: updated.id,
       displayNickname: updated.displayNickname,
       displayName: adminUserDisplayName(fields),
       guildNickname: guildNicknameOnly(fields) ?? '-',
+      siteRole: isSiteUserRole(updated.siteRole) ? updated.siteRole : null,
+      inferredRole,
+      role,
+      roleLabel: SITE_ROLE_LABELS[role],
     });
   } catch (e) {
     if (e instanceof z.ZodError) {

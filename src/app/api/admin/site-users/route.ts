@@ -3,13 +3,13 @@ import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { parseRoleNames } from '@/lib/discord-guild';
 import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields } from '@/lib/user-display';
-import { getUserRole, loadUserRoleContext } from '@/lib/user-role';
-
-const ROLE_LABELS = {
-  admin: '관리자',
-  teacher: '선생님',
-  student: '학생',
-} as const;
+import {
+  getUserRole,
+  inferUserRole,
+  isSiteUserRole,
+  loadUserRoleContext,
+  SITE_ROLE_LABELS,
+} from '@/lib/user-role';
 
 export async function GET() {
   try {
@@ -29,7 +29,9 @@ export async function GET() {
     return NextResponse.json(
       users.map((u) => {
         const fields = normalizeNickFields(u);
-        const siteRole = getUserRole(u, roleCtx);
+        const inferredRole = inferUserRole(u, roleCtx);
+        const role = getUserRole(u, roleCtx);
+        const siteRoleOverride = isSiteUserRole(u.siteRole) ? u.siteRole : null;
         return {
           id: u.id,
           discordId: u.discordId,
@@ -37,8 +39,10 @@ export async function GET() {
           displayName: adminUserDisplayName(fields),
           guildNickname: guildNicknameOnly(fields) ?? '-',
           discordUsername: u.discordUsername,
-          role: siteRole,
-          roleLabel: ROLE_LABELS[siteRole],
+          siteRole: siteRoleOverride,
+          inferredRole,
+          role,
+          roleLabel: SITE_ROLE_LABELS[role],
           discordRoleNames: parseRoleNames(u.discordRoleNames),
           isInGuild: u.isInGuild,
           className: u.class?.name ?? '미배정',
