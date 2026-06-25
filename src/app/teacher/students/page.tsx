@@ -82,7 +82,7 @@ export default function TeacherStudentsPage() {
             <p className={ds.subtitle}>담당 학생 현황을 확인하세요</p>
           </div>
           <Link href="/teacher" className="text-sm text-primary hover:underline">
-            선생님 마이페이지
+            반장 마이페이지
           </Link>
         </div>
 
@@ -154,7 +154,7 @@ export default function TeacherStudentsPage() {
               <div className="space-y-4 text-sm">
                 <div className="grid grid-cols-2 gap-3">
                   <div><p className={ds.caption}>서버 닉네임</p><p className="text-foreground">{detail.serverNickname}</p></div>
-                  <div><p className={ds.caption}>담당 선생님</p><p className="text-foreground">{detail.teacherName}</p></div>
+                  <div><p className={ds.caption}>담당 반장</p><p className="text-foreground">{detail.teacherName}</p></div>
                   <div><p className={ds.caption}>반</p><p className="text-foreground">{detail.className}</p></div>
                   <div><p className={ds.caption}>상태</p><p className="text-foreground">{STATUS_LABELS[detail.status] ?? detail.status}</p></div>
                 </div>
