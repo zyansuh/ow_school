@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { assertDiscordUserIdAvailable } from '@/lib/teacher/auth';
@@ -82,6 +83,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       where: { id },
       include: teacherInclude,
     });
+
+    revalidateTag('home-class-stats');
 
     return NextResponse.json(mapTeacherWithClasses(refreshed));
   } catch (e) {
