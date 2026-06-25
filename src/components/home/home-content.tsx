@@ -74,10 +74,8 @@ export async function HomeContent() {
         </div>
       </section>
 
-      <HomeStatsSection siteStats={siteStats} classStats={stats} isAdmin={isAdmin} />
-
-      {/* Notices */}
-      <section className="page-container">
+      {/* 공지사항 — 상단 */}
+      <section className="page-container -mt-2 sm:-mt-4 relative z-20">
         <Card className={`${ds.card} mx-auto w-full max-w-[900px]`}>
           <PageCardBody>
             <h3 className="heading-section text-foreground mb-4 flex items-center gap-2">
@@ -95,6 +93,9 @@ export async function HomeContent() {
           </PageCardBody>
         </Card>
       </section>
+
+      {/* 클래스 소개 + 하단 인원 통계 */}
+      <HomeStatsSection siteStats={siteStats} classStats={stats} isAdmin={isAdmin} />
     </div>
   );
 }

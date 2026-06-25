@@ -57,7 +57,7 @@ type ClassDraftRow = {
 
 const SITE_FIELDS = [
   { key: 'students' as const, label: '학생 수', icon: Users },
-  { key: 'teachers' as const, label: '반장 수', icon: UserCheck },
+  { key: 'teachers' as const, label: '선생님 인원', icon: UserCheck },
   { key: 'graduated' as const, label: '졸업생 수', icon: GraduationCap },
 ];
 
@@ -183,7 +183,36 @@ export function HomeStatsSection({ siteStats, classStats, isAdmin }: Props) {
 
   return (
     <>
-      <section className="page-container -mt-5 sm:-mt-8 relative z-20">
+      <section id="classes" className="page-container section-gap pt-6 sm:pt-8">
+        <div className="text-center mb-8 sm:mb-12 max-w-2xl mx-auto px-1 min-w-0">
+          <div className="flex flex-col items-center gap-3">
+            <h2 className="heading-section text-foreground tracking-tight break-keep">클래스 소개</h2>
+            {isAdmin && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                disabled={loading}
+                onClick={() => void openEditor()}
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                클래스 인원 수정
+              </Button>
+            )}
+          </div>
+          <p className="text-sm sm:text-[15px] text-muted-foreground leading-relaxed text-balance break-keep mt-3">
+            오버워치 · PUBG · 발로란트 — 게임별 반을 선택하고 담당 반장을 만나보세요
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7 items-stretch">
+          {GAME_CLASSES.map((cls, i) => (
+            <ClassCard key={cls.slug} cls={cls} stats={classStats[cls.slug]} priority={i === 0} />
+          ))}
+        </div>
+      </section>
+
+      <section className="page-container pt-2 sm:pt-4 pb-2">
         {isAdmin && (
           <div className="flex justify-end mb-2">
             <Button
@@ -222,35 +251,6 @@ export function HomeStatsSection({ siteStats, classStats, isAdmin }: Props) {
         </div>
       </section>
 
-      <section id="classes" className="page-container section-gap pt-6 sm:pt-8">
-        <div className="text-center mb-8 sm:mb-12 max-w-2xl mx-auto px-1 min-w-0">
-          <div className="flex flex-col items-center gap-3">
-            <h2 className="heading-section text-foreground tracking-tight break-keep">클래스 소개</h2>
-            {isAdmin && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                disabled={loading}
-                onClick={() => void openEditor()}
-              >
-                <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                클래스 인원 수정
-              </Button>
-            )}
-          </div>
-          <p className="text-sm sm:text-[15px] text-muted-foreground leading-relaxed text-balance break-keep mt-3">
-            오버워치 · PUBG · 발로란트 — 게임별 반을 선택하고 담당 반장을 만나보세요
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7 items-stretch">
-          {GAME_CLASSES.map((cls, i) => (
-            <ClassCard key={cls.slug} cls={cls} stats={classStats[cls.slug]} priority={i === 0} />
-          ))}
-        </div>
-      </section>
-
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -264,7 +264,7 @@ export function HomeStatsSection({ siteStats, classStats, isAdmin }: Props) {
           {payload && siteDraft && classDraft && (
             <div className="space-y-6 mt-2">
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground">상단 통계</h3>
+                <h3 className="text-sm font-semibold text-foreground">하단 인원 통계</h3>
                 {SITE_FIELDS.map(({ key, label }) => {
                   const autoKey = `${key}Auto` as keyof SiteDraft;
                   const valueKey = key;
