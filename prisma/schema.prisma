@@ -49,6 +49,17 @@ model Class {
   applications   Application[]
 }
 
+/** 공개 인원 표시용 집계 스냅샷 — User·Teacher 원본 데이터는 변경하지 않음 */
+model EnrollmentStat {
+  entityType  String
+  entityId    String
+  activeCount Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@id([entityType, entityId])
+  @@index([entityType])
+}
+
 model Teacher {
   id               String         @id @default(cuid())
   name             String

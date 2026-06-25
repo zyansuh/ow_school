@@ -60,7 +60,7 @@ async function collectStudentIds(teacherId: string): Promise<string[]> {
   const [active, interviews, applications] = await Promise.all([
     prisma.user.findMany({
       where: { teacherId, adminRole: null },
-      select: { id: true, adminRole: true, discordRoleNames: true, discordId: true },
+      include: { adminRole: true },
     }),
     prisma.interview.findMany({
       where: { teacherId },
@@ -85,7 +85,7 @@ async function collectStudentIds(teacherId: string): Promise<string[]> {
 
   const extras = await prisma.user.findMany({
     where: { id: { in: Array.from(extraIds) }, adminRole: null },
-    select: { id: true, adminRole: true, discordRoleNames: true, discordId: true },
+    include: { adminRole: true },
   });
   for (const u of filterStudentUsers(extras, ctx)) ids.add(u.id);
 

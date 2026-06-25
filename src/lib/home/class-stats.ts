@@ -1,6 +1,8 @@
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { defaultClassStats } from '@/lib/db-fallbacks';
+import { countByClassId, findActiveStudentsByClass } from '@/lib/enrollment/queries';
+import { syncEnrollmentStats } from '@/lib/enrollment/persist';
 import { getActiveStudentCountsByTeacher } from '@/lib/teacher/counts';
 
 export type HomeClassStats = Record<string, { recruiting: boolean; current: number; max: number }>;
@@ -42,16 +44,29 @@ async function computeHomeClassStats(): Promise<HomeClassStats> {
     },
   });
 
-  const liveCounts = await getActiveStudentCountsByTeacher();
+  const [liveTeacherCounts, classStudents] = await Promise.all([
+    getActiveStudentCountsByTeacher(),
+    findActiveStudentsByClass(),
+  ]);
+  const liveClassCounts = countByClassId(classStudents);
+
+  try {
+    await syncEnrollmentStats();
+  } catch (e) {
+    console.error('[home] syncEnrollmentStats failed:', e);
+  }
 
   return Object.fromEntries(
     classes.map((c) => {
       const roster = mergeTeachersForClass(c);
+      const currentByClass = liveClassCounts[c.id] ?? 0;
+      const currentByTeachers = roster.reduce((sum, t) => sum + (liveTeacherCounts[t.id] ?? 0), 0);
+      const current = currentByClass > 0 ? currentByClass : currentByTeachers;
       return [
         c.slug,
         {
-          recruiting: roster.some((t) => t.maxStudents > 0 && (liveCounts[t.id] ?? 0) < t.maxStudents),
-          current: roster.reduce((sum, t) => sum + (liveCounts[t.id] ?? 0), 0),
+          recruiting: roster.some((t) => t.maxStudents > 0 && (liveTeacherCounts[t.id] ?? 0) < t.maxStudents),
+          current,
           max: roster.reduce((sum, t) => sum + t.maxStudents, 0),
         },
       ];

@@ -1,5 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import { filterStudentUsers, loadUserRoleContext } from '@/lib/users/role';
+import {
+  countByTeacherId,
+  findActiveAssignedStudents,
+} from '@/lib/enrollment/queries';
+import { syncEnrollmentStats } from '@/lib/enrollment/persist';
 import { computeTeacherIsActive } from '@/lib/teacher/recruiting';
 
 /** teacherId 기준 활성 담당 학생 (Discord userId로 User 연결) */
@@ -43,28 +48,11 @@ export async function syncAllTeacherStudentCounts() {
     const count = await syncTeacherStudentCount(t.id);
     results.push({ teacherId: t.id, count });
   }
+  await syncEnrollmentStats();
   return results;
 }
 
 export async function getActiveStudentCountsByTeacher() {
-  const ctx = await loadUserRoleContext();
-  const users = await prisma.user.findMany({
-    where: {
-      status: 'active',
-      teacherId: { not: null },
-      adminRole: { is: null },
-    },
-    select: {
-      teacherId: true,
-      adminRole: true,
-      discordRoleNames: true,
-      discordId: true,
-    },
-  });
-  const students = filterStudentUsers(users, ctx);
-  const counts: Record<string, number> = {};
-  for (const u of students) {
-    if (u.teacherId) counts[u.teacherId] = (counts[u.teacherId] ?? 0) + 1;
-  }
-  return counts;
+  const students = await findActiveAssignedStudents();
+  return countByTeacherId(students);
 }

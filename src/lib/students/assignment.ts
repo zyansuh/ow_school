@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { syncEnrollmentStats } from '@/lib/enrollment/persist';
 import { syncTeacherStudentCount } from '@/lib/teacher/counts';
 import { isStudentUser, loadUserRoleContext } from '@/lib/users/role';
 
@@ -46,6 +47,7 @@ export async function assignStudentTeacher(userId: string, teacherId: string | n
       data: { teacherId: null, classId: null },
     });
     if (previousTeacherId) await syncTeacherStudentCount(previousTeacherId);
+    await syncEnrollmentStats();
     return prisma.user.findUnique({ where: { id: userId }, include: { teacher: true, class: true } });
   }
 
@@ -66,6 +68,7 @@ export async function assignStudentTeacher(userId: string, teacherId: string | n
     recounts.push(syncTeacherStudentCount(previousTeacherId));
   }
   await Promise.all(recounts);
+  await syncEnrollmentStats();
 
   return prisma.user.findUnique({ where: { id: userId }, include: { teacher: true, class: true } });
 }

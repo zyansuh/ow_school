@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { syncEnrollmentStats } from '@/lib/enrollment/persist';
 import { notifyTeacherOnGraduation } from '@/lib/notifications/graduation-teacher-dm';
 import { adminUserDisplayName, normalizeNickFields } from '@/lib/users/display';
 import { syncTeacherStudentCount } from '@/lib/teacher/counts';
@@ -38,6 +39,7 @@ export async function graduateUser(userId: string, options: GraduateOptions = {}
 
   if (teacherId) {
     await syncTeacherStudentCount(teacherId);
+    await syncEnrollmentStats();
   }
 
   const dm = await notifyTeacherOnGraduation({
@@ -69,6 +71,7 @@ export async function restoreGraduatedUser(userId: string) {
 
   if (assignment?.teacherId) {
     await syncTeacherStudentCount(assignment.teacherId);
+    await syncEnrollmentStats();
   }
 
   return prisma.user.findUnique({

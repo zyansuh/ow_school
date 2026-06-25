@@ -432,8 +432,9 @@ npm run dev         # http://localhost:3000
 | `20250625120000_user_site_role` | `siteRole` |
 | `20250625140000_user_guild_joined_at` | `guildJoinedAt` |
 | `20250625200000_content_posts` | `ContentPost` · `ContentImage` (컨텐츠 소개) |
+| `20250626100000_enrollment_stat` | `EnrollmentStat` — 공개 인원 집계 스냅샷 |
 
-> 메인 홈 레이아웃·통계는 DB 자동 집계입니다. 별도 마이그레이션 없음.
+> 메인 홈 레이아웃·통계는 DB 자동 집계입니다. `EnrollmentStat`은 표시용 캐시이며 User·Teacher 원본은 변경하지 않습니다.
 
 ---
 
@@ -453,9 +454,14 @@ npm run dev         # http://localhost:3000
 | **학생 수** | `student` 역할 + 담당 선생님 배정된 활성 학생 (`countActiveStudentsWithTeacher`) |
 | **선생님 인원** | 활성 `Teacher` 수 (`isActive: true`) |
 | **졸업생 수** | `status: graduated` 학생 (`countGraduatedStudents`) |
-| **클래스 카드 X/Y명** | 반별 활성 선생님 정원·담당 학생 실시간 합산 (`getHomeClassStats`) |
+| **클래스 카드 X/Y명** | 반(`classId`)별 활성 학생 수 + 선생님 정원 합산 (`getHomeClassStats`) |
+| **선생님 카드 X/Y명** | 선생님(`teacherId`)별 활성 담당 학생 수 (`getActiveStudentCountsByTeacher`) |
 
 캐시: `unstable_cache` + ISR `revalidate: 60~120`. 수동 수정 UI는 없으며, 운영 데이터 변경 시 자동 반영됩니다.
+
+**인원 0 표시 버그 방지:** 학생 역할 판별에 `siteRole`·`guildJoinedAt`·`createdAt` 등 User 전체 필드가 필요합니다. `filterStudentUsers` 호출 시 `include: { adminRole: true }`로 조회하며, 일부 필드만 `select`하면 마을주민으로 잘못 분류되어 0명이 됩니다 (`src/lib/enrollment/queries.ts`).
+
+**`EnrollmentStat` 테이블:** 배정·졸업·홈 통계 갱신 시 선생님·반별 활성 학생 수를 스냅샷으로 저장합니다. 기존 `User`·`Teacher` 행은 수정하지 않습니다.
 
 ### 선생님별 정원·담당 학생
 
@@ -463,7 +469,7 @@ npm run dev         # http://localhost:3000
 |------|------|
 | **최대 정원** (`maxStudents`) | `/admin/teachers` → 수정 |
 | **담당 학생 수** | 학생 배정·졸업·신청으로 자동 반영 |
-| **선생님 카드 X/Y명** | `getActiveStudentCountsByTeacher` 실시간 집계 |
+| **선생님 카드 X/Y명** | `getActiveStudentCountsByTeacher` — `teacherId` 기준 활성 학생 집계 |
 
 ### 구현 파일
 
@@ -471,6 +477,9 @@ npm run dev         # http://localhost:3000
 |------|------|
 | `src/lib/home/stats.ts` | 하단 3종 통계 DB 집계 |
 | `src/lib/home/class-stats.ts` | 클래스 카드 인원 집계 |
+| `src/lib/enrollment/queries.ts` | 역할 판별에 필요한 User 전체 조회·반/선생님별 카운트 |
+| `src/lib/enrollment/persist.ts` | `EnrollmentStat` 스냅샷 upsert |
+| `src/lib/teacher/counts.ts` | 선생님별 담당 학생 수·`currentStudents` 동기화 |
 | `src/components/home/home-content.tsx` | 레이아웃 순서 (공지 → 클래스 → 통계) |
 | `src/components/home/home-site-stats.tsx` | `HomeStatsSection` — 클래스 그리드 + 통계 카드 |
 
@@ -672,6 +681,7 @@ import { ds } from '@/styles/design-system';
 | P3009 failed migration | `prisma migrate resolve` — **백업 후** 진행 |
 | 역할·가입일 불일치 | `/admin/discord-sync` |
 | 졸업 취소 실패 | `status === graduated'` 확인, `/admin/users` 사용 |
+| 클래스 카드·선생님 카드 인원 0 | `getActiveStudentCountsByTeacher`가 User 전체 필드로 조회하는지 확인 (`enrollment/queries.ts`). 배정 후 `syncEnrollmentStats` 호출 여부 확인 |
 | 선생님 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 · 카드/상세는 `getActiveStudentCountsByTeacher` 통일 |
 | 졸업 DM 미발송 | `Teacher.discordUserId` 연결 확인 · `DISCORD_BOT_TOKEN` · 봇 DM 권한 |
 | Bot 닉 403 | 역할 순위 · MANAGE_NICKNAMES |
