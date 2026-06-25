@@ -2,6 +2,10 @@ import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { defaultClassStats } from '@/lib/db-fallbacks';
 import { getActiveStudentCountsByTeacher } from '@/lib/teacher/counts';
+import {
+  mergeHomeClassStats,
+  readHomeClassStatsOverride,
+} from '@/lib/home/site-stats-override';
 
 export type HomeClassStats = Record<string, { recruiting: boolean; current: number; max: number }>;
 
@@ -28,42 +32,57 @@ function mergeTeachersForClass(c: {
   return roster;
 }
 
+async function computeHomeClassStats(): Promise<HomeClassStats> {
+  const classes = await prisma.class.findMany({
+    include: {
+      teachers: {
+        where: { isActive: true },
+        select: { id: true, maxStudents: true },
+      },
+      teacherClasses: {
+        where: { teacher: { isActive: true } },
+        select: { teacher: { select: { id: true, maxStudents: true } } },
+      },
+    },
+  });
+
+  const liveCounts = await getActiveStudentCountsByTeacher();
+
+  return Object.fromEntries(
+    classes.map((c) => {
+      const roster = mergeTeachersForClass(c);
+      return [
+        c.slug,
+        {
+          recruiting: roster.some((t) => t.maxStudents > 0 && (liveCounts[t.id] ?? 0) < t.maxStudents),
+          current: roster.reduce((sum, t) => sum + (liveCounts[t.id] ?? 0), 0),
+          max: roster.reduce((sum, t) => sum + t.maxStudents, 0),
+        },
+      ];
+    }),
+  );
+}
+
+export async function getHomeClassStatsComputed(): Promise<HomeClassStats> {
+  try {
+    return await computeHomeClassStats();
+  } catch (e) {
+    console.error('[home] getClassStats failed:', e);
+    return defaultClassStats();
+  }
+}
+
 export const getHomeClassStats = unstable_cache(
   async (): Promise<HomeClassStats> => {
     try {
-      const classes = await prisma.class.findMany({
-        include: {
-          teachers: {
-            where: { isActive: true },
-            select: { id: true, maxStudents: true },
-          },
-          teacherClasses: {
-            where: { teacher: { isActive: true } },
-            select: { teacher: { select: { id: true, maxStudents: true } } },
-          },
-        },
-      });
-
-      const liveCounts = await getActiveStudentCountsByTeacher();
-
-      return Object.fromEntries(
-        classes.map((c) => {
-          const roster = mergeTeachersForClass(c);
-          return [
-            c.slug,
-            {
-              recruiting: roster.some((t) => t.maxStudents > 0 && (liveCounts[t.id] ?? 0) < t.maxStudents),
-              current: roster.reduce((sum, t) => sum + (liveCounts[t.id] ?? 0), 0),
-              max: roster.reduce((sum, t) => sum + t.maxStudents, 0),
-            },
-          ];
-        }),
-      );
+      const computed = await computeHomeClassStats();
+      const override = await readHomeClassStatsOverride();
+      return mergeHomeClassStats(computed, override);
     } catch (e) {
       console.error('[home] getClassStats failed:', e);
       return defaultClassStats();
     }
   },
   ['home-class-stats'],
-  { revalidate: 60 },
+  { revalidate: 60, tags: ['home-class-stats'] },
 );
