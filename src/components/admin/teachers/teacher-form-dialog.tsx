@@ -80,7 +80,7 @@ export function TeacherFormDialog({
 
   const applyDiscordUser = useCallback(
     (user: DiscordSearchUser) => {
-      const label = user.discordLabel?.trim();
+      const label = user.serverNickname?.trim() || user.discordLabel?.trim();
       onChange({
         ...formRef.current,
         discordUserId: user.discordId,
@@ -92,9 +92,12 @@ export function TeacherFormDialog({
 
   const onIdLookupResolved = useCallback(
     (payload: DiscordIdLookupResult) => {
-      const targetId = formRef.current.discordUserId.trim();
       onChange(
-        applyTargetDiscordLabel(formRef.current, targetId, payload.discordLabel),
+        applyTargetDiscordLabel(
+          formRef.current,
+          payload.discordId,
+          payload.discordLabel,
+        ),
       );
     },
     [onChange],

@@ -126,6 +126,7 @@ export function DiscordUserSearch({
 }
 
 export type DiscordIdLookupResult = {
+  discordId: string;
   discordLabel: string | null;
   serverNickname: string | null;
   globalDisplayName: string | null;
@@ -179,6 +180,7 @@ export function DiscordUserIdLookup({ discordUserId, onResolved }: IdLookupProps
             message: data.message,
           });
           onResolvedRef.current({
+            discordId: id,
             discordLabel: data.discordLabel ?? null,
             serverNickname: data.serverNickname ?? null,
             globalDisplayName: data.globalDisplayName ?? null,
