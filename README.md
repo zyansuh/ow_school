@@ -4,7 +4,7 @@
 
 # 🎮 정착지원국
 
-**평화로운 게임마을** — 게임 멘토링 클래스 · 수강 신청 · 반장 관리 · 졸업면담
+**평화로운 게임마을** — 게임 멘토링 클래스 · 수강 신청 · 선생님 관리 · 졸업면담
 
 > 수달반 🦦 · 사자반 🦁 · 여우반 🦊 — 함께 성장하는 게임 클래스
 
@@ -60,9 +60,9 @@
 
 | 역할 | 대표 경로 | 할 수 있는 것 |
 |------|-----------|----------------|
-| **마을주민** | `/`, `/mypage` | 반·반장 둘러보기, 커뮤니티 참여 |
-| **학생** | `/apply`, `/interview` | 수강 신청, 졸업면담, 담당 반장 배정 |
-| **반장** | `/teacher` | 담당 학생 관리, 통계 |
+| **마을주민** | `/`, `/mypage` | 반·선생님 둘러보기, 커뮤니티 참여 |
+| **학생** | `/apply`, `/interview` | 수강 신청, 졸업면담, 담당 선생님 배정 |
+| **선생님** | `/teacher` | 담당 학생 관리, 통계 |
 | **관리자** | `/admin` | 전체 운영·역할·졸업·Discord 동기화 |
 
 ---
@@ -76,7 +76,7 @@
 | 표시 | DB 값 | 자동 분류 우선순위 |
 |------|-------|-------------------|
 | 관리자 | `admin` | `AdminRole` 테이블 존재 |
-| 반장 | `teacher` | Discord `신입반교사` 역할 · `Teacher.discordUserId` · Teacher 닉 매칭 |
+| 선생님 | `teacher` | Discord `신입반교사` 역할 · `Teacher.discordUserId` · Teacher 닉 매칭 |
 | 학생 | `student` | Discord **서버 가입 2달 미만** (`guildJoinedAt` 기준) |
 | 마을주민 | `resident` | 가입 2달 이상 · 미가입 · 위에 해당 없음 |
 
@@ -88,7 +88,7 @@ flowchart TD
     B -->|예| C[siteRole 그대로 사용]
     B -->|아니오| D{AdminRole?}
     D -->|예| E[admin]
-    D -->|아니오| F{반장 판별}
+    D -->|아니오| F{선생님 판별}
     F -->|예| G[teacher]
     F -->|아니오| H{가입 2달 미만?}
     H -->|예| I[student]
@@ -112,7 +112,7 @@ node scripts/verify-user-role.mjs
 
 - `guildJoinedAt`은 Discord Member API `joined_at` 동기화 값. 없으면 **최초 로그인일(`createdAt`)** 을 보조 기준으로 사용.
 - **학생 관리**(`/admin/students`)·홈 통계의 “학생 수”는 `student` 역할만 집계 (마을주민 제외).
-- **메인 홈 통계**(학생 수·반장 수·졸업생 수·클래스 카드 인원)는 DB 실제 값과 **표시용 오버라이드**를 분리합니다. 관리자가 메인에서 수정한 숫자는 `SiteSetting`에만 저장되며, `User`·`Teacher` 등 운영 데이터는 변경되지 않습니다.
+- **메인 홈 통계**(학생 수·선생님 인원·졸업생 수·클래스 카드 인원)는 **DB에서 자동 집계**하여 표시합니다 (`src/lib/home/stats.ts`, `class-stats.ts`). ISR 캐시 60~120초.
 - 관리자로 `siteRole=admin` 지정 시 `AdminRole` 부여, 다른 역할로 변경 시 `AdminRole` 해제.
 
 ---
@@ -123,17 +123,17 @@ node scripts/verify-user-role.mjs
 
 | 기능 | 경로 | 설명 |
 |------|------|------|
-| 메인 | `/` | Hero, 반 카드, 담당 반장 안내, 공지 (ISR `revalidate: 60`) · **관리자: 통계 카드 클릭 수정** |
+| 메인 | `/` | Hero → **공지사항** → 클래스 소개 → 하단 **인원 통계 카드** (ISR `revalidate: 60`) |
 | 반별 | `/classes/[slug]` | `overwatch` · `pubg` · `valorant` — `TeacherCard`, 수강 신청 링크 |
-| 반장 목록 | `/teachers` | `/#classes`로 리다이렉트 (메인 반 섹션) |
-| 반장 상세 | `/teachers/[id]` | 프로필, MBTI, 담당 학생, 신청 CTA |
-| 수강 신청 | `/apply?class={slug}` | 닉네임, Discord, 플레이 시간, 담당 반장 |
+| 선생님 목록 | `/teachers` | `/#classes`로 리다이렉트 (메인 반 섹션) |
+| 선생님 상세 | `/teachers/[id]` | 프로필, MBTI, 담당 학생, 신청 CTA |
+| 수강 신청 | `/apply?class={slug}` | 닉네임, Discord, 플레이 시간, 담당 선생님 |
 | 졸업면담 | `/interview` | 제출·수정, 졸업/동호회 포인트 |
 | 졸업후기 | `/graduation` | 졸업후기 FAB (홈 등) |
 | 마이페이지 | `/mypage` | 프로필, 서버 닉 변경, 신청·면담 내역, Discord 새로고침 |
 | 로그인 | `/login` | Discord OAuth |
 
-### 👨‍🏫 반장 포털
+### 👨‍🏫 선생님 포털
 
 | 기능 | 경로 |
 |------|------|
@@ -148,12 +148,12 @@ node scripts/verify-user-role.mjs
 
 | 메뉴 | URL | 핵심 기능 |
 |------|-----|-----------|
-| 대시보드 | `/admin` | 월별 차트, 반별 통계, 동기화 요약 · 메인 홈 표시 통계 안내 |
-| Discord 동기화 | `/admin/discord-sync` | 전체 유저 닉·역할·가입일, 반장 연결 검증 |
+| 대시보드 | `/admin` | 월별 차트, 반별 통계, 동기화 요약 |
+| Discord 동기화 | `/admin/discord-sync` | 전체 유저 닉·역할·가입일, 선생님 연결 검증 |
 | **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/졸업 취소**, 서버 가입일 |
-| 학생 관리 | `/admin/students` | 담당 반장 변경, 졸업 처리 |
+| 학생 관리 | `/admin/students` | 담당 선생님 변경, 졸업 처리 |
 | 졸업생 | `/admin/graduated` | 졸업생 목록, **졸업 취소** |
-| 반장 관리 | `/admin/teachers` | CRUD, 활동/비활성, 정원, 복수 반 |
+| 선생님 관리 | `/admin/teachers` | CRUD, 활동/비활성, 정원, 복수 반 |
 | 신청 관리 | `/admin/applications` | 수강 신청 내역 |
 | 졸업면담 | `/admin/interviews` | 조회·삭제 (감사 로그) |
 | 포인트 | `/admin/points` | 월별 집계, 엑셀 |
@@ -165,17 +165,19 @@ node scripts/verify-user-role.mjs
 
 | 동작 | DB 변경 | 비고 |
 |------|---------|------|
-| **졸업** | `status → graduated`, `classId`/`teacherId` null | 반장 `currentStudents` 재계산 |
+| **졸업** | `status → graduated`, `classId`/`teacherId` null | 선생님 `currentStudents` 재계산 · **담당 선생님 DM 알림** (선택) |
 | **졸업 취소** | `status → active`, 마지막 담당·반 복원 | 면담·승인 신청 이력 기준 (`students/assignment.ts`) |
 
 **졸업 취소 UI:** `/admin/graduated`, `/admin/users` (졸업 관리 열), API `PATCH` `statusAction: ungraduate`
+
+**졸업 시 선생님 DM:** `/admin/students`, `/admin/users` 졸업 다이얼로그에서 발송 여부·수신 선생님 선택. 졸업면담 제출 시 담당 선생님에게 자동 DM (`lib/notifications/graduation-teacher-dm.ts`). DM 실패해도 졸업 처리는 유지됩니다.
 
 ### 🔗 Discord 연동 요약
 
 | 항목 | 구현 |
 |------|------|
 | 사용자 식별 | `User.discordId` (닉 변경해도 유지) |
-| 학생↔반장 | `User.teacherId` → `Teacher` |
+| 학생↔선생님 | `User.teacherId` → `Teacher` |
 | 일반 표시명 | 서버 닉 → 글로벌 → username |
 | 관리자 표시명 | `displayNickname` → 서버 닉 → … |
 | 길드 동기화 | `lib/discord/guild.ts`, TTL `GUILD_SYNC_TTL_SEC` (기본 300초) |
@@ -285,20 +287,20 @@ peaceful_game/
 | | `points.ts` | 월별 포인트 리포트 |
 | | `role-requests.ts` | 권한 요청·감사 로그 |
 | | `discord-user-lookup.ts` | Discord 유저 조회 |
-| **teacher/** | `identity.ts` | 반장 엔티티 해석 |
+| **teacher/** | `identity.ts` | 선생님 엔티티 해석 |
 | | `auth.ts`, `classes.ts`, `counts.ts` | Discord ID, 반 매핑, 학생 수 |
 | | `students.ts`, `assigned-students.ts` | 담당 학생 API·공개 프로필 |
 | | `recruiting.ts`, `display.ts`, `activity.ts` | 모집 상태, UI 라벨, 활동 시간 |
 | | `discord-field.ts`, `discord-link.ts` | Discord 필드 검증·백필 |
 | | `delete.ts`, `query.ts` | 삭제, 목록 쿼리 |
 | **students/** | `users.ts` | 활성·졸업 학생 조회/카운트 |
-| | `assignment.ts` | 담당 반장 배정·복원 |
+| | `assignment.ts` | 담당 선생님 배정·복원 |
 | | `graduation.ts` | 졸업·졸업 취소 |
 | **users/** | `role.ts`, `display.ts`, `header.ts` | 역할, 표시명, 헤더 라벨 |
-| **home/** | `stats.ts`, `class-stats.ts`, `site-stats-override.ts`, `ensure-classes.ts` | 홈 통계, 표시 오버라이드, 반 자동 생성 |
+| **home/** | `stats.ts`, `class-stats.ts`, `ensure-classes.ts` | 홈 DB 자동 통계, 반 자동 생성 |
 | **interviews/** | `access.ts`, `utils.ts` | 면담 권한, 동아리명 파싱 |
 | **applications/** | `policy.ts`, `service.ts`, `status.ts` | 신청 정책·생성·상태 변경 |
-| **notifications/** | `application-submitted.ts`, `interview-submitted.ts` | Discord 알림 |
+| **notifications/** | `application-submitted.ts`, `interview-submitted.ts`, `graduation-teacher-dm.ts` | Discord 알림·졸업 DM |
 | **utils/** | `index.ts` | `cn`, `formatDate`, `STATUS_LABELS` |
 | | `async.ts`, `segment.ts`, `form-options.ts`, `mbti.ts` | 병렬 처리, dynamic export, 폼 옵션 |
 
@@ -310,23 +312,23 @@ peaceful_game/
 | `layout/` | `main-layout`, `site-header`, `site-footer`, `space-background` | 전역 레이아웃 |
 | `providers/` | `session-provider` | NextAuth SessionProvider |
 | `cards/` | `class-card`, `teacher-card` | 홈·반 카드 |
-| `home/` | `home-content`, `home-site-stats` (`HomeStatsSection`), `interview-fab` | 메인 페이지 본문 · 관리자 통계 편집 |
-| `apply/` | `teacher-select-card` | 수강 신청 반장 선택 |
-| `teacher/` | `teacher-activity-fields` | 반장 폼 활동 시간 |
+| `home/` | `home-content`, `home-site-stats` (`HomeStatsSection`), `interview-fab` | 메인 레이아웃 · 클래스·통계 |
+| `apply/` | `teacher-select-card` | 수강 신청 선생님 선택 |
+| `teacher/` | `teacher-activity-fields` | 선생님 폼 활동 시간 |
 | `interview/` | `graduation-review-fab` | 졸업후기 모달 |
 | **admin/** | `admin-nav`, `admin-page-header` | 관리자 레이아웃 |
 | | `user-display-nick-edit`, `user-site-role-edit`, `user-graduation-actions` | 사이트 사용자 관리 |
 | | `discord-user-search`, `discord-sync-panel` | Discord 연동 UI |
 | | `monthly-stats-editor`, `admin-grant-search` | 통계·권한 |
 | **admin/students/** | `student-teacher-assign`, `student-display-nick-edit` | 학생 관리 |
-| **admin/teachers/** | `teacher-table`, `teacher-form-dialog` | 반장 CRUD |
+| **admin/teachers/** | `teacher-table`, `teacher-form-dialog` | 선생님 CRUD |
 
 ### `src/hooks/`
 
 | 경로 | 설명 |
 |------|------|
 | `auth/use-discord-sign-in.ts` | `signInWithDiscord`, 재시도 |
-| `admin/use-admin-teachers.ts` | 반장 폼·CRUD 상태 |
+| `admin/use-admin-teachers.ts` | 선생님 폼·CRUD 상태 |
 | `admin/use-discord-sync.ts` | 동기화 API·리포트 |
 | `apply/use-apply-form.ts` | 수강 신청 폼 |
 | `mypage/use-mypage.ts` | `/api/me` 데이터 |
@@ -345,9 +347,9 @@ peaceful_game/
 | prefix | 인증 | 용도 |
 |--------|------|------|
 | `/api/auth/*` | — | NextAuth, 쿠키 리셋 |
-| `/api/health`, `/api/classes`, `/api/teachers` | 공개/선택 | 헬스, 반, 반장 |
+| `/api/health`, `/api/classes`, `/api/teachers` | 공개/선택 | 헬스, 반, 선생님 |
 | `/api/me`, `/api/applications`, `/api/interviews` | 로그인 | 마이페이지, 신청, 면담 |
-| `/api/teacher/*` | 반장 | 담당 학생·통계·프로필 |
+| `/api/teacher/*` | 선생님 | 담당 학생·통계·프로필 |
 | `/api/admin/*` | 관리자 | 전체 운영 API |
 | `/api/cron/discord-sync` | `CRON_SECRET` | Vercel Cron |
 
@@ -425,81 +427,68 @@ npm run dev         # http://localhost:3000
 | `20250623150000_teacher_discord_user_id` | `Teacher.discordUserId` |
 | `20250623210000_admin_role_requests` | 관리자 권한 요청 |
 | `20250623220000_drop_site_display_name` | 레거시 필드 제거 |
-| `20250623230000_teacher_multi_class` | 반장 복수 반 |
+| `20250623230000_teacher_multi_class` | 선생님 복수 반 |
 | `20250624100000_user_display_nickname` | `displayNickname` |
 | `20250625120000_user_site_role` | `siteRole` |
 | `20250625140000_user_guild_joined_at` | `guildJoinedAt` |
 | `20250625200000_content_posts` | `ContentPost` · `ContentImage` (컨텐츠 소개) |
 
-> 메인 홈 통계 오버라이드는 **기존 `SiteSetting` 테이블**만 사용합니다. 별도 마이그레이션 없음.
+> 메인 홈 레이아웃·통계는 DB 자동 집계입니다. 별도 마이그레이션 없음.
 
 ---
 
-## 📊 메인 홈 통계 수정 (관리자)
+## 📊 메인 홈 레이아웃 · 인원 통계
 
-메인 페이지(`/`)의 **학생 수 · 반장 수 · 졸업생 수**와 **클래스 카드 인원**(현재/정원)은 기본적으로 DB에서 자동 집계됩니다. 운영상 화면에만 다른 숫자를 보여줘야 할 때 관리자가 **표시값**을 지정할 수 있습니다.
+메인 페이지(`/`) 구성 (**위 → 아래**):
 
-### 동작 원리
+1. **Hero** — 정착지원국 소개
+2. **공지사항** — `SiteSetting` 키 `notices`
+3. **클래스 소개** — 게임별 카드 그리드 (`#classes`)
+4. **인원 통계 카드** (하단) — 학생 수 · 선생님 인원 · 졸업생 수
 
-| 구분 | 설명 |
+### 자동 집계 (DB)
+
+| 표시 | 집계 방식 |
+|------|-----------|
+| **학생 수** | `student` 역할 + 담당 선생님 배정된 활성 학생 (`countActiveStudentsWithTeacher`) |
+| **선생님 인원** | 활성 `Teacher` 수 (`isActive: true`) |
+| **졸업생 수** | `status: graduated` 학생 (`countGraduatedStudents`) |
+| **클래스 카드 X/Y명** | 반별 활성 선생님 정원·담당 학생 실시간 합산 (`getHomeClassStats`) |
+
+캐시: `unstable_cache` + ISR `revalidate: 60~120`. 수동 수정 UI는 없으며, 운영 데이터 변경 시 자동 반영됩니다.
+
+### 선생님별 정원·담당 학생
+
+| 항목 | 경로 |
 |------|------|
-| **DB 집계값** | `User`·`Teacher`·담당 배정 등 실제 데이터 기준 자동 계산 |
-| **표시 오버라이드** | `SiteSetting` 키 `homeSiteStatsOverride` · `homeClassStatsOverride` (JSON) |
-| **화면 표시** | 오버라이드가 있으면 해당 값, 없으면 DB 집계값 |
-
-**중요:** 오버라이드는 **표시용**입니다. 학생 배정·반장 정원·졸업 처리 등 **운영 데이터는 절대 수정하지 않습니다.**
-
-### 관리자 UI (메인 홈)
-
-1. Discord 로그인 + 관리자 권한(`AdminRole`)으로 `/` 접속
-2. 상단 통계 카드(학생 수·반장 수·졸업생 수) **클릭** 또는 우측 **「통계 수정」** 버튼
-3. 클래스 섹션의 **「클래스 인원 수정」** 버튼으로 동일 모달 진입
-4. 각 항목에서 **「DB 자동」** 체크 시 실제 집계값 사용, 해제 후 숫자 입력 시 표시값 고정
-5. 저장 후 `revalidateTag`로 홈 캐시 갱신 (최대 1~2분 ISR과 병행)
-
-### 반장(선생님)별 정원·담당 학생 수
-
-| 수정 대상 | 경로 | 비고 |
-|-----------|------|------|
-| **반장 최대 정원** (`maxStudents`) | `/admin/teachers` → 수정 → 「최대 인원」 | DB `Teacher.maxStudents` 변경 |
-| **담당 학생 수** (실제) | 학생 배정·졸업·신청 승인으로 자동 반영 | `User.teacherId` + 역할 필터 집계 |
-| **메인 카드 인원** (표시만) | 메인 홈 통계 수정 모달 | 클래스별 current/max 오버라이드 |
-
-반장 카드의 `담당 학생 X/Y명`은 **실시간 DB 집계**(`getActiveStudentCountsByTeacher`)를 사용합니다. 메인 클래스 카드의 `X/Y명`만 오버라이드와 병합됩니다.
-
-### API
-
-```http
-GET /api/admin/stats/home
-Authorization: (관리자 세션)
-
-PUT /api/admin/stats/home
-Content-Type: application/json
-
-{
-  "site": {
-    "students": 42,    // null = DB 자동
-    "teachers": null,
-    "graduated": 10
-  },
-  "classes": {
-    "overwatch": { "current": 5, "max": 20 },
-    "pubg": { "current": null, "max": null }
-  }
-}
-```
-
-응답에는 `computed`(DB 집계)·`override`(저장값)·`display`(화면 표시)가 모두 포함됩니다.
+| **최대 정원** (`maxStudents`) | `/admin/teachers` → 수정 |
+| **담당 학생 수** | 학생 배정·졸업·신청으로 자동 반영 |
+| **선생님 카드 X/Y명** | `getActiveStudentCountsByTeacher` 실시간 집계 |
 
 ### 구현 파일
 
 | 파일 | 역할 |
 |------|------|
-| `src/lib/home/site-stats-override.ts` | SiteSetting 읽기/쓰기·병합 |
-| `src/lib/home/stats.ts` | 상단 3종 통계 집계 + 오버라이드 |
-| `src/lib/home/class-stats.ts` | 반별 인원 집계 + 오버라이드 |
-| `src/components/home/home-site-stats.tsx` | `HomeStatsSection` — 클릭 편집 UI |
-| `src/app/api/admin/stats/home/route.ts` | 관리자 API |
+| `src/lib/home/stats.ts` | 하단 3종 통계 DB 집계 |
+| `src/lib/home/class-stats.ts` | 클래스 카드 인원 집계 |
+| `src/components/home/home-content.tsx` | 레이아웃 순서 (공지 → 클래스 → 통계) |
+| `src/components/home/home-site-stats.tsx` | `HomeStatsSection` — 클래스 그리드 + 통계 카드 |
+
+---
+
+## 🎓 졸업 시 선생님 DM
+
+학생 졸업 처리 시 담당 선생님(또는 선택한 선생님)에게 **Discord Bot DM**으로 알림을 보냅니다.
+
+| 경로 | 동작 |
+|------|------|
+| `/admin/students` · `/admin/users` | 졸업 다이얼로그 — DM 발송 체크, 수신 선생님 선택 |
+| 졸업면담 제출 (`POST /api/interviews`) | 담당 선생님에게 자동 DM |
+| API body | `sendTeacherDm` (기본 true), `dmTeacherId` (선택) |
+
+**전제:** `Teacher.discordUserId` 연결 + `DISCORD_BOT_TOKEN` 설정. DM 실패 시에도 졸업 DB 처리는 완료됩니다.
+
+구현: `src/lib/notifications/graduation-teacher-dm.ts` · `src/components/admin/graduate-student-dialog.tsx`
 
 ---
 
@@ -576,8 +565,8 @@ sequenceDiagram
 |--------|------|------|
 | GET | `/api/health` | DB·Auth·Bot 상태 |
 | GET | `/api/classes` | 반 목록·모집 인원 |
-| GET | `/api/teachers` | 활성 반장 목록 |
-| GET | `/api/teachers/[id]` | 반장 상세 |
+| GET | `/api/teachers` | 활성 선생님 목록 |
+| GET | `/api/teachers/[id]` | 선생님 상세 |
 | GET | `/api/notices` | 공지 |
 | GET | `/api/me` | 내 프로필 (`?refresh=1` 강제 sync) |
 | PATCH | `/api/me/guild-nick` | 서버 닉 변경 |
@@ -586,7 +575,7 @@ sequenceDiagram
 | GET | `/api/interviews/mine` | 내 면담 |
 | GET/POST | `/api/graduation-reviews` | 졸업후기 |
 
-### 반장 (`requireTeacherUser`)
+### 선생님 (`requireTeacherUser`)
 
 | Method | Path |
 |--------|------|
@@ -600,15 +589,14 @@ sequenceDiagram
 | Method | Path | 비고 |
 |--------|------|------|
 | GET | `/api/admin/site-users` | 전체 사용자 |
-| PATCH | `/api/admin/site-users/[id]` | `displayNickname`, `siteRole`, `statusAction` |
-| GET/PATCH | `/api/admin/students`, `[id]` | 학생·졸업·담당 |
+| PATCH | `/api/admin/site-users/[id]` | `displayNickname`, `siteRole`, `statusAction`, `sendTeacherDm` |
+| PATCH | `/api/admin/students`, `[id]` | 학생·졸업·담당 (`action: graduate`, `sendTeacherDm`) |
 | GET | `/api/admin/graduated` | 졸업생 |
-| GET/POST/PATCH/DELETE | `/api/admin/teachers`, `[id]` | 반장 CRUD |
+| GET/POST/PATCH/DELETE | `/api/admin/teachers`, `[id]` | 선생님 CRUD |
 | GET | `/api/admin/applications`, `[id]` | 신청 |
 | GET/DELETE | `/api/admin/interviews`, `[id]` | 면담 |
 | GET | `/api/admin/points` | 포인트 |
 | GET | `/api/admin/stats`, `/stats/monthly` | 통계 |
-| GET/PUT | `/api/admin/stats/home` | 메인 홈 표시 통계 오버라이드 (DB 집계값 유지) |
 | POST | `/api/admin/discord-sync` | 일괄 동기화 |
 | POST | `/api/admin/discord-sync/fix-link` | 연결 수정 |
 | GET | `/api/admin/ops-status` | 스키마 점검 |
@@ -638,7 +626,7 @@ sequenceDiagram
 | `guildJoinedAt` | 서버 가입 시각 |
 | `isInGuild` | 길드 가입 여부 (DB 기준) |
 | `status` | `active` \| `graduated` |
-| `classId` / `teacherId` | 반 · 담당 반장 |
+| `classId` / `teacherId` | 반 · 담당 선생님 |
 
 ### 전체 모델
 
@@ -684,9 +672,8 @@ import { ds } from '@/styles/design-system';
 | P3009 failed migration | `prisma migrate resolve` — **백업 후** 진행 |
 | 역할·가입일 불일치 | `/admin/discord-sync` |
 | 졸업 취소 실패 | `status === graduated'` 확인, `/admin/users` 사용 |
-| 반장 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 · 카드/상세는 `getActiveStudentCountsByTeacher` 통일 |
-| 메인 홈 통계 수정 안 됨 | 관리자 로그인 여부 확인 · `/api/admin/stats/home` PUT 응답 확인 · 저장 후 새로고침 |
-| 메인 숫자와 DB 불일치 | 의도된 **표시 오버라이드**일 수 있음 — 메인 통계 모달에서 「DB 자동」 복원 |
+| 선생님 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 · 카드/상세는 `getActiveStudentCountsByTeacher` 통일 |
+| 졸업 DM 미발송 | `Teacher.discordUserId` 연결 확인 · `DISCORD_BOT_TOKEN` · 봇 DM 권한 |
 | Bot 닉 403 | 역할 순위 · MANAGE_NICKNAMES |
 | Windows EPERM prisma | node 프로세스 종료 후 재시도 |
 
