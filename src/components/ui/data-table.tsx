@@ -8,11 +8,15 @@ export type DataTableColumn<T> = {
   key: string;
   header: string;
   cell: (row: T) => ReactNode;
+  /** 데스크톱 테이블 열 너비 (예: '12rem', '18%') */
+  width?: string;
   /** 모바일 카드에서 라벨로 표시 */
   mobileLabel?: string;
   hideOnMobile?: boolean;
   /** 모바일에서 카드 하단 전체 너비 버튼 영역 */
   mobileFooter?: boolean;
+  headerClassName?: string;
+  cellClassName?: string;
 };
 
 type Props<T> = {
@@ -38,18 +42,34 @@ export function DataTable<T>({
 
   const mobileColumns = columns.filter((c) => !c.hideOnMobile && !c.mobileFooter);
   const footerColumns = columns.filter((c) => c.mobileFooter);
+  const hasColumnWidths = columns.some((c) => c.width);
 
   return (
     <div className={cn('rounded-xl border border-border bg-card shadow-card overflow-hidden', className)}>
       {/* Desktop table */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-max min-w-full text-sm table-auto">
+      <div className="hidden md:block overflow-x-auto px-4 sm:px-6 py-1">
+        <table
+          className={cn(
+            'w-full text-sm',
+            hasColumnWidths ? 'table-fixed' : 'table-auto min-w-full',
+          )}
+        >
+          {hasColumnWidths && (
+            <colgroup>
+              {columns.map((col) => (
+                <col key={col.key} style={col.width ? { width: col.width } : undefined} />
+              ))}
+            </colgroup>
+          )}
           <thead>
             <tr className="border-b border-border bg-muted/30">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground whitespace-nowrap"
+                  className={cn(
+                    'px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground whitespace-nowrap align-middle',
+                    col.headerClassName,
+                  )}
                 >
                   {col.header}
                 </th>
@@ -60,7 +80,13 @@ export function DataTable<T>({
             {data.map((row) => (
               <tr key={keyExtractor(row)} className="border-b border-border/50 hover:bg-card-hover/60 transition-colors">
                 {columns.map((col) => (
-                  <td key={col.key} className="px-4 py-3 text-foreground align-middle whitespace-nowrap">
+                  <td
+                    key={col.key}
+                    className={cn(
+                      'px-3 py-3 text-foreground align-middle',
+                      col.cellClassName,
+                    )}
+                  >
                     {col.cell(row)}
                   </td>
                 ))}
