@@ -5,9 +5,18 @@ import { isDiscordSnowflake } from '@/lib/discord-id';
 /** Discord 서버 역할명 — 정확히 일치해야 선생님으로 분류 */
 export const TEACHER_DISCORD_ROLE_NAME = '신입반교사';
 
-export type SiteUserRole = 'admin' | 'teacher' | 'student';
+export const SITE_USER_ROLES = ['resident', 'student', 'teacher', 'admin'] as const;
+export type SiteUserRole = (typeof SITE_USER_ROLES)[number];
+
+export const SITE_ROLE_LABELS: Record<SiteUserRole, string> = {
+  resident: '마을주민',
+  student: '학생',
+  teacher: '선생님',
+  admin: '관리자',
+};
 
 export type UserRoleFields = {
+  siteRole?: string | null;
   adminRole?: unknown | null;
   discordRoleNames?: string | null;
   discordId?: string;
@@ -25,6 +34,10 @@ export type UserRoleContext = {
 function normalizeTeacherNameKey(value: string | null | undefined): string | null {
   const v = value?.trim().toLowerCase();
   return v && !isDiscordSnowflake(v) ? v : null;
+}
+
+export function isSiteUserRole(value: string | null | undefined): value is SiteUserRole {
+  return SITE_USER_ROLES.includes(value as SiteUserRole);
 }
 
 export function roleNamesFromUser(user: Pick<UserRoleFields, 'discordRoleNames'>): string[] {
@@ -65,16 +78,26 @@ export function isTeacherByTeacherRecordName(
   return false;
 }
 
-/**
- * 대상 사용자 역할 (admin > teacher > student)
- * 현재 로그인 사용자가 아닌 target user 기준
- */
-export function getUserRole(user: UserRoleFields, ctx: UserRoleContext): SiteUserRole {
+/** siteRole 미설정 시 Discord·Teacher·AdminRole 기준 자동 분류 */
+export function inferUserRole(user: UserRoleFields, ctx: UserRoleContext): SiteUserRole {
   if (isAdminUser(user)) return 'admin';
   if (isTeacherDiscordRole(user)) return 'teacher';
   if (isTeacherByDiscordUserId(user.discordId, ctx)) return 'teacher';
   if (isTeacherByTeacherRecordName(user, ctx)) return 'teacher';
   return 'student';
+}
+
+/**
+ * 사이트 이용자 역할 — 관리자 지정(siteRole) 우선, 없으면 자동 분류
+ */
+export function getUserRole(user: UserRoleFields, ctx: UserRoleContext): SiteUserRole {
+  const override = user.siteRole?.trim();
+  if (isSiteUserRole(override)) return override;
+  return inferUserRole(user, ctx);
+}
+
+export function getUserRoleLabel(user: UserRoleFields, ctx: UserRoleContext): string {
+  return SITE_ROLE_LABELS[getUserRole(user, ctx)];
 }
 
 export function isTeacherUser(user: UserRoleFields, ctx: UserRoleContext): boolean {
@@ -83,6 +106,10 @@ export function isTeacherUser(user: UserRoleFields, ctx: UserRoleContext): boole
 
 export function isStudentUser(user: UserRoleFields, ctx: UserRoleContext): boolean {
   return getUserRole(user, ctx) === 'student';
+}
+
+export function isResidentUser(user: UserRoleFields, ctx: UserRoleContext): boolean {
+  return getUserRole(user, ctx) === 'resident';
 }
 
 export async function loadTeacherDiscordUserIdSet(): Promise<Set<string>> {
