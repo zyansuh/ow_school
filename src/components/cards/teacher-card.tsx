@@ -3,8 +3,8 @@ import { Users, Clock } from 'lucide-react';
 import { PageCard, PageCardHeader, PageCardBody, PageCardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatMainActivityTime, teacherRoleLabel } from '@/lib/teacher-display';
-import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher-recruiting';
+import { formatMainActivityTime, teacherRoleLabel } from '@/lib/teacher/display';
+import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher/recruiting';
 
 type TeacherCardData = {
   id: string;

@@ -1,4 +1,4 @@
-import type { UserNickFields } from '@/lib/user-display';
+import type { UserNickFields } from '@/lib/users/display';
 
 export type TeacherCapacity = {
   id: string;

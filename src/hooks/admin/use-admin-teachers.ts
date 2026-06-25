@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { isDiscordSnowflake } from '@/lib/discord-id';
+import { isDiscordSnowflake } from '@/lib/discord/id';
 
 export type AdminTeacher = {
   id: string;
@@ -52,7 +52,7 @@ export const emptyTeacherForm: TeacherFormState = {
   activityTimeSlot: '',
 };
 
-export { parseActivityDays } from '@/lib/teacher-activity';
+export { parseActivityDays } from '@/lib/teacher/activity';
 
 export function useAdminTeachers() {
   const [teachers, setTeachers] = useState<AdminTeacher[]>([]);

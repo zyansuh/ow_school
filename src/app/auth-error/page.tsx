@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AUTH_ERROR_MESSAGES, resetAuthCookies } from '@/lib/auth-errors';
+import { AUTH_ERROR_MESSAGES, resetAuthCookies } from '@/lib/auth/errors';
 
 function AuthErrorRedirect() {
   const router = useRouter();

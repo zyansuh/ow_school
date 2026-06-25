@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { runAdminDiscordSync } from '@/lib/discord-sync-admin';
+import { runAdminDiscordSync } from '@/lib/admin/discord-sync';
 
 export async function GET() {
   try {

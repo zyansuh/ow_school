@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Users, GraduationCap, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import type { TeacherStudentDetail, TeacherStudentRow, TeacherStudentStats } from '@/lib/teacher-students';
+import type { TeacherStudentDetail, TeacherStudentRow, TeacherStudentStats } from '@/lib/teacher/students';
 
 export default function TeacherStudentsPage() {
   const { status } = useSession();

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { ensureGameClasses } from '@/lib/ensure-game-classes';
-import { getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
-import { isRecruitmentOpen } from '@/lib/teacher-recruiting';
+import { ensureGameClasses } from '@/lib/home/ensure-classes';
+import { getActiveStudentCountsByTeacher } from '@/lib/teacher/counts';
+import { isRecruitmentOpen } from '@/lib/teacher/recruiting';
 
 export async function GET() {
   await ensureGameClasses();

@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
-import { grantAdmin, revokeAdmin } from '@/lib/rbac';
+import { grantAdmin, revokeAdmin } from '@/lib/auth/rbac';
 import { sendDiscordWebhook } from '@/lib/discord/notify';
-import { userDisplayName } from '@/lib/user-display';
+import { userDisplayName } from '@/lib/users/display';
 import { SITE_NAME } from '@/lib/site-brand';
 
 export async function createAdminRoleRequest(userId: string, message?: string) {

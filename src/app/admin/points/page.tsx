@@ -8,7 +8,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { DataTable } from '@/components/ui/data-table';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { formatPoint } from '@/lib/points';
-import type { MonthlyPointRow, MonthlyPointSummary } from '@/lib/admin-points';
+import type { MonthlyPointRow, MonthlyPointSummary } from '@/lib/admin/points';
 import { Download, Users, GraduationCap, Trophy, Coins } from 'lucide-react';
 
 type Report = {

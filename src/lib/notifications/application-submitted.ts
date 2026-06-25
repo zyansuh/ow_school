@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields } from '@/lib/user-display';
+import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields } from '@/lib/users/display';
 import { sendDiscordDirectMessage } from '@/lib/discord/notify';
 import { formatDateTime } from '@/lib/utils';
 

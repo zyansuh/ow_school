@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireTeacherUser } from '@/lib/api-helpers';
-import { ACTIVITY_DAYS } from '@/lib/form-options';
+import { ACTIVITY_DAYS } from '@/lib/utils/form-options';
 
 const schema = z.object({
   activityDays: z.array(z.string()).optional(),

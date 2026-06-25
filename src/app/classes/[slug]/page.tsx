@@ -7,13 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Users, ArrowLeft } from 'lucide-react';
 import { getClassBySlug } from '@/lib/constants';
-import { getActiveStudentCountsByTeacher } from '@/lib/teacher-counts';
-import { isRecruitmentOpen } from '@/lib/teacher-recruiting';
-import { findTeachersForClassSlug } from '@/lib/teachers-query';
+import { getActiveStudentCountsByTeacher } from '@/lib/teacher/counts';
+import { isRecruitmentOpen } from '@/lib/teacher/recruiting';
+import { findTeachersForClassSlug } from '@/lib/teacher/query';
 import { TeacherCard } from '@/components/cards';
 import { EmptyState } from '@/components/ui/loading';
 
-export { dynamic } from '@/lib/segment';
+export { dynamic } from '@/lib/utils/segment';
 
 export default async function ClassPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
-import { PLAY_TIME_SLOTS } from '@/lib/form-options';
+import { PLAY_TIME_SLOTS } from '@/lib/utils/form-options';
 import { ds } from '@/styles/design-system';
 import { useApplyForm } from '@/hooks/apply/use-apply-form';
 import { TeacherSelectCard } from '@/components/apply/teacher-select-card';

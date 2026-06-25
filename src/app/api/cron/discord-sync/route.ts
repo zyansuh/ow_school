@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runAdminDiscordSync } from '@/lib/discord-sync-admin';
+import { runAdminDiscordSync } from '@/lib/admin/discord-sync';
 
 export async function GET(req: NextRequest) {
   const secret = req.headers.get('authorization')?.replace('Bearer ', '');

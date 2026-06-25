@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { parseRoleNames } from '@/lib/discord-guild';
-import { normalizeNickFields, adminUserDisplayName, guildNicknameOnly } from '@/lib/user-display';
-import { findGraduatedStudentUsers } from '@/lib/student-users';
+import { parseRoleNames } from '@/lib/discord/guild';
+import { normalizeNickFields, adminUserDisplayName, guildNicknameOnly } from '@/lib/users/display';
+import { findGraduatedStudentUsers } from '@/lib/students/users';
 
 export async function GET() {
   try {

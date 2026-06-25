@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser, requireUser } from '@/lib/api-helpers';
-import { graduateUser } from '@/lib/graduation';
-import { interviewAuthorName } from '@/lib/interview-access';
+import { graduateUser } from '@/lib/students/graduation';
+import { interviewAuthorName } from '@/lib/interviews/access';
 import { CLUB_POINT, GRADUATION_POINT } from '@/lib/points';
 import { notifyInterviewSubmitted } from '@/lib/notifications/interview-submitted';
 import { z } from 'zod';

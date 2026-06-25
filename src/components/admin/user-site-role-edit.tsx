@@ -8,7 +8,7 @@ import {
   SITE_ROLE_LABELS,
   SITE_USER_ROLES,
   type SiteUserRole,
-} from '@/lib/user-role';
+} from '@/lib/users/role';
 
 type Props = {
   userId: string;

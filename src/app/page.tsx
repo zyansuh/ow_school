@@ -1,5 +1,5 @@
 import { MainLayout } from '@/components/layout/main-layout';
-import { HomeContent } from '@/components/pages/home-content';
+import { HomeContent } from '@/components/home/home-content';
 import { InterviewFab } from '@/components/home/interview-fab';
 
 export const revalidate = 60;

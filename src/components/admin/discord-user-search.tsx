@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { isDiscordSnowflake } from '@/lib/discord-id';
+import { isDiscordSnowflake } from '@/lib/discord/id';
 
 export type DiscordSearchUser = {
   id: string;

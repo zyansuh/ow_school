@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { apiError, requireUser } from '@/lib/api-helpers';
 import { db } from '@/lib/prisma';
-import { userDisplayName } from '@/lib/user-display';
+import { userDisplayName } from '@/lib/users/display';
 
 const postSchema = z.object({
   content: z.string().min(10, '후기는 10자 이상 입력해주세요'),

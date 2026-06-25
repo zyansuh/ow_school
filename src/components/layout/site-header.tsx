@@ -5,9 +5,9 @@ import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
 import { Gamepad2, Menu, X } from 'lucide-react';
 import { useState } from 'react';
-import { signInWithDiscord } from '@/hooks/use-discord-sign-in';
-import { userDisplayName } from '@/lib/user-display';
-import { userHeaderSubtitle } from '@/lib/user-header';
+import { signInWithDiscord } from '@/hooks/auth/use-discord-sign-in';
+import { userDisplayName } from '@/lib/users/display';
+import { userHeaderSubtitle } from '@/lib/users/header';
 import { SITE_NAME } from '@/lib/site-brand';
 
 import { Button } from '@/components/ui/button';

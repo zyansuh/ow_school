@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { signInWithDiscord } from '@/hooks/use-discord-sign-in';
+import { signInWithDiscord } from '@/hooks/auth/use-discord-sign-in';
 import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Card } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Label, Textarea, Select, Input } from '@/components/ui/input';
 import { LoadingPage } from '@/components/ui/loading';
 import { toast } from 'sonner';
-import { resolveDisplayName } from '@/lib/user-display';
+import { resolveDisplayName } from '@/lib/users/display';
 import { GraduationReviewFab } from '@/components/interview/graduation-review-fab';
 import { ds } from '@/styles/design-system';
 import { CLUB_POINT, CLUB_RECOMMENDATION_URL, formatPoint, GRADUATION_POINT } from '@/lib/points';

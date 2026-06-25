@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { graduateUser, restoreGraduatedUser } from '@/lib/graduation';
-import { assignStudentTeacher } from '@/lib/student-assignment';
-import { isStudentUser, loadUserRoleContext } from '@/lib/user-role';
+import { graduateUser, restoreGraduatedUser } from '@/lib/students/graduation';
+import { assignStudentTeacher } from '@/lib/students/assignment';
+import { isStudentUser, loadUserRoleContext } from '@/lib/users/role';
 
 const patchSchema = z.object({
   action: z.enum(['graduate', 'ungraduate']).optional(),

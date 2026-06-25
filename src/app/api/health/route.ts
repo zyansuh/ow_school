@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { resolveAuthUrl } from '@/lib/auth-url';
-import { isBotInGuild } from '@/lib/discord-guild';
+import { resolveAuthUrl } from '@/lib/auth/url';
+import { isBotInGuild } from '@/lib/discord/guild';
 
 export const dynamic = 'force-dynamic';
 

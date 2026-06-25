@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { fixTeacherLinkForUser } from '@/lib/discord-sync-admin';
+import { fixTeacherLinkForUser } from '@/lib/admin/discord-sync';
 
 const schema = z.object({
   userId: z.string().min(1),

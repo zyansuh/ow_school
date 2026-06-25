@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { parseRoleNames } from '@/lib/discord-guild';
-import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
+import { parseRoleNames } from '@/lib/discord/guild';
+import { adminUserDisplayName, normalizeNickFields } from '@/lib/users/display';
 
 export async function GET() {
   try {

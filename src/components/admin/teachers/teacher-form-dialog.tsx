@@ -11,9 +11,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { MBTI_TYPES } from '@/lib/mbti';
+import { MBTI_TYPES } from '@/lib/utils/mbti';
 import { cn } from '@/lib/utils';
-import { isDiscordSnowflake } from '@/lib/discord-id';
+import { isDiscordSnowflake } from '@/lib/discord/id';
 import {
   DiscordUserSearch,
   DiscordUserIdLookup,

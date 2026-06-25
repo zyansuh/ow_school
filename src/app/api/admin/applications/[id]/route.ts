@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { applyApplicationStatusChange } from '@/lib/applications';
-import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
+import { applyApplicationStatusChange } from '@/lib/applications/status';
+import { countActiveStudentsForTeacher } from '@/lib/teacher/counts';
 import { z } from 'zod';
 
 const patchSchema = z.object({ status: z.enum(['pending', 'approved', 'rejected']) });

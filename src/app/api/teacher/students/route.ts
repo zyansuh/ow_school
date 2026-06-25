@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { apiError, requireTeacherUser } from '@/lib/api-helpers';
-import { getTeacherStudents } from '@/lib/teacher-students';
+import { getTeacherStudents } from '@/lib/teacher/students';
 
 export async function GET() {
   try {

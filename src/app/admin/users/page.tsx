@@ -10,7 +10,7 @@ import { UserDisplayNickEdit } from '@/components/admin/user-display-nick-edit';
 import { UserSiteRoleEdit } from '@/components/admin/user-site-role-edit';
 import { UserGraduationActions } from '@/components/admin/user-graduation-actions';
 import { formatDate, cn } from '@/lib/utils';
-import { type SiteUserRole } from '@/lib/user-role';
+import { type SiteUserRole } from '@/lib/users/role';
 import { ds } from '@/styles/design-system';
 import { toast } from 'sonner';
 

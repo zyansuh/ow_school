@@ -6,10 +6,10 @@ import {
   lastMonths,
   mergeMonthlyStats,
 } from '@/lib/monthly-stats';
-import { parseRoleNames } from '@/lib/discord-guild';
-import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
-import { findAssignedStudentsForTeacher } from '@/lib/student-users';
-import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
+import { parseRoleNames } from '@/lib/discord/guild';
+import { normalizeNickFields, userDisplayName } from '@/lib/users/display';
+import { findAssignedStudentsForTeacher } from '@/lib/students/users';
+import { countActiveStudentsForTeacher } from '@/lib/teacher/counts';
 
 export async function GET() {
   try {

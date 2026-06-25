@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { getGuildConfig } from '@/lib/discord-guild';
+import { getGuildConfig } from '@/lib/discord/guild';
 
 async function columnExists(table: string, column: string) {
   const rows = await prisma.$queryRaw<Array<{ column_name: string }>>`

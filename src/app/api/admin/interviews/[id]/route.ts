@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { interviewAuthorName } from '@/lib/interview-access';
-import { normalizeNickFields, adminUserDisplayName } from '@/lib/user-display';
+import { interviewAuthorName } from '@/lib/interviews/access';
+import { normalizeNickFields, adminUserDisplayName } from '@/lib/users/display';
 import { z } from 'zod';
 
 const deleteSchema = z.object({

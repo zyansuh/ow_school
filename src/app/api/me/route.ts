@@ -5,9 +5,9 @@ import { apiError, requireUser } from '@/lib/api-helpers';
 import {
   syncUserGuildDataIfStale,
   runGuildSyncIfStale,
-} from '@/lib/discord-guild';
-import { resolveGuildMembershipFromDb } from '@/lib/guild-membership';
-import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
+} from '@/lib/discord/guild';
+import { resolveGuildMembershipFromDb } from '@/lib/discord/guild-membership';
+import { normalizeNickFields, userDisplayName } from '@/lib/users/display';
 
 export async function GET(req: NextRequest) {
   try {
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 
     if (!dbUser) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const { parseRoleNames } = await import('@/lib/discord-guild');
+    const { parseRoleNames } = await import('@/lib/discord/guild');
 
     return NextResponse.json({
       ...dbUser,

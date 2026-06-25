@@ -3,8 +3,8 @@
 import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { formatMainActivityTime, teacherRoleLabel } from '@/lib/teacher-display';
-import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher-recruiting';
+import { formatMainActivityTime, teacherRoleLabel } from '@/lib/teacher/display';
+import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher/recruiting';
 
 export type TeacherSelectItem = {
   id: string;

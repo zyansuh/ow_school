@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { getMonthlyPointReport } from '@/lib/admin-points';
+import { getMonthlyPointReport } from '@/lib/admin/points';
 
 function parseYearMonth(req: NextRequest) {
   const year = Number(req.nextUrl.searchParams.get('year'));

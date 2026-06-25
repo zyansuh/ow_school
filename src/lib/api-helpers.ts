@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { requireAdmin } from '@/lib/rbac';
+import { requireAdmin } from '@/lib/auth/rbac';
 import { prisma } from '@/lib/prisma';
 import { resolveTeacherEntityForUser } from '@/lib/teacher/identity';
 

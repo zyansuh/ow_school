@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { logAdminRoleAction } from '@/lib/admin/role-requests';
-import { graduateUser, restoreGraduatedUser } from '@/lib/graduation';
-import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields } from '@/lib/user-display';
+import { graduateUser, restoreGraduatedUser } from '@/lib/students/graduation';
+import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields } from '@/lib/users/display';
 import {
   getUserRole,
   inferUserRole,
@@ -12,7 +12,7 @@ import {
   isStudentUser,
   loadUserRoleContext,
   SITE_ROLE_LABELS,
-} from '@/lib/user-role';
+} from '@/lib/users/role';
 
 const patchSchema = z.object({
   displayNickname: z.string().max(32).nullable().optional(),

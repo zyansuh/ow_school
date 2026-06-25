@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { signInWithDiscord } from '@/hooks/use-discord-sign-in';
+import { signInWithDiscord } from '@/hooks/auth/use-discord-sign-in';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { LoadingPage, EmptyState } from '@/components/ui/loading';
 import { STATUS_LABELS, formatDate } from '@/lib/utils';
-import { userDisplayName } from '@/lib/user-display';
+import { userDisplayName } from '@/lib/users/display';
 import { ds } from '@/styles/design-system';
 import { useMyPageData } from '@/hooks/mypage/use-mypage';
 

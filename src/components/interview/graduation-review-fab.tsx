@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { SITE_NAME } from '@/lib/site-brand';
-import { resolveDisplayName, type UserNickFields } from '@/lib/user-display';
+import { resolveDisplayName, type UserNickFields } from '@/lib/users/display';
 
 type MeData = UserNickFields & {
   discordId?: string;

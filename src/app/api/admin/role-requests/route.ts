@@ -7,7 +7,7 @@ import {
   revokeAdminWithAudit,
 } from '@/lib/admin/role-requests';
 import { prisma } from '@/lib/prisma';
-import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
+import { adminUserDisplayName, normalizeNickFields } from '@/lib/users/display';
 import { z } from 'zod';
 
 export async function GET(req: NextRequest) {

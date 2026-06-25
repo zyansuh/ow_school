@@ -5,8 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { MainLayout } from '@/components/layout/main-layout';
-import { AUTH_ERROR_MESSAGES } from '@/lib/auth-errors';
-import { retryDiscordSignIn, signInWithDiscord } from '@/hooks/use-discord-sign-in';
+import { AUTH_ERROR_MESSAGES } from '@/lib/auth/errors';
+import { retryDiscordSignIn, signInWithDiscord } from '@/hooks/auth/use-discord-sign-in';
 import { SITE_NAME } from '@/lib/site-brand';
 
 const RETRY_ERRORS = new Set(['Configuration', 'InvalidCheck', 'OAuthCallbackError', 'OAuthSignin']);

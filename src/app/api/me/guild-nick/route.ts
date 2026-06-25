@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireUser } from '@/lib/api-helpers';
-import { getGuildConfig, syncUserGuildData, updateGuildNickname } from '@/lib/discord-guild';
+import { getGuildConfig, syncUserGuildData, updateGuildNickname } from '@/lib/discord/guild';
 
 const schema = z.object({
   nick: z

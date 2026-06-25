@@ -7,7 +7,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ds } from '@/styles/design-system';
 import type { AdminTeacher } from '@/hooks/admin/use-admin-teachers';
-import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher-recruiting';
+import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher/recruiting';
 
 type Props = {
   teachers: AdminTeacher[];

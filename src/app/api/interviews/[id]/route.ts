@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireUser } from '@/lib/api-helpers';
-import { getInterviewForUser, interviewAuthorName } from '@/lib/interview-access';
+import { getInterviewForUser, interviewAuthorName } from '@/lib/interviews/access';
 import { z } from 'zod';
 
 const schema = z.object({

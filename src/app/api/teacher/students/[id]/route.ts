@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { apiError, requireTeacherUser } from '@/lib/api-helpers';
-import { getTeacherStudentDetail } from '@/lib/teacher-students';
+import { getTeacherStudentDetail } from '@/lib/teacher/students';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 

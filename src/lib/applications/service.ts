@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/prisma';
-import { applyApplicationStatusChange } from '@/lib/applications';
-import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
-import { isRecruitmentOpen } from '@/lib/teacher-recruiting';
+import { applyApplicationStatusChange } from '@/lib/applications/status';
+import { countActiveStudentsForTeacher } from '@/lib/teacher/counts';
+import { isRecruitmentOpen } from '@/lib/teacher/recruiting';
 import { initialApplicationStatus } from '@/lib/applications/policy';
 import { notifyApplicationSubmitted } from '@/lib/notifications/application-submitted';
-import { adminUserDisplayName, normalizeNickFields } from '@/lib/user-display';
+import { adminUserDisplayName, normalizeNickFields } from '@/lib/users/display';
 
 export type CreateApplicationInput = {
   userId: string;

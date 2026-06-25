@@ -6,14 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
-import { countActiveStudentsForTeacher } from '@/lib/teacher-counts';
-import { getTeacherAssignedStudentRows } from '@/lib/teacher-assigned-students';
+import { countActiveStudentsForTeacher } from '@/lib/teacher/counts';
+import { getTeacherAssignedStudentRows } from '@/lib/teacher/assigned-students';
 import { formatDate } from '@/lib/utils';
 import { ds } from '@/styles/design-system';
-import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher-recruiting';
-import { formatMainActivityTime, teacherRoleLabel } from '@/lib/teacher-display';
+import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher/recruiting';
+import { formatMainActivityTime, teacherRoleLabel } from '@/lib/teacher/display';
 
-export { dynamic } from '@/lib/segment';
+export { dynamic } from '@/lib/utils/segment';
 
 function parseDays(json: string | null) {
   if (!json) return [] as string[];

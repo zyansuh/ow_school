@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { ensureGameClasses } from '../src/lib/ensure-game-classes';
+import { ensureGameClasses } from '../src/lib/home/ensure-classes';
 
 const prisma = new PrismaClient();
 

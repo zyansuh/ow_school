@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { assertDiscordUserIdAvailable } from '@/lib/teacher-auth';
-import { mapTeacherWithClasses, syncTeacherClasses } from '@/lib/teacher-classes';
-import { assertValidTeacherDiscordField } from '@/lib/teacher-discord-field';
-import { computeTeacherIsActive } from '@/lib/teacher-recruiting';
+import { assertDiscordUserIdAvailable } from '@/lib/teacher/auth';
+import { mapTeacherWithClasses, syncTeacherClasses } from '@/lib/teacher/classes';
+import { assertValidTeacherDiscordField } from '@/lib/teacher/discord-field';
+import { computeTeacherIsActive } from '@/lib/teacher/recruiting';
 import { z } from 'zod';
 
 const teacherSchema = z.object({

@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { parseRoleNames } from '@/lib/discord-guild';
-import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields } from '@/lib/user-display';
-import { resolveGuildJoinedAt } from '@/lib/guild-tenure';
+import { parseRoleNames } from '@/lib/discord/guild';
+import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields } from '@/lib/users/display';
+import { resolveGuildJoinedAt } from '@/lib/discord/guild-tenure';
 import {
   getUserRole,
   inferUserRole,
   isSiteUserRole,
   loadUserRoleContext,
   SITE_ROLE_LABELS,
-} from '@/lib/user-role';
+} from '@/lib/users/role';
 
 export async function GET() {
   try {

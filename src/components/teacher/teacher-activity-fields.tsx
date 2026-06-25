@@ -1,6 +1,6 @@
 "use client";
 
-import { ACTIVITY_DAYS } from "@/lib/form-options";
+import { ACTIVITY_DAYS } from "@/lib/utils/form-options";
 import { Label, Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 

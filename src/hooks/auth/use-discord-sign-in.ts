@@ -1,7 +1,7 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { resetAuthCookies } from '@/lib/auth-errors';
+import { resetAuthCookies } from '@/lib/auth/errors';
 
 function resolveCallbackUrl(callbackUrl?: string): string {
   if (callbackUrl) return callbackUrl;

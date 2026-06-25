@@ -1,18 +1,18 @@
 import NextAuth from 'next-auth';
 import { prisma, db } from '@/lib/prisma';
-import { ensureDefaultAdmin, isAdmin } from '@/lib/rbac';
-import { authConfig } from '@/lib/auth.config';
+import { ensureDefaultAdmin, isAdmin } from '@/lib/auth/rbac';
+import { authConfig } from '@/lib/auth/config';
 import {
   checkUserGuildMembership,
   getGuildConfig,
   parseRoleNames,
   syncUserGuildData,
   syncUserGuildDataBestEffort,
-} from '@/lib/discord-guild';
-import { normalizeNickFields, userDisplayName } from '@/lib/user-display';
+} from '@/lib/discord/guild';
+import { normalizeNickFields, userDisplayName } from '@/lib/users/display';
 import { resolveTeacherEntityForUser } from '@/lib/teacher/identity';
-import { getUserRole, loadUserRoleContext, type UserRoleContext } from '@/lib/user-role';
-import { backfillTeacherDiscordUserId } from '@/lib/teacher-discord-link';
+import { getUserRole, loadUserRoleContext, type UserRoleContext } from '@/lib/users/role';
+import { backfillTeacherDiscordUserId } from '@/lib/teacher/discord-link';
 
 type DiscordProfile = {
   id: string;

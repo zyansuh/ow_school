@@ -1,12 +1,12 @@
 import { prisma } from '@/lib/prisma';
-import { getGuildConfig, getGuildMemberInfo, syncUserGuildData } from '@/lib/discord-guild';
+import { getGuildConfig, getGuildMemberInfo, syncUserGuildData } from '@/lib/discord/guild';
 import {
   globalDisplayNameOnly,
   guildNicknameOnly,
   normalizeNickFields,
   teacherDiscordLabel,
-} from '@/lib/user-display';
-import { isDiscordSnowflake } from '@/lib/discord-id';
+} from '@/lib/users/display';
+import { isDiscordSnowflake } from '@/lib/discord/id';
 
 export type AdminDiscordUserLookup = {
   found: boolean;

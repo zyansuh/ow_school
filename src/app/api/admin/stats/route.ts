@@ -6,8 +6,8 @@ import {
   lastMonths,
   mergeMonthlyStats,
 } from '@/lib/monthly-stats';
-import { countActiveStudents } from '@/lib/student-users';
-import { filterStudentUsers, loadUserRoleContext } from '@/lib/user-role';
+import { countActiveStudents } from '@/lib/students/users';
+import { filterStudentUsers, loadUserRoleContext } from '@/lib/users/role';
 
 export async function GET() {
   try {

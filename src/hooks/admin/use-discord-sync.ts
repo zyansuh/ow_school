@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import type { DiscordSyncReport } from '@/lib/discord-sync-admin';
+import type { DiscordSyncReport } from '@/lib/admin/discord-sync';
 
 export function useDiscordSync() {
   const [syncing, setSyncing] = useState(false);

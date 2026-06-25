@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { teacherPublicInclude, teachersForClassIdWhere } from '@/lib/teachers-query';
+import { teacherPublicInclude, teachersForClassIdWhere } from '@/lib/teacher/query';
 
 export async function GET(req: NextRequest) {
   const slug = req.nextUrl.searchParams.get('slug');

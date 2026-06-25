@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { normalizeNickFields, adminUserDisplayName } from '@/lib/user-display';
+import { normalizeNickFields, adminUserDisplayName } from '@/lib/users/display';
 
 export async function GET() {
   try {

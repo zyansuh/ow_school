@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { signInWithDiscord } from '@/hooks/use-discord-sign-in';
+import { signInWithDiscord } from '@/hooks/auth/use-discord-sign-in';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { userDisplayName } from '@/lib/user-display';
-import { PLAY_TIME_SLOTS } from '@/lib/form-options';
+import { userDisplayName } from '@/lib/users/display';
+import { PLAY_TIME_SLOTS } from '@/lib/utils/form-options';
 import type { TeacherSelectItem } from '@/components/apply/teacher-select-card';
 
 export function useApplyForm() {
