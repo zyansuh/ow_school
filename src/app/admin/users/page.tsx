@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { DataTable } from '@/components/ui/data-table';
 import { SkeletonTable } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { UserDisplayNickEdit } from '@/components/admin/user-display-nick-edit';
 import { formatDate, cn } from '@/lib/utils';
 import { ds } from '@/styles/design-system';
 import { toast } from 'sonner';
@@ -13,6 +14,7 @@ import { toast } from 'sonner';
 type SiteUser = {
   id: string;
   discordId: string;
+  displayNickname: string | null;
   displayName: string;
   guildNickname: string;
   discordUsername: string;
@@ -47,8 +49,9 @@ export default function AdminSiteUsersPage() {
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<(typeof ROLE_FILTERS)[number]>('전체');
 
-  useEffect(() => {
-    fetch('/api/admin/site-users')
+  const load = useCallback(() => {
+    setLoading(true);
+    return fetch('/api/admin/site-users')
       .then((r) => r.json())
       .then((data) => {
         if (!Array.isArray(data)) {
@@ -61,6 +64,10 @@ export default function AdminSiteUsersPage() {
       .catch(() => toast.error('사용자 목록을 불러오지 못했습니다'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -81,7 +88,7 @@ export default function AdminSiteUsersPage() {
     <div className={ds.pageGap}>
       <AdminPageHeader
         title="사이트 사용자"
-        description="Discord로 로그인한 적이 있는 전체 계정입니다. 학생 관리와 달리 역할·상태 필터 없이 모두 표시됩니다."
+        description="Discord로 로그인한 적이 있는 전체 계정입니다. 표시 닉네임은 관리자 화면용이며 Discord 서버 닉은 변경되지 않습니다."
       />
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -126,7 +133,16 @@ export default function AdminSiteUsersPage() {
             {
               key: 'name',
               header: '표시 이름',
-              cell: (u) => <span className="font-medium">{u.displayName}</span>,
+              cell: (u) => (
+                <UserDisplayNickEdit
+                  userId={u.id}
+                  saveUrl={`/api/admin/site-users/${u.id}`}
+                  currentDisplay={u.displayName}
+                  displayNickname={u.displayNickname}
+                  guildNickname={u.guildNickname}
+                  onSaved={() => void load()}
+                />
+              ),
             },
             {
               key: 'discordId',
