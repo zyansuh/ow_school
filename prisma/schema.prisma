@@ -19,6 +19,7 @@ model User {
   siteRole          String?
   discordRoleNames  String?
   isInGuild         Boolean           @default(false)
+  guildJoinedAt     DateTime?
   guildSyncedAt     DateTime?
   status            String            @default("active")
   classId           String?
