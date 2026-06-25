@@ -33,6 +33,7 @@ export async function GET() {
         return {
           id: u.id,
           discordId: u.discordId,
+          displayNickname: u.displayNickname,
           displayName: adminUserDisplayName(fields),
           guildNickname: guildNicknameOnly(fields) ?? '-',
           discordUsername: u.discordUsername,
