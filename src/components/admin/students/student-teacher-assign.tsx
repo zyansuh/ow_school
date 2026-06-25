@@ -38,7 +38,7 @@ export function StudentTeacherAssign({ studentId, currentTeacherId, teachers, on
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '변경 실패');
-      toast.success('담당 반장이 변경되었습니다');
+      toast.success('담당 선생님이 변경되었습니다');
       onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '변경 실패');

@@ -35,12 +35,12 @@ type SiteUser = {
   createdAt: string;
 };
 
-const ROLE_FILTERS = ['전체', '마을주민', '학생', '반장', '관리자'] as const;
+const ROLE_FILTERS = ['전체', '마을주민', '학생', '선생님', '관리자'] as const;
 const ROLE_FILTER_MAP: Record<(typeof ROLE_FILTERS)[number], SiteUserRole | null> = {
   전체: null,
   마을주민: 'resident',
   학생: 'student',
-  반장: 'teacher',
+  선생님: 'teacher',
   관리자: 'admin',
 };
 
@@ -176,7 +176,7 @@ export default function AdminSiteUsersPage() {
             },
             {
               key: 'teacher',
-              header: '담당 반장',
+              header: '담당 선생님',
               cell: (u) => <span>{u.teacherName}</span>,
               hideOnMobile: true,
             },

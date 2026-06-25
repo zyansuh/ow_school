@@ -72,7 +72,7 @@ export default function AdminStudentsPage() {
     <div>
       <AdminPageHeader
         title="학생 관리"
-        description="담당 반장 변경은 반장 휴식·개인사정 시 다른 반장으로 옮길 때 사용하세요."
+        description="담당 선생님 변경은 선생님 휴식·개인사정 시 다른 선생님으로 옮길 때 사용하세요."
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/graduated">졸업생 목록</Link>
@@ -80,9 +80,9 @@ export default function AdminStudentsPage() {
         }
       />
       <p className="text-sm text-muted-foreground mb-4">
-        반장 휴식은{' '}
+        선생님 휴식은{' '}
         <Link href="/admin/teachers" className="text-primary hover:underline">
-          반장 관리
+          선생님 관리
         </Link>
         에서 비활성 처리할 수 있습니다.
       </p>
@@ -134,7 +134,7 @@ export default function AdminStudentsPage() {
             { key: 'class', header: '반', cell: (u) => u.className },
             {
               key: 'teacher',
-              header: '담당 반장',
+              header: '담당 선생님',
               cell: (u) => (
                 <StudentTeacherAssign
                   key={`${u.id}-${u.teacherId ?? 'none'}`}

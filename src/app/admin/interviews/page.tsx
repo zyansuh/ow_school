@@ -97,7 +97,7 @@ export default function AdminInterviewsPage() {
           columns={[
             { key: 'nick', header: '서버닉네임', cell: (iv) => iv.nickname },
             { key: 'class', header: '반', cell: (iv) => iv.className || '-' },
-            { key: 'teacher', header: '담당 반장', cell: (iv) => iv.teacher?.name || '-' },
+            { key: 'teacher', header: '담당 선생님', cell: (iv) => iv.teacher?.name || '-' },
             { key: 'club', header: '동호회', cell: (iv) => (iv.joinedClub ? '예' : '아니오') },
             {
               key: 'date',

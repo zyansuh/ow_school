@@ -5,11 +5,19 @@ import { assertDiscordUserIdAvailable } from '@/lib/teacher/auth';
 import { mapTeacherWithClasses, syncTeacherClasses } from '@/lib/teacher/classes';
 import { assertValidTeacherDiscordField } from '@/lib/teacher/discord-field';
 import { computeTeacherIsActive } from '@/lib/teacher/recruiting';
+import {
+  teacherBirthYearField,
+  teacherGenderField,
+  teacherRegionField,
+} from '@/lib/teacher/profile';
 import { z } from 'zod';
 
 const teacherSchema = z.object({
   name: z.string().min(1, '이름을 입력하세요'),
   mbti: z.string().optional(),
+  gender: teacherGenderField,
+  region: teacherRegionField,
+  birthYear: teacherBirthYearField,
   intro: z.string().optional(),
   classIds: z.array(z.string().min(1)).min(1, '담당 반을 1개 이상 선택하세요'),
   classId: z.string().optional(),
@@ -81,7 +89,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '디스코드 서버 닉네임에 User ID를 넣을 수 없습니다' }, { status: 400 });
     }
     if (e instanceof Error && e.message.startsWith('DISCORD_USER_ID_TAKEN')) {
-      return NextResponse.json({ error: '이미 다른 반장에 연결된 Discord User ID입니다' }, { status: 409 });
+      return NextResponse.json({ error: '이미 다른 선생님에 연결된 Discord User ID입니다' }, { status: 409 });
     }
     return apiError(e);
   }

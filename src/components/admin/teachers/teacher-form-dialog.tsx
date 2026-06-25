@@ -12,6 +12,10 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { MBTI_TYPES } from '@/lib/utils/mbti';
+import {
+  TEACHER_BIRTH_YEARS,
+  TEACHER_GENDER_OPTIONS,
+} from '@/lib/teacher/profile';
 import { cn } from '@/lib/utils';
 import { isDiscordSnowflake } from '@/lib/discord/id';
 import {
@@ -115,7 +119,7 @@ export function TeacherFormDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
-          <DialogTitle>{editing ? '반장 수정' : '새 반장 등록'}</DialogTitle>
+          <DialogTitle>{editing ? '선생님 수정' : '새 선생님 등록'}</DialogTitle>
           <DialogDescription>
             담당 반은 여러 개 선택할 수 있습니다. Discord 정보는 검색·ID로 선택한 대상 유저 기준입니다.
           </DialogDescription>
@@ -225,12 +229,48 @@ export function TeacherFormDialog({
             )}
           </section>
 
-          <section className="space-y-3">
-            <Field label="소개">
+          <section className="space-y-5">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">반장 소개</h3>
+            <div className="grid sm:grid-cols-3 gap-5">
+              <Field label="성별">
+                <Select
+                  value={form.gender}
+                  onChange={(e) => onChange({ ...form, gender: e.target.value })}
+                >
+                  {TEACHER_GENDER_OPTIONS.map((opt) => (
+                    <option key={opt.value || 'none'} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="지역">
+                <Input
+                  value={form.region}
+                  onChange={(e) => onChange({ ...form, region: e.target.value })}
+                  placeholder="예: 서울, 부산"
+                />
+              </Field>
+              <Field label="연도">
+                <Select
+                  value={form.birthYear}
+                  onChange={(e) => onChange({ ...form, birthYear: e.target.value })}
+                >
+                  <option value="">선택 안 함</option>
+                  {TEACHER_BIRTH_YEARS.map((year) => (
+                    <option key={year} value={year}>
+                      {year}년생
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <Field label="소개 글">
               <Textarea
                 value={form.intro}
                 onChange={(e) => onChange({ ...form, intro: e.target.value })}
                 className="min-h-[120px]"
+                placeholder="반장님 소개를 입력하세요"
               />
             </Field>
           </section>

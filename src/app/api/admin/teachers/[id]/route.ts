@@ -7,11 +7,19 @@ import { mapTeacherWithClasses, syncTeacherClasses } from '@/lib/teacher/classes
 import { assertValidTeacherDiscordField } from '@/lib/teacher/discord-field';
 import { countActiveStudentsForTeacher } from '@/lib/teacher/counts';
 import { computeTeacherIsActive } from '@/lib/teacher/recruiting';
+import {
+  teacherBirthYearField,
+  teacherGenderField,
+  teacherRegionField,
+} from '@/lib/teacher/profile';
 import { z } from 'zod';
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
   mbti: z.string().optional(),
+  gender: teacherGenderField,
+  region: teacherRegionField,
+  birthYear: teacherBirthYearField,
   intro: z.string().optional(),
   classIds: z.array(z.string().min(1)).min(1).optional(),
   classId: z.string().optional(),
@@ -84,7 +92,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: '디스코드 서버 닉네임에 User ID를 넣을 수 없습니다' }, { status: 400 });
     }
     if (e instanceof Error && e.message.startsWith('DISCORD_USER_ID_TAKEN')) {
-      return NextResponse.json({ error: '이미 다른 반장에 연결된 Discord User ID입니다' }, { status: 409 });
+      return NextResponse.json({ error: '이미 다른 선생님에 연결된 Discord User ID입니다' }, { status: 409 });
     }
     return apiError(e);
   }
@@ -98,7 +106,7 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (e instanceof Error && e.message === 'TEACHER_NOT_FOUND') {
-      return NextResponse.json({ error: '반장을 찾을 수 없습니다' }, { status: 404 });
+      return NextResponse.json({ error: '선생님을 찾을 수 없습니다' }, { status: 404 });
     }
     return apiError(e);
   }

@@ -8,6 +8,9 @@ export type AdminTeacher = {
   id: string;
   name: string;
   mbti?: string;
+  gender?: string | null;
+  region?: string | null;
+  birthYear?: number | null;
   intro?: string;
   discord?: string;
   discordUserId?: string | null;
@@ -27,6 +30,9 @@ export type ClassItem = { id: string; name: string };
 export type TeacherFormState = {
   name: string;
   mbti: string;
+  gender: string;
+  region: string;
+  birthYear: string;
   intro: string;
   discord: string;
   discordUserId: string;
@@ -41,6 +47,9 @@ export type TeacherFormState = {
 export const emptyTeacherForm: TeacherFormState = {
   name: '',
   mbti: '',
+  gender: '',
+  region: '',
+  birthYear: '',
   intro: '',
   discord: '',
   discordUserId: '',
@@ -76,7 +85,7 @@ export function useAdminTeachers() {
         );
       })
       .catch(() => {
-        toast.error('반장 목록을 불러오지 못했습니다');
+        toast.error('선생님 목록을 불러오지 못했습니다');
         setTeachers([]);
       })
       .finally(() => setLoading(false));
@@ -110,6 +119,9 @@ export function useAdminTeachers() {
         body: JSON.stringify({
           name: form.name.trim(),
           mbti: form.mbti || undefined,
+          gender: form.gender || null,
+          region: form.region.trim() || null,
+          birthYear: form.birthYear ? Number(form.birthYear) : null,
           intro: form.intro.trim() || undefined,
           discord: form.discord.trim() || undefined,
           discordUserId: form.discordUserId.trim() || null,

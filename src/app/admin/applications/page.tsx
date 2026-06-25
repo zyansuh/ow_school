@@ -34,7 +34,7 @@ export default function AdminApplicationsPage() {
     <div>
       <AdminPageHeader
         title="신청 관리"
-        description="수강 신청은 반장 선택 시 자동 승인됩니다."
+        description="수강 신청은 선생님 선택 시 자동 승인됩니다."
       />
       {loading ? (
         <SkeletonTable rows={6} />
@@ -46,7 +46,7 @@ export default function AdminApplicationsPage() {
           emptyDescription="학생이 수강 신청을 완료하면 여기에 표시됩니다."
           columns={[
             { key: 'nick', header: '신청자', cell: (a) => a.nickname },
-            { key: 'teacher', header: '희망 반장', cell: (a) => a.teacher.name },
+            { key: 'teacher', header: '희망 선생님', cell: (a) => a.teacher.name },
             { key: 'class', header: '반', cell: (a) => a.class.name },
             {
               key: 'slot',

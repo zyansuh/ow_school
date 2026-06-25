@@ -76,7 +76,7 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="총 학생 수" value={stats.totalStudents} suffix="명" icon={Users} />
-        <StatCard label="총 반장 수" value={stats.totalTeachers} suffix="명" icon={GraduationCap} />
+        <StatCard label="총 선생님 수" value={stats.totalTeachers} suffix="명" icon={GraduationCap} />
         <StatCard label="이번 달 신청" value={stats.monthlyApplicationCount} suffix="건" icon={FileText} />
         <StatCard label="반 수" value={Object.keys(stats.byClass).length} suffix="개" icon={Layers} />
       </div>

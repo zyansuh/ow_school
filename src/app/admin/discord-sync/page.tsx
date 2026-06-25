@@ -8,7 +8,7 @@ export default function AdminDiscordSyncPage() {
       <div>
         <h1 className="text-2xl font-bold">Discord 동기화</h1>
         <p className="text-sm text-gray-400 mt-1">
-          서버 닉네임·역할을 최신화하고, 담당 학생 수와 반장 연결을 검증합니다.
+          서버 닉네임·역할을 최신화하고, 담당 학생 수와 선생님 연결을 검증합니다.
         </p>
       </div>
       <DiscordSyncPanel />
