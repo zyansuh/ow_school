@@ -10,6 +10,8 @@ const patchSchema = z.object({
   action: z.enum(['graduate', 'ungraduate']).optional(),
   teacherId: z.string().nullable().optional(),
   displayNickname: z.string().max(32).nullable().optional(),
+  sendTeacherDm: z.boolean().optional(),
+  dmTeacherId: z.string().nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -40,9 +42,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (user.status === 'graduated') {
         return NextResponse.json({ error: '이미 졸업 처리된 사용자입니다' }, { status: 400 });
       }
-      await graduateUser(id);
-      const updated = await prisma.user.findUnique({ where: { id } });
-      return NextResponse.json(updated);
+      const { user: updated, dm } = await graduateUser(id, {
+        sendTeacherDm: body.sendTeacherDm,
+        dmTeacherId: body.dmTeacherId,
+      });
+      return NextResponse.json({ ...updated, dm });
     }
 
     if (!isStudentUser(user, ctx)) {

@@ -8,7 +8,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { formatDate, STATUS_LABELS, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+import { GraduateStudentDialog } from '@/components/admin/graduate-student-dialog';
 import {
   StudentTeacherAssign,
   type TeacherOption,
@@ -36,6 +36,7 @@ export default function AdminStudentsPage() {
   const [teachers, setTeachers] = useState<TeacherOption[]>([]);
   const [filter, setFilter] = useState('전체');
   const [loading, setLoading] = useState(true);
+  const [graduateTarget, setGraduateTarget] = useState<Student | null>(null);
 
   const load = () =>
     Promise.all([
@@ -52,21 +53,6 @@ export default function AdminStudentsPage() {
   }, []);
 
   const filtered = filter === '전체' ? users : users.filter((u) => u.className === filter);
-
-  const graduate = async (id: string) => {
-    if (!confirm('이 학생을 졸업 처리하시겠습니까?')) return;
-    const res = await fetch(`/api/admin/students/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'graduate' }),
-    });
-    if (!res.ok) {
-      toast.error('졸업 처리 실패');
-      return;
-    }
-    toast.success('졸업 처리되었습니다');
-    void load();
-  };
 
   return (
     <div>
@@ -161,12 +147,29 @@ export default function AdminStudentsPage() {
               header: '관리',
               mobileFooter: true,
               cell: (u) => (
-                <Button size="sm" variant="outline" onClick={() => void graduate(u.id)}>
+                <Button size="sm" variant="outline" onClick={() => setGraduateTarget(u)}>
                   졸업
                 </Button>
               ),
             },
           ]}
+        />
+      )}
+
+      {graduateTarget && (
+        <GraduateStudentDialog
+          open={!!graduateTarget}
+          onOpenChange={(open) => !open && setGraduateTarget(null)}
+          studentId={graduateTarget.id}
+          studentName={graduateTarget.nickname}
+          assignedTeacherId={graduateTarget.teacherId}
+          assignedTeacherName={graduateTarget.teacherName}
+          saveUrl={`/api/admin/students/${graduateTarget.id}`}
+          apiMode="students"
+          onGraduated={() => {
+            setGraduateTarget(null);
+            void load();
+          }}
         />
       )}
     </div>

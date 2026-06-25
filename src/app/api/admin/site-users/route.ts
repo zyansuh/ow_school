@@ -49,6 +49,7 @@ export async function GET() {
           isInGuild: u.isInGuild,
           guildJoinedAt: guildJoinedAt?.toISOString() ?? null,
           className: u.class?.name ?? '미배정',
+          teacherId: u.teacherId,
           teacherName: u.teacher?.name ?? '-',
           status: u.status,
           interviewCount: u._count.interviews,

@@ -18,6 +18,8 @@ const patchSchema = z.object({
   displayNickname: z.string().max(32).nullable().optional(),
   siteRole: z.enum(['resident', 'student', 'teacher', 'admin']).nullable().optional(),
   statusAction: z.enum(['graduate', 'ungraduate']).optional(),
+  sendTeacherDm: z.boolean().optional(),
+  dmTeacherId: z.string().nullable().optional(),
 });
 
 /** 표시 닉네임·사이트 역할·졸업 상태만 수정 — 다른 User 필드는 변경하지 않음 */
@@ -74,7 +76,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (existing.status === 'graduated') {
         return NextResponse.json({ error: '이미 졸업 처리된 사용자입니다' }, { status: 400 });
       }
-      await graduateUser(id);
+      const { dm } = await graduateUser(id, {
+        sendTeacherDm: body.sendTeacherDm,
+        dmTeacherId: body.dmTeacherId,
+      });
       const graduated = await prisma.user.findUnique({
         where: { id },
         include: { adminRole: true },
@@ -85,6 +90,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         status: 'graduated',
         role,
         roleLabel: SITE_ROLE_LABELS[role],
+        dm,
       });
     }
 

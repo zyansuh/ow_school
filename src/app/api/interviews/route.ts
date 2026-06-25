@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       return created;
     });
 
-    await graduateUser(user.id);
+    await graduateUser(user.id, { sendTeacherDm: true, dmTeacherId: teacherId });
 
     notifyInterviewSubmitted({
       interviewId: interview.id,

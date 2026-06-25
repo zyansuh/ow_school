@@ -28,6 +28,7 @@ type SiteUser = {
   isInGuild: boolean;
   guildJoinedAt: string | null;
   className: string;
+  teacherId: string | null;
   teacherName: string;
   status: string;
   interviewCount: number;
@@ -210,6 +211,8 @@ export default function AdminSiteUsersPage() {
                   status={u.status}
                   saveUrl={`/api/admin/site-users/${u.id}`}
                   canGraduate={u.role === 'student'}
+                  assignedTeacherId={u.teacherId}
+                  assignedTeacherName={u.teacherName !== '-' ? u.teacherName : null}
                   onSaved={() => void load()}
                 />
               ),
