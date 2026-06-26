@@ -44,9 +44,14 @@ export function ContentImageUploader({ images, thumbnailUrl, onChange, disabled 
     try {
       const uploaded: ImageItem[] = [];
       for (const file of Array.from(files)) {
+        if (file.size > 8 * 1024 * 1024) {
+          toast.error(`${file.name}: 8MB 이하만 업로드할 수 있습니다`);
+          continue;
+        }
         const url = await uploadContentImageFile(file);
         uploaded.push({ url, sortOrder: images.length + uploaded.length });
       }
+      if (!uploaded.length) return;
       const next = [...images, ...uploaded].map((img, i) => ({ ...img, sortOrder: i }));
       const nextThumb = thumbnailUrl || next[0]?.url || '';
       onChange(next, nextThumb);
@@ -91,7 +96,14 @@ export function ContentImageUploader({ images, thumbnailUrl, onChange, disabled 
               className="flex gap-3 items-center rounded-xl border border-border p-3 bg-card/50"
             >
               <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                <Image src={img.url} alt="" fill className="object-cover" sizes="96px" />
+                <Image
+                  src={img.url}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="96px"
+                  unoptimized={img.url.startsWith('/uploads/')}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground truncate">{index + 1}번째 이미지</p>

@@ -16,3 +16,5 @@ tsconfig.tsbuildinfo
 _legacy/
 public/uploads/teachers/*
 !public/uploads/teachers/.gitkeep
+public/uploads/contents/*
+!public/uploads/contents/.gitkeep
