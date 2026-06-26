@@ -14,7 +14,7 @@ type StudentUserInclude = {
 
 const activeStudentBaseWhere = {
   adminRole: null,
-  status: { not: 'graduated' as const },
+  status: 'active' as const,
 };
 
 /** 활성 학생만 조회 (teacher·admin 제외, 서버 필터) */
@@ -36,6 +36,27 @@ export async function findGraduatedStudentUsers(ctx?: UserRoleContext) {
   const roleCtx = ctx ?? (await loadUserRoleContext());
   const users = await prisma.user.findMany({
     where: { adminRole: null, status: 'graduated' },
+    include: {
+      class: true,
+      teacher: true,
+      adminRole: true,
+      applications: {
+        where: { status: 'approved' },
+        include: { class: true, teacher: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+    },
+    orderBy: { updatedAt: 'desc' },
+  });
+  return users.filter((u) => !isTeacherUser(u, roleCtx));
+}
+
+/** 퇴교 처리된 학생 (teacher·admin 제외) */
+export async function findWithdrawnStudentUsers(ctx?: UserRoleContext) {
+  const roleCtx = ctx ?? (await loadUserRoleContext());
+  const users = await prisma.user.findMany({
+    where: { adminRole: null, status: 'withdrawn' },
     include: {
       class: true,
       teacher: true,

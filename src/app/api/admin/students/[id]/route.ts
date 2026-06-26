@@ -4,10 +4,11 @@ import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { graduateUser, restoreGraduatedUser } from '@/lib/students/graduation';
 import { assignStudentTeacher } from '@/lib/students/assignment';
+import { restoreWithdrawnStudent, withdrawStudent } from '@/lib/students/withdrawal';
 import { isStudentUser, loadUserRoleContext } from '@/lib/users/role';
 
 const patchSchema = z.object({
-  action: z.enum(['graduate', 'ungraduate']).optional(),
+  action: z.enum(['graduate', 'ungraduate', 'withdraw', 'unwithdraw']).optional(),
   teacherId: z.string().nullable().optional(),
   displayNickname: z.string().max(32).nullable().optional(),
   sendTeacherDm: z.boolean().optional(),
@@ -33,7 +34,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json(updated);
     }
 
+    if (body.action === 'unwithdraw') {
+      if (user.status !== 'withdrawn') {
+        return NextResponse.json({ error: '퇴교생이 아닙니다' }, { status: 400 });
+      }
+      const updated = await restoreWithdrawnStudent(id);
+      return NextResponse.json(updated);
+    }
+
     const ctx = await loadUserRoleContext();
+
+    if (body.action === 'withdraw') {
+      if (!isStudentUser(user, ctx)) {
+        return NextResponse.json({ error: '학생만 퇴교 처리할 수 있습니다' }, { status: 400 });
+      }
+      if (user.status === 'graduated') {
+        return NextResponse.json({ error: '졸업생은 퇴교 처리할 수 없습니다' }, { status: 400 });
+      }
+      if (user.status === 'withdrawn') {
+        return NextResponse.json({ error: '이미 퇴교 처리된 사용자입니다' }, { status: 400 });
+      }
+      const updated = await withdrawStudent(id);
+      return NextResponse.json(updated);
+    }
 
     if (body.action === 'graduate') {
       if (!isStudentUser(user, ctx)) {
@@ -74,6 +97,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (e instanceof Error) {
       if (e.message === 'GRADUATED') {
         return NextResponse.json({ error: '졸업생은 선생님 배정이 불가합니다. 먼저 졸업 취소를 해주세요.' }, { status: 400 });
+      }
+      if (e.message === 'ALREADY_WITHDRAWN') {
+        return NextResponse.json({ error: '이미 퇴교 처리된 사용자입니다' }, { status: 400 });
+      }
+      if (e.message === 'NOT_WITHDRAWN') {
+        return NextResponse.json({ error: '퇴교생이 아닙니다' }, { status: 400 });
       }
       if (e.message === 'TEACHER_NOT_FOUND') {
         return NextResponse.json({ error: '선생님을 찾을 수 없습니다' }, { status: 404 });

@@ -9,6 +9,7 @@ import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { formatDate, STATUS_LABELS, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { GraduateStudentDialog } from '@/components/admin/graduate-student-dialog';
+import { WithdrawStudentDialog } from '@/components/admin/withdraw-student-dialog';
 import {
   StudentTeacherAssign,
   type TeacherOption,
@@ -37,6 +38,7 @@ export default function AdminStudentsPage() {
   const [filter, setFilter] = useState('전체');
   const [loading, setLoading] = useState(true);
   const [graduateTarget, setGraduateTarget] = useState<Student | null>(null);
+  const [withdrawTarget, setWithdrawTarget] = useState<Student | null>(null);
 
   const load = () =>
     Promise.all([
@@ -60,9 +62,14 @@ export default function AdminStudentsPage() {
         title="학생 관리"
         description="담당 선생님 변경은 선생님 휴식·개인사정 시 다른 선생님으로 옮길 때 사용하세요."
         actions={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/graduated">졸업생 목록</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/withdrawn">퇴교생 목록</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/graduated">졸업생 목록</Link>
+            </Button>
+          </div>
         }
       />
       <p className="text-sm text-muted-foreground mb-4">
@@ -100,6 +107,7 @@ export default function AdminStudentsPage() {
             {
               key: 'nick',
               header: '표시 이름',
+              width: '11rem',
               cell: (u) => (
                 <StudentDisplayNickEdit
                   studentId={u.id}
@@ -110,17 +118,31 @@ export default function AdminStudentsPage() {
                 />
               ),
             },
-            { key: 'guild', header: '길드 닉', cell: (u) => u.guildNickname },
+            {
+              key: 'guild',
+              header: '길드 닉',
+              width: '8rem',
+              cellClassName: 'whitespace-nowrap',
+              cell: (u) => u.guildNickname,
+            },
             {
               key: 'discord',
               header: 'Discord ID',
+              width: '9rem',
               cell: (u) => <span className="font-mono text-xs text-muted-foreground">{u.discordId}</span>,
               hideOnMobile: true,
             },
-            { key: 'class', header: '반', cell: (u) => u.className },
+            {
+              key: 'class',
+              header: '반',
+              width: '5.5rem',
+              cellClassName: 'whitespace-nowrap',
+              cell: (u) => u.className,
+            },
             {
               key: 'teacher',
               header: '담당 선생님',
+              width: '18rem',
               cell: (u) => (
                 <StudentTeacherAssign
                   key={`${u.id}-${u.teacherId ?? 'none'}`}
@@ -134,22 +156,38 @@ export default function AdminStudentsPage() {
             {
               key: 'status',
               header: '상태',
+              width: '4.5rem',
+              cellClassName: 'whitespace-nowrap',
               cell: (u) => <Badge variant="outline">{STATUS_LABELS[u.status] || u.status}</Badge>,
             },
             {
               key: 'date',
               header: '가입일',
+              width: '7.5rem',
+              cellClassName: 'whitespace-nowrap',
               cell: (u) => <span className="text-muted-foreground">{formatDate(u.createdAt)}</span>,
               hideOnMobile: true,
             },
             {
               key: 'action',
               header: '관리',
+              width: '10rem',
+              cellClassName: 'whitespace-nowrap',
               mobileFooter: true,
               cell: (u) => (
-                <Button size="sm" variant="outline" onClick={() => setGraduateTarget(u)}>
-                  졸업
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setGraduateTarget(u)}>
+                    졸업
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-danger border-danger/40 hover:bg-danger/10"
+                    onClick={() => setWithdrawTarget(u)}
+                  >
+                    퇴교
+                  </Button>
+                </div>
               ),
             },
           ]}
@@ -168,6 +206,19 @@ export default function AdminStudentsPage() {
           apiMode="students"
           onGraduated={() => {
             setGraduateTarget(null);
+            void load();
+          }}
+        />
+      )}
+
+      {withdrawTarget && (
+        <WithdrawStudentDialog
+          open={!!withdrawTarget}
+          onOpenChange={(open) => !open && setWithdrawTarget(null)}
+          studentId={withdrawTarget.id}
+          studentName={withdrawTarget.nickname}
+          onWithdrawn={() => {
+            setWithdrawTarget(null);
             void load();
           }}
         />

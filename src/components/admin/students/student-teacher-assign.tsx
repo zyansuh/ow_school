@@ -48,11 +48,11 @@ export function StudentTeacherAssign({ studentId, currentTeacherId, teachers, on
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 min-w-[12rem]">
       <Select
         value={teacherId}
         onChange={(e) => setTeacherId(e.target.value)}
-        className="min-w-[140px] text-xs h-8"
+        className="min-w-[11rem] max-w-full text-xs h-8 whitespace-nowrap"
       >
         <option value="">미배정</option>
         {teachers.map((t) => (

@@ -10,6 +10,7 @@ const links = [
   { href: '/admin/users', label: '사이트 사용자' },
   { href: '/admin/students', label: '학생 관리' },
   { href: '/admin/graduated', label: '졸업생' },
+  { href: '/admin/withdrawn', label: '퇴교생' },
   { href: '/admin/teachers', label: '선생님 관리' },
   { href: '/admin/contents', label: '컨텐츠 소개' },
   { href: '/admin/applications', label: '신청 관리' },
