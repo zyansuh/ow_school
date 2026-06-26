@@ -41,7 +41,7 @@ export default function AdminStudentsPage() {
   const load = () =>
     Promise.all([
       fetch('/api/admin/students').then((r) => r.json()),
-      fetch('/api/admin/teachers').then((r) => r.json()),
+      fetch('/api/admin/teachers?for=student-assign').then((r) => r.json()),
     ]).then(([students, teacherList]) => {
       setUsers(Array.isArray(students) ? students : []);
       setTeachers(Array.isArray(teacherList) ? teacherList : []);

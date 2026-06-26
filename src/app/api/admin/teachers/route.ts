@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { assertDiscordUserIdAvailable } from '@/lib/teacher/auth';
-import { mapTeacherWithClasses, syncTeacherClasses } from '@/lib/teacher/classes';
+import { mapTeacherWithClasses, syncTeacherClasses, teacherInclude } from '@/lib/teacher/classes';
+import { listTeachersForStudentAssign } from '@/lib/teacher/student-assign';
 import { assertValidTeacherDiscordField } from '@/lib/teacher/discord-field';
 import { computeTeacherIsActive } from '@/lib/teacher/recruiting';
 import {
@@ -32,14 +33,13 @@ const teacherSchema = z.object({
   maxStudents: z.number().int().min(0).max(99).optional(),
 });
 
-const teacherInclude = {
-  class: true,
-  teacherClasses: { include: { class: true } },
-} as const;
-
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await requireAdminUser();
+    if (req.nextUrl.searchParams.get('for') === 'student-assign') {
+      const teachers = await listTeachersForStudentAssign();
+      return NextResponse.json(teachers);
+    }
     const teachers = await prisma.teacher.findMany({
       include: teacherInclude,
       orderBy: { createdAt: 'desc' },
