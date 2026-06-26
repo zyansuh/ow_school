@@ -148,27 +148,37 @@ node scripts/verify-user-role.mjs
 
 | 메뉴 | URL | 핵심 기능 |
 |------|-----|-----------|
-| 대시보드 | `/admin` | 월별 차트, 반별 통계, 동기화 요약 |
+| 대시보드 | `/admin` | 월별 차트, 반별 통계, Discord 동기화 요약 (졸업후기 미리보기 없음) |
 | Discord 동기화 | `/admin/discord-sync` | 전체 유저 닉·역할·가입일, 선생님 연결 검증 |
 | **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/졸업 취소**, 서버 가입일 |
-| 학생 관리 | `/admin/students` | 담당 선생님 변경, 졸업 처리 |
+| 학생 관리 | `/admin/students` | 담당 선생님 변경(잔여 정원순), 졸업·**퇴교** 처리 |
 | 졸업생 | `/admin/graduated` | 졸업생 목록, **졸업 취소** |
+| **퇴교생** | `/admin/withdrawn` | 퇴교생 목록, **재학 복구** |
 | 선생님 관리 | `/admin/teachers` | CRUD, 활동/비활성, 정원, 복수 반 |
+| **컨텐츠 소개** | `/admin/contents` | 게시글·이미지 CRUD (Vercel Blob 또는 로컬 `public/uploads/contents`) |
 | 신청 관리 | `/admin/applications` | 수강 신청 내역 |
 | 졸업면담 | `/admin/interviews` | 조회·삭제 (감사 로그) |
-| 포인트 | `/admin/points` | 월별 집계, 엑셀 |
-| 졸업후기 | `/admin/graduation-reviews` | 조회 |
+| 포인트 | `/admin/points` | 월별 집계, 엑셀, **졸업 포인트 대상 삭제** |
+| 졸업후기 | `/admin/graduation-reviews` | 조회 (대시보드 카드는 제거됨) |
 | 관리자 목록 | `/admin/admins` | 권한 부여·해제 |
 | 권한 요청 | `/admin/roles` | `AdminRoleRequest` 승인·거절 |
 
-### 🎓 졸업 · 졸업 취소
+### 🎓 졸업 · 졸업 취소 · 퇴교
 
 | 동작 | DB 변경 | 비고 |
 |------|---------|------|
 | **졸업** | `status → graduated`, `classId`/`teacherId` null | 선생님 `currentStudents` 재계산 · **담당 선생님 DM 알림** (선택) |
 | **졸업 취소** | `status → active`, 마지막 담당·반 복원 | 면담·승인 신청 이력 기준 (`students/assignment.ts`) |
+| **퇴교** | `status → withdrawn`, `classId`/`teacherId` null | 레코드 삭제 없음 · 일반 학생 목록에서 제외 |
+| **퇴교 복구** | `status → active` | `/admin/withdrawn` — 담당 선생님은 자동 복원되지 않음 |
 
-**졸업 취소 UI:** `/admin/graduated`, `/admin/users` (졸업 관리 열), API `PATCH` `statusAction: ungraduate`
+**졸업 취소 UI:** `/admin/graduated`, `/admin/users` (졸업 관리 열), API `PATCH` `action: ungraduate`
+
+**퇴교 UI:** `/admin/students` 관리 열 **퇴교** 버튼 → 확인 모달. 목록은 `/admin/withdrawn`.
+
+**학생관리 담당 선생님 Select:** `GET /api/admin/teachers?for=student-assign` — DB 실시간 담당 학생 수 기준 **잔여 정원 많은 순**, 동일 시 이름순.
+
+**학생관리 테이블 UI:** 반·상태·관리 열 `whitespace-nowrap` 및 고정 너비로 줄바꿈 방지.
 
 **졸업 시 선생님 DM:** `/admin/students`, `/admin/users` 졸업 다이얼로그에서 발송 여부·수신 선생님 선택. 졸업면담 제출 시 담당 선생님에게 자동 DM (`lib/notifications/graduation-teacher-dm.ts`). DM 실패해도 졸업 처리는 유지됩니다.
 
@@ -543,6 +553,18 @@ sequenceDiagram
 
 - `PointHistory.userId` 기준 — 닉 변경 후에도 유지
 - 관리자 `/admin/points` · 엑셀 다운로드
+- **졸업 포인트 삭제:** 해당 월·학생의 `pointType: graduation` 내역만 삭제 (`DELETE /api/admin/points/graduation`). 동호회·기타 포인트 및 다른 월 데이터는 유지됩니다.
+
+### 컨텐츠 소개 이미지 업로드
+
+| 환경 | 저장 위치 |
+|------|-----------|
+| Vercel (`BLOB_READ_WRITE_TOKEN` 설정) | Vercel Blob `contents/` |
+| 로컬·Blob 미설정 | `public/uploads/contents/` → `/uploads/contents/…` URL |
+
+- JPEG·PNG·WebP·GIF, 최대 8MB
+- `file.type`이 비어 있으면 확장자로 MIME 보조 판별
+- 게시글 수정 시 기존 이미지 URL 유지, 폼에서 삭제·순서 변경 후 저장 시 `syncContentImages`로 DB 동기화
 
 ---
 
@@ -599,12 +621,17 @@ sequenceDiagram
 |--------|------|------|
 | GET | `/api/admin/site-users` | 전체 사용자 |
 | PATCH | `/api/admin/site-users/[id]` | `displayNickname`, `siteRole`, `statusAction`, `sendTeacherDm` |
-| PATCH | `/api/admin/students`, `[id]` | 학생·졸업·담당 (`action: graduate`, `sendTeacherDm`) |
+| PATCH | `/api/admin/students`, `[id]` | 학생·졸업·퇴교·담당 (`action: graduate` \| `withdraw` \| `unwithdraw`) |
 | GET | `/api/admin/graduated` | 졸업생 |
+| GET | `/api/admin/withdrawn` | 퇴교생 |
+| GET | `/api/admin/teachers?for=student-assign` | 학생관리용 선생님 목록 (잔여 정원순) |
 | GET/POST/PATCH/DELETE | `/api/admin/teachers`, `[id]` | 선생님 CRUD |
+| GET/POST/PATCH/DELETE | `/api/admin/contents`, `[id]` | 컨텐츠 소개 CRUD |
+| POST | `/api/admin/contents/upload` | 컨텐츠 이미지 업로드 |
 | GET | `/api/admin/applications`, `[id]` | 신청 |
 | GET/DELETE | `/api/admin/interviews`, `[id]` | 면담 |
 | GET | `/api/admin/points` | 포인트 |
+| DELETE | `/api/admin/points/graduation` | 해당 월 졸업 포인트 삭제 (`userId`, `year`, `month`) |
 | GET | `/api/admin/stats`, `/stats/monthly` | 통계 |
 | POST | `/api/admin/discord-sync` | 일괄 동기화 |
 | POST | `/api/admin/discord-sync/fix-link` | 연결 수정 |
@@ -634,7 +661,7 @@ sequenceDiagram
 | `siteRole` | `resident` \| `student` \| `teacher` \| `admin` \| null |
 | `guildJoinedAt` | 서버 가입 시각 |
 | `isInGuild` | 길드 가입 여부 (DB 기준) |
-| `status` | `active` \| `graduated` |
+| `status` | `active` \| `graduated` \| `withdrawn` |
 | `classId` / `teacherId` | 반 · 담당 선생님 |
 
 ### 전체 모델
@@ -682,6 +709,8 @@ import { ds } from '@/styles/design-system';
 | 역할·가입일 불일치 | `/admin/discord-sync` |
 | 졸업 취소 실패 | `status === graduated'` 확인, `/admin/users` 사용 |
 | 클래스 카드·선생님 카드 인원 0 | `getActiveStudentCountsByTeacher`가 User 전체 필드로 조회하는지 확인 (`enrollment/queries.ts`). 배정 후 `syncEnrollmentStats` 호출 여부 확인 |
+| 컨텐츠 이미지 업로드 실패 | `BLOB_READ_WRITE_TOKEN` 확인 또는 로컬 `public/uploads/contents` 권한 · 8MB·JPEG/PNG/WebP/GIF |
+| 졸업 포인트 삭제 후 합계 이상 | 해당 월만 삭제됨 — 페이지 새로고침 또는 월 재선택 |
 | 선생님 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 · 카드/상세는 `getActiveStudentCountsByTeacher` 통일 |
 | 졸업 DM 미발송 | `Teacher.discordUserId` 연결 확인 · `DISCORD_BOT_TOKEN` · 봇 DM 권한 |
 | Bot 닉 403 | 역할 순위 · MANAGE_NICKNAMES |
