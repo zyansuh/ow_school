@@ -1,13 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/input';
-import { LoadingPage, EmptyState } from '@/components/ui/loading';
+import { LoadingPage } from '@/components/ui/loading';
 import { StatCard } from '@/components/ui/stat-card';
-import { DataTable } from '@/components/ui/data-table';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { MonthlyStatsEditor } from '@/components/admin/monthly-stats-editor';
 import { DiscordSyncPanel } from '@/components/admin/discord-sync/discord-sync-panel';
@@ -16,7 +14,6 @@ import { toast } from 'sonner';
 import { Users, GraduationCap, FileText, Layers } from 'lucide-react';
 
 type MonthlyPoint = { month: string; count: number };
-type GraduationReview = { id: string; authorName: string; className: string; content: string; createdAt: string };
 
 function MonthlyChart({ data, color }: { data: MonthlyPoint[]; color: string }) {
   const max = Math.max(...data.map((d) => d.count), 1);
@@ -47,14 +44,12 @@ export default function AdminDashboard() {
   } | null>(null);
   const [noticesText, setNoticesText] = useState('');
   const [savingNotices, setSavingNotices] = useState(false);
-  const [reviews, setReviews] = useState<GraduationReview[]>([]);
 
   const loadStats = () => fetch('/api/admin/stats').then((r) => r.json()).then((d) => setStats(d.stats));
 
   useEffect(() => {
     loadStats();
     fetch('/api/notices').then((r) => r.json()).then((d) => setNoticesText((d.items as string[]).join('\n')));
-    fetch('/api/admin/graduation-reviews').then((r) => r.json()).then((d) => { if (Array.isArray(d)) setReviews(d); });
   }, []);
 
   const saveNotices = async () => {
@@ -104,26 +99,6 @@ export default function AdminDashboard() {
             </div>
           ))}
         </div>
-      </Card>
-
-      <Card className={`${ds.card} ${ds.cardPad}`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className={ds.sectionTitle}>졸업후기</h2>
-          <Link href="/admin/graduation-reviews" className="text-sm text-primary hover:underline">전체 보기 →</Link>
-        </div>
-        {reviews.length === 0 ? (
-          <EmptyState title="등록된 졸업후기가 없습니다" />
-        ) : (
-          <DataTable
-            data={reviews.slice(0, 5)}
-            keyExtractor={(r) => r.id}
-            columns={[
-              { key: 'author', header: '작성자', cell: (r) => r.authorName },
-              { key: 'class', header: '반', cell: (r) => <span className="text-primary">{r.className}</span> },
-              { key: 'content', header: '내용', cell: (r) => <p className="line-clamp-2 text-muted-foreground">{r.content}</p> },
-            ]}
-          />
-        )}
       </Card>
 
       <Card className={`${ds.card} ${ds.cardPad}`}>
