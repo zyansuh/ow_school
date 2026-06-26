@@ -87,3 +87,20 @@ export async function getMonthlyPointReport(year: number, month: number) {
 
   return { year, month, summary, rows };
 }
+
+function monthRangeBounds(year: number, month: number) {
+  return monthRange(year, month);
+}
+
+/** 해당 월·학생의 졸업 포인트 내역만 삭제 (다른 포인트·다른 월 데이터는 유지) */
+export async function deleteGraduationPointsForUser(userId: string, year: number, month: number) {
+  const { start, end } = monthRangeBounds(year, month);
+  const result = await prisma.pointHistory.deleteMany({
+    where: {
+      userId,
+      pointType: 'graduation',
+      createdAt: { gte: start, lt: end },
+    },
+  });
+  return result.count;
+}

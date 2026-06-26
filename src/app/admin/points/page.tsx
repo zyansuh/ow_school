@@ -7,9 +7,11 @@ import { SkeletonTable, SkeletonStatGrid } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
 import { DataTable } from '@/components/ui/data-table';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { DeleteGraduationPointDialog } from '@/components/admin/points/delete-graduation-point-dialog';
 import { formatPoint } from '@/lib/points';
 import type { MonthlyPointRow, MonthlyPointSummary } from '@/lib/admin/points';
-import { Download, Users, GraduationCap, Trophy, Coins } from 'lucide-react';
+import { Download, Users, GraduationCap, Trophy, Coins, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 type Report = {
   year: number;
@@ -47,6 +49,8 @@ export default function AdminPointsPage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<MonthlyPointRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async (y: number, m: number) => {
     setLoading(true);
@@ -62,6 +66,31 @@ export default function AdminPointsPage() {
   useEffect(() => {
     void load(year, month);
   }, [year, month, load]);
+
+  const confirmDeleteGraduation = async () => {
+    if (!deleteTarget || !report) return;
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/admin/points/graduation', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: deleteTarget.userId,
+          year: report.year,
+          month: report.month,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '삭제 실패');
+      toast.success('졸업 포인트가 삭제되었습니다');
+      setDeleteTarget(null);
+      await load(year, month);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '삭제 실패');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const summary = report?.summary;
   const rows = report?.rows ?? [];
@@ -140,10 +169,39 @@ export default function AdminPointsPage() {
                 header: '총 포인트',
                 cell: (r) => <span className="tabular-nums font-semibold text-primary">{formatAmount(r.totalPoint)}</span>,
               },
+              {
+                key: 'action',
+                header: '관리',
+                width: '5.5rem',
+                cellClassName: 'whitespace-nowrap',
+                mobileFooter: true,
+                cell: (r) =>
+                  r.graduationPoint > 0 ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-danger border-danger/40 hover:bg-danger/10"
+                      onClick={() => setDeleteTarget(r)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />
+                      삭제
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  ),
+              },
             ]}
           />
         </>
       )}
+
+      <DeleteGraduationPointDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        studentName={deleteTarget?.serverNick ?? ''}
+        loading={deleting}
+        onConfirm={() => void confirmDeleteGraduation()}
+      />
     </div>
   );
 }
