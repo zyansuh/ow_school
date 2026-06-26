@@ -100,6 +100,8 @@ export default function AdminStudentsPage() {
         <SkeletonTable rows={8} />
       ) : (
         <DataTable
+          layout="wide"
+          scrollHint
           data={filtered}
           keyExtractor={(u) => u.id}
           emptyTitle="학생이 없습니다"
@@ -107,7 +109,8 @@ export default function AdminStudentsPage() {
             {
               key: 'nick',
               header: '표시 이름',
-              width: '11rem',
+              width: '12rem',
+              cellClassName: 'whitespace-nowrap',
               cell: (u) => (
                 <StudentDisplayNickEdit
                   studentId={u.id}
@@ -121,28 +124,30 @@ export default function AdminStudentsPage() {
             {
               key: 'guild',
               header: '길드 닉',
-              width: '8rem',
+              width: '9rem',
               cellClassName: 'whitespace-nowrap',
               cell: (u) => u.guildNickname,
             },
             {
               key: 'discord',
               header: 'Discord ID',
-              width: '9rem',
+              width: '11rem',
+              cellClassName: 'whitespace-nowrap',
               cell: (u) => <span className="font-mono text-xs text-muted-foreground">{u.discordId}</span>,
               hideOnMobile: true,
             },
             {
               key: 'class',
               header: '반',
-              width: '5.5rem',
+              width: '6rem',
               cellClassName: 'whitespace-nowrap',
               cell: (u) => u.className,
             },
             {
               key: 'teacher',
               header: '담당 선생님',
-              width: '18rem',
+              width: '26rem',
+              cellClassName: 'whitespace-nowrap',
               cell: (u) => (
                 <StudentTeacherAssign
                   key={`${u.id}-${u.teacherId ?? 'none'}`}
@@ -156,14 +161,14 @@ export default function AdminStudentsPage() {
             {
               key: 'status',
               header: '상태',
-              width: '4.5rem',
+              width: '5rem',
               cellClassName: 'whitespace-nowrap',
               cell: (u) => <Badge variant="outline">{STATUS_LABELS[u.status] || u.status}</Badge>,
             },
             {
               key: 'date',
               header: '가입일',
-              width: '7.5rem',
+              width: '8.5rem',
               cellClassName: 'whitespace-nowrap',
               cell: (u) => <span className="text-muted-foreground">{formatDate(u.createdAt)}</span>,
               hideOnMobile: true,
@@ -171,11 +176,11 @@ export default function AdminStudentsPage() {
             {
               key: 'action',
               header: '관리',
-              width: '10rem',
+              width: '11.5rem',
               cellClassName: 'whitespace-nowrap',
               mobileFooter: true,
               cell: (u) => (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-nowrap items-center gap-2">
                   <Button size="sm" variant="outline" onClick={() => setGraduateTarget(u)}>
                     졸업
                   </Button>

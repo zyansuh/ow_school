@@ -48,11 +48,11 @@ export function StudentTeacherAssign({ studentId, currentTeacherId, teachers, on
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 min-w-[12rem]">
+    <div className="flex flex-nowrap items-center gap-2">
       <Select
         value={teacherId}
         onChange={(e) => setTeacherId(e.target.value)}
-        className="min-w-[11rem] max-w-full text-xs h-8 whitespace-nowrap"
+        className="w-[17rem] shrink-0 text-xs h-8"
       >
         <option value="">미배정</option>
         {teachers.map((t) => (
@@ -62,7 +62,7 @@ export function StudentTeacherAssign({ studentId, currentTeacherId, teachers, on
           </option>
         ))}
       </Select>
-      <Button size="sm" variant="outline" disabled={!dirty || saving} onClick={() => void save()}>
+      <Button size="sm" variant="outline" className="shrink-0" disabled={!dirty || saving} onClick={() => void save()}>
         {saving ? '변경 중...' : '변경'}
       </Button>
     </div>
