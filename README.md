@@ -178,7 +178,7 @@ node scripts/verify-user-role.mjs
 
 **학생관리 담당 선생님 Select:** `GET /api/admin/teachers?for=student-assign` — DB 실시간 담당 학생 수 기준 **잔여 정원 많은 순**, 동일 시 이름순.
 
-**학생관리 테이블 UI:** 반·상태·관리 열 `whitespace-nowrap` 및 고정 너비로 줄바꿈 방지.
+**학생관리 테이블 UI:** `DataTable` `layout="wide"` — 열 **최소 너비** 유지 + **가로 스크롤** (`overflow-x-auto`). `table-fixed`로 뷰포트에 눌리며 잘리던 문제 방지. 반·상태·관리 열 `whitespace-nowrap`. 담당 선생님 Select `17rem` 고정 + 변경 버튼 `flex-nowrap`. PC에서 열이 많으면 표 상단 안내 문구 표시 (`scrollHint`).
 
 **졸업 시 선생님 DM:** `/admin/students`, `/admin/users` 졸업 다이얼로그에서 발송 여부·수신 선생님 선택. 졸업면담 제출 시 담당 선생님에게 자동 DM (`lib/notifications/graduation-teacher-dm.ts`). DM 실패해도 졸업 처리는 유지됩니다.
 
@@ -318,7 +318,7 @@ peaceful_game/
 
 | 폴더 | 주요 파일 | 용도 |
 |------|-----------|------|
-| `ui/` | `button`, `badge`, `card`, `input`, `dialog`, `data-table`, `stat-card`, `skeleton` | 공통 UI (shadcn 스타일) |
+| `ui/` | `button`, `badge`, `card`, `input`, `dialog`, **`data-table`** (`layout`: `compact` \| `wide`), `stat-card`, `skeleton` | 공통 UI (shadcn 스타일) |
 | `layout/` | `main-layout`, `site-header`, `site-footer`, `space-background` | 전역 레이아웃 |
 | `providers/` | `session-provider` | NextAuth SessionProvider |
 | `cards/` | `class-card`, `teacher-card` | 홈·반 카드 |
@@ -710,7 +710,7 @@ import { ds } from '@/styles/design-system';
 | 졸업 취소 실패 | `status === graduated'` 확인, `/admin/users` 사용 |
 | 클래스 카드·선생님 카드 인원 0 | `getActiveStudentCountsByTeacher`가 User 전체 필드로 조회하는지 확인 (`enrollment/queries.ts`). 배정 후 `syncEnrollmentStats` 호출 여부 확인 |
 | 컨텐츠 이미지 업로드 실패 | `BLOB_READ_WRITE_TOKEN` 확인 또는 로컬 `public/uploads/contents` 권한 · 8MB·JPEG/PNG/WebP/GIF |
-| 졸업 포인트 삭제 후 합계 이상 | 해당 월만 삭제됨 — 페이지 새로고침 또는 월 재선택 |
+| 학생관리 테이블 잘림·열 눌림 | `/admin/students`는 `layout="wide"` 적용 여부 확인 · 표 영역 좌우 스크롤 · `student-teacher-assign` Select 폭 |
 | 선생님 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 · 카드/상세는 `getActiveStudentCountsByTeacher` 통일 |
 | 졸업 DM 미발송 | `Teacher.discordUserId` 연결 확인 · `DISCORD_BOT_TOKEN` · 봇 DM 권한 |
 | Bot 닉 403 | 역할 순위 · MANAGE_NICKNAMES |
@@ -729,8 +729,20 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "guildJoinedAt" TIMESTAMP(3);
 ## 🎨 UI / UX
 
 - 다크 테마 · 우주 배경 (`space-background`)
-- 모바일: Sheet 메뉴, `DataTable` 카드 뷰
+- 모바일: Sheet 메뉴, `DataTable` 카드 뷰 (`md` 미만)
+- **관리자 넓은 테이블:** `DataTable`에 `layout="wide"` + `scrollHint` — 열 최소 너비 유지, 가로 스크롤. 학생 관리(`/admin/students`) 적용
 - Sonner 토스트 · WebP 이미지 · 홈 ISR 60초
+
+### `DataTable` 레이아웃
+
+| `layout` | 동작 | 사용처 예 |
+|----------|------|-----------|
+| `compact` (기본) | `table-fixed` + 뷰포트 너비에 맞춤 | 짧은 목록 |
+| `wide` | `table-auto` + `col minWidth` + 가로 스크롤 | 학생 관리 등 열이 많은 관리 화면 |
+
+```tsx
+<DataTable layout="wide" scrollHint columns={...} data={...} keyExtractor={...} />
+```
 
 ---
 
