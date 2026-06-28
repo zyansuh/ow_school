@@ -1,4 +1,4 @@
-import { put, BlobError } from '@vercel/blob';
+import { list, put, BlobError } from '@vercel/blob';
 import {
   buildContentImagePathname,
   isContentBlobConfigured,
@@ -16,6 +16,60 @@ export {
   resolveImageMime,
 } from '@/lib/contents/upload-shared';
 
+function getBlobReadWriteToken(): string {
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  if (!token) {
+    throw new Error('BLOB_NOT_CONFIGURED');
+  }
+  if (!token.startsWith('vercel_blob_rw_')) {
+    throw new Error('BLOB_TOKEN_INVALID');
+  }
+  return token;
+}
+
+/** 관리자 진단 — list 1건으로 토큰·Store 연결 확인 */
+export async function probeBlobConnection(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const token = getBlobReadWriteToken();
+    await list({ limit: 1, token });
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof Error && e.message === 'BLOB_NOT_CONFIGURED') {
+      return {
+        ok: false,
+        error:
+          'BLOB_READ_WRITE_TOKEN 환경 변수가 없습니다. Vercel → Storage → Blob → Connect Project 후 재배포하세요.',
+      };
+    }
+    if (e instanceof Error && e.message === 'BLOB_TOKEN_INVALID') {
+      return {
+        ok: false,
+        error: 'BLOB_READ_WRITE_TOKEN 형식이 올바르지 않습니다. Storage에서 Store를 다시 연결하세요.',
+      };
+    }
+    const detail = e instanceof BlobError ? e.message : e instanceof Error ? e.message : 'unknown';
+    return { ok: false, error: detail };
+  }
+}
+
+export async function getBlobStorageStatusWithProbe() {
+  const base = {
+    vercel: isVercelDeployment(),
+    hasReadWriteToken: !!process.env.BLOB_READ_WRITE_TOKEN?.trim(),
+    hasOidcToken: !!process.env.VERCEL_OIDC_TOKEN?.trim(),
+    hasStoreId: !!process.env.BLOB_STORE_ID?.trim(),
+    configured: isContentBlobConfigured(),
+    uploadMode: 'server' as const,
+    maxBytes: maxUploadBytes(),
+  };
+  const probe = await probeBlobConnection();
+  return {
+    ...base,
+    probe,
+    ready: probe.ok,
+  };
+}
+
 async function uploadContentImageLocal(file: File, mime: string): Promise<string> {
   const { mkdir, writeFile } = await import('fs/promises');
   const path = await import('path');
@@ -29,27 +83,20 @@ async function uploadContentImageLocal(file: File, mime: string): Promise<string
 }
 
 async function uploadContentImageBlob(file: File, mime: string): Promise<string> {
+  const token = getBlobReadWriteToken();
   const pathname = buildContentImagePathname(mime);
   const body = Buffer.from(await file.arrayBuffer());
-  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-  const storeId = process.env.BLOB_STORE_ID?.trim();
-
-  if (isVercelDeployment() && !token && !storeId) {
-    throw new Error('BLOB_NOT_CONFIGURED');
-  }
 
   const blob = await put(pathname, body, {
     access: 'public',
     addRandomSuffix: false,
     contentType: mime,
-    ...(token ? { token } : {}),
-    ...(storeId ? { storeId } : {}),
+    token,
   });
 
   return blob.url;
 }
 
-/** 로컬 개발용 — FormData 서버 업로드 */
 export async function uploadContentImageServer(file: File): Promise<string> {
   const mime = resolveImageMime(file);
   if (!mime) {
@@ -91,7 +138,13 @@ export function mapUploadErrorMessage(error: unknown): { status: number; message
       return {
         status: 503,
         message:
-          'Vercel Blob이 연결되지 않았습니다. Vercel 대시보드 → Storage → Blob Store → Connect Project 후 재배포하세요.',
+          'BLOB_READ_WRITE_TOKEN이 없습니다. Vercel 대시보드 → ow-school → Storage → Blob Store → Connect Project → Redeploy 후 다시 시도하세요.',
+      };
+    case 'BLOB_TOKEN_INVALID':
+      return {
+        status: 503,
+        message:
+          'BLOB_READ_WRITE_TOKEN이 유효하지 않습니다. Storage에서 Blob Store 연결을 해제 후 다시 Connect하고 재배포하세요.',
       };
     default:
       break;
@@ -103,7 +156,7 @@ export function mapUploadErrorMessage(error: unknown): { status: number; message
       status: 503,
       message: detail
         ? `Vercel Blob 업로드 실패: ${detail}`
-        : 'Vercel Blob 업로드에 실패했습니다. Storage에서 Blob Store가 이 프로젝트에 연결되어 있는지 확인하세요.',
+        : 'Vercel Blob 업로드에 실패했습니다. GET /api/admin/contents/upload 에서 probe.ok 확인 후 Storage 연결을 점검하세요.',
     };
   }
 

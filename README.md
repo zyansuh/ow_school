@@ -571,8 +571,10 @@ sequenceDiagram
 2. **Storage** 탭 → **Blob** Store가 없으면 **Create** → 이름 예: `ow-school-blob`
 3. Store 상세 → **Connect to Project** → **ow-school** 선택 → Connect
 4. **Redeploy** (환경 변수 `BLOB_READ_WRITE_TOKEN` 또는 `BLOB_STORE_ID` + OIDC 자동 주입)
-5. 관리자 로그인 후 연결 확인:
-   - `GET /api/admin/contents/upload` → `{ hasReadWriteToken, hasStoreId, configured, ... }` (토큰 값은 노출 안 함)
+5. 관리자 로그인 후 연결 확인: `GET /api/admin/contents/upload`
+   - `ready: true` · `probe.ok: true` → 업로드 가능
+   - `hasReadWriteToken: false` → Storage **Connect Project** 후 **Redeploy** 필수
+   - `probe.ok: false` → `probe.error` 메시지 확인 (토큰 만료·Store 불일치)
 6. **컨텐츠 소개** → 이미지 추가 (배포 환경 **4MB 이하**)
 
 **업로드 흐름 (프로덕션)**
@@ -733,8 +735,7 @@ import { ds } from '@/styles/design-system';
 | 역할·가입일 불일치 | `/admin/discord-sync` |
 | 졸업 취소 실패 | `status === graduated'` 확인, `/admin/users` 사용 |
 | 클래스 카드·선생님 카드 인원 0 | `getActiveStudentCountsByTeacher`가 User 전체 필드로 조회하는지 확인 (`enrollment/queries.ts`). 배정 후 `syncEnrollmentStats` 호출 여부 확인 |
-| 컨텐츠 이미지 CORS / vercel.com/api/blob | 클라이언트 직접 업로드 사용 금지 — 서버 FormData 경유 확인 · Blob Store Connect 후 재배포 |
-| 컨텐츠 이미지 업로드 503 | Vercel **Storage → Blob → Connect Project** · `GET /api/admin/contents/upload`에서 `hasStoreId`/`hasReadWriteToken` · 4MB 이하 |
+| 컨텐츠 Blob 업로드 실패 | `GET /api/admin/contents/upload` → `ready`/`probe.ok` 확인 · `BLOB_READ_WRITE_TOKEN` 없으면 Storage Connect + **Redeploy** |
 | 학생관리 테이블 잘림·열 눌림 | `/admin/students`는 `layout="wide"` 적용 여부 확인 · 표 영역 좌우 스크롤 · `student-teacher-assign` Select 폭 |
 | 선생님 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 · 카드/상세는 `getActiveStudentCountsByTeacher` 통일 |
 | 졸업 DM 미발송 | `Teacher.discordUserId` 연결 확인 · `DISCORD_BOT_TOKEN` · 봇 DM 권한 |

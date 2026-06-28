@@ -28,9 +28,8 @@ export function isVercelDeployment(): boolean {
 }
 
 export function isContentBlobConfigured(): boolean {
-  if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) return true;
-  if (process.env.VERCEL_OIDC_TOKEN?.trim() && process.env.BLOB_STORE_ID?.trim()) return true;
-  return false;
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  return !!token && token.startsWith('vercel_blob_rw_');
 }
 
 export function maxUploadBytes(options?: { productionHost?: boolean }): number {

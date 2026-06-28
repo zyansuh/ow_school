@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  blobStorageStatus,
+  getBlobStorageStatusWithProbe,
   mapUploadErrorMessage,
   maxUploadBytes,
   resolveImageMime,
@@ -15,7 +15,7 @@ export const maxDuration = 60;
 export async function GET() {
   try {
     await requireAdminUser();
-    return NextResponse.json(blobStorageStatus());
+    return NextResponse.json(await getBlobStorageStatusWithProbe());
   } catch (e) {
     return apiError(e);
   }
