@@ -73,7 +73,7 @@ export function ContentImageUploader({ images, thumbnailUrl, onChange, disabled 
       >
         <ImagePlus className="h-8 w-8 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">
-          {uploading ? '업로드 중…' : '클릭하여 이미지 추가 (여러 장 선택 가능)'}
+          {uploading ? '업로드 중…' : '클릭하여 이미지 추가 (여러 장 선택 가능, JPEG/PNG/WebP/GIF · 배포 환경 4MB 이하)'}
         </span>
         <input
           type="file"

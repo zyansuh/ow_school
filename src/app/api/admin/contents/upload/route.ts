@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  mapUploadErrorMessage,
+  maxUploadBytes,
+  resolveImageMime,
+  uploadContentImage,
+} from '@/lib/contents/upload';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
-import { uploadContentImage, resolveImageMime } from '@/lib/contents/upload';
 
-const MAX_BYTES = 8 * 1024 * 1024;
+export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,21 +23,28 @@ export async function POST(req: NextRequest) {
     if (!resolveImageMime(file)) {
       return NextResponse.json({ error: 'JPEG·PNG·WebP·GIF만 업로드할 수 있습니다' }, { status: 400 });
     }
-    if (file.size > MAX_BYTES) {
-      return NextResponse.json({ error: '이미지는 8MB 이하여야 합니다' }, { status: 400 });
+
+    const limit = maxUploadBytes();
+    if (file.size > limit) {
+      return NextResponse.json(
+        {
+          error:
+            limit <= 4 * 1024 * 1024
+              ? 'Vercel 배포 환경에서는 이미지가 4MB 이하여야 합니다'
+              : '이미지는 8MB 이하여야 합니다',
+        },
+        { status: 400 },
+      );
     }
 
     const url = await uploadContentImage(file);
     return NextResponse.json({ url });
   } catch (e) {
-    if (e instanceof Error) {
-      if (e.message === 'INVALID_IMAGE_TYPE') {
-        return NextResponse.json({ error: 'JPEG·PNG·WebP·GIF만 업로드할 수 있습니다' }, { status: 400 });
-      }
-      if (e.message === 'IMAGE_TOO_LARGE') {
-        return NextResponse.json({ error: '이미지는 8MB 이하여야 합니다' }, { status: 400 });
-      }
+    const mapped = mapUploadErrorMessage(e);
+    if (mapped) {
+      return NextResponse.json({ error: mapped.message }, { status: mapped.status });
     }
+    console.error('[contents/upload]', e);
     return apiError(e);
   }
 }
