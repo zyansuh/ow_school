@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import type { ContentPostDetail } from '@/lib/contents/types';
+import { uploadContentImageFile } from '@/lib/contents/upload-client';
 
 export type ContentFormState = {
   title: string;
@@ -124,11 +125,4 @@ export function useAdminContents() {
   return { posts, loading, saving, deletingId, load, save, remove };
 }
 
-export async function uploadContentImageFile(file: File): Promise<string> {
-  const form = new FormData();
-  form.append('file', file);
-  const res = await fetch('/api/admin/contents/upload', { method: 'POST', body: form });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || '업로드 실패');
-  return data.url as string;
-}
+export { uploadContentImageFile };

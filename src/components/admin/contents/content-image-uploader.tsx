@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { ArrowDown, ArrowUp, ImagePlus, Star, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { uploadContentImageFile } from '@/hooks/admin/use-admin-contents';
+import { uploadContentImageFile } from '@/lib/contents/upload-client';
 import { toast } from 'sonner';
 
 type ImageItem = { url: string; sortOrder: number };

@@ -1,57 +1,25 @@
 import { put, BlobError } from '@vercel/blob';
+import {
+  buildContentImagePathname,
+  isContentBlobConfigured,
+  isVercelDeployment,
+  maxUploadBytes,
+  resolveImageMime,
+} from '@/lib/contents/upload-shared';
 
-const MAX_BYTES = 8 * 1024 * 1024; // 8MB
-/** Vercel Serverless 요청 본문 한도(약 4.5MB) — 프로덕션에서는 이보다 작게 제한 */
-const VERCEL_MAX_BYTES = 4 * 1024 * 1024;
-
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-
-const EXT_BY_MIME: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-};
-
-const MIME_BY_EXT: Record<string, string> = {
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  png: 'image/png',
-  webp: 'image/webp',
-  gif: 'image/gif',
-};
-
-function extensionFromName(name: string): string | null {
-  const ext = name.split('.').pop()?.toLowerCase();
-  return ext && MIME_BY_EXT[ext] ? ext : null;
-}
-
-export function isVercelDeployment(): boolean {
-  return process.env.VERCEL === '1';
-}
-
-/** Vercel Blob 토큰 또는 OIDC + Store ID */
-export function isContentBlobConfigured(): boolean {
-  if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) return true;
-  if (process.env.VERCEL_OIDC_TOKEN?.trim() && process.env.BLOB_STORE_ID?.trim()) return true;
-  return false;
-}
-
-export function maxUploadBytes(): number {
-  return isVercelDeployment() ? VERCEL_MAX_BYTES : MAX_BYTES;
-}
-
-/** 브라우저·OS에 따라 file.type이 비어 있을 수 있어 확장자로 보조 판별 */
-export function resolveImageMime(file: File): string | null {
-  if (file.type && ALLOWED_TYPES.has(file.type)) return file.type;
-  const ext = extensionFromName(file.name);
-  return ext ? MIME_BY_EXT[ext] : null;
-}
+export {
+  blobStorageStatus,
+  buildContentImagePathname,
+  isContentBlobConfigured,
+  isVercelDeployment,
+  maxUploadBytes,
+  resolveImageMime,
+} from '@/lib/contents/upload-shared';
 
 async function uploadContentImageLocal(file: File, mime: string): Promise<string> {
   const { mkdir, writeFile } = await import('fs/promises');
   const path = await import('path');
-  const ext = EXT_BY_MIME[mime] ?? 'jpg';
+  const ext = mime.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
   const dir = path.join(process.cwd(), 'public', 'uploads', 'contents');
   await mkdir(dir, { recursive: true });
   const name = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
@@ -61,20 +29,22 @@ async function uploadContentImageLocal(file: File, mime: string): Promise<string
 }
 
 async function uploadContentImageBlob(file: File, mime: string): Promise<string> {
-  const ext = EXT_BY_MIME[mime] ?? 'jpg';
-  const pathname = `contents/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+  const pathname = buildContentImagePathname(mime);
   const body = Buffer.from(await file.arrayBuffer());
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
 
   const blob = await put(pathname, body, {
     access: 'public',
     addRandomSuffix: false,
     contentType: mime,
+    ...(token ? { token } : {}),
   });
 
   return blob.url;
 }
 
-export async function uploadContentImage(file: File): Promise<string> {
+/** 로컬 개발용 — FormData 서버 업로드 */
+export async function uploadContentImageServer(file: File): Promise<string> {
   const mime = resolveImageMime(file);
   if (!mime) {
     throw new Error('INVALID_IMAGE_TYPE');
@@ -85,12 +55,7 @@ export async function uploadContentImage(file: File): Promise<string> {
     throw new Error(isVercelDeployment() ? 'IMAGE_TOO_LARGE_VERCEL' : 'IMAGE_TOO_LARGE');
   }
 
-  // Vercel Serverless는 파일시스템 쓰기 불가 — Blob SDK(OIDC/토큰 자동) 사용
-  if (isVercelDeployment()) {
-    return uploadContentImageBlob(file, mime);
-  }
-
-  if (isContentBlobConfigured()) {
+  if (isVercelDeployment() || isContentBlobConfigured()) {
     return uploadContentImageBlob(file, mime);
   }
 
@@ -103,6 +68,12 @@ export function mapUploadErrorMessage(error: unknown): { status: number; message
   switch (error.message) {
     case 'INVALID_IMAGE_TYPE':
       return { status: 400, message: 'JPEG·PNG·WebP·GIF만 업로드할 수 있습니다' };
+    case 'INVALID_PATH':
+      return { status: 400, message: '허용되지 않은 업로드 경로입니다' };
+    case 'UNAUTHORIZED':
+      return { status: 401, message: '로그인이 필요합니다' };
+    case 'FORBIDDEN':
+      return { status: 403, message: '관리자만 업로드할 수 있습니다' };
     case 'IMAGE_TOO_LARGE':
       return { status: 400, message: '이미지는 8MB 이하여야 합니다' };
     case 'IMAGE_TOO_LARGE_VERCEL':
@@ -114,17 +85,19 @@ export function mapUploadErrorMessage(error: unknown): { status: number; message
       return {
         status: 503,
         message:
-          'Vercel Blob이 연결되지 않았습니다. Vercel 대시보드 → Storage → Blob → 프로젝트 연결 후 재배포하세요.',
+          'Vercel Blob이 연결되지 않았습니다. Vercel 대시보드 → Storage → Blob Store → Connect Project 후 재배포하세요.',
       };
     default:
       break;
   }
 
   if (error instanceof BlobError) {
+    const detail = error.message?.trim();
     return {
       status: 503,
-      message:
-        'Vercel Blob 업로드에 실패했습니다. Storage에서 Blob Store가 이 프로젝트에 연결되어 있는지 확인하세요.',
+      message: detail
+        ? `Vercel Blob 업로드 실패: ${detail}`
+        : 'Vercel Blob 업로드에 실패했습니다. Storage에서 Blob Store가 이 프로젝트에 연결되어 있는지 확인하세요.',
     };
   }
 
