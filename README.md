@@ -559,12 +559,24 @@ sequenceDiagram
 
 | 환경 | 저장 위치 |
 |------|-----------|
-| Vercel (`BLOB_READ_WRITE_TOKEN` 설정) | Vercel Blob `contents/` |
-| 로컬·Blob 미설정 | `public/uploads/contents/` → `/uploads/contents/…` URL |
+| **Vercel 배포** (`VERCEL=1`) | **항상** Vercel Blob `contents/` (로컬 디스크 쓰기 불가) |
+| 로컬 + Blob 토큰/OIDC 설정 | Vercel Blob |
+| 로컬 + Blob 미설정 | `public/uploads/contents/` → `/uploads/contents/…` URL |
 
-- JPEG·PNG·WebP·GIF, 최대 8MB
+**Vercel Blob 연결 (프로덕션 필수)**
+
+1. [Vercel 대시보드](https://vercel.com) → 프로젝트 → **Storage** → **Create Database / Store** → **Blob**
+2. 생성한 Blob Store를 **ow-school 프로젝트에 Connect**
+3. 재배포 — `BLOB_READ_WRITE_TOKEN` 또는 `VERCEL_OIDC_TOKEN` + `BLOB_STORE_ID`가 자동 주입됨
+4. `/api/admin/contents/upload` 테스트 (관리자 로그인 후 컨텐츠 소개 → 이미지 추가)
+
+> ⚠️ Blob Store 미연결 시 Vercel에서 업로드 API가 **500** 또는 **503**을 반환합니다. (예전에는 로컬 폴더에 쓰려다 Serverless 파일시스템 제한으로 실패)
+
+- JPEG·PNG·WebP·GIF
+- 로컬 최대 **8MB** · Vercel 배포 최대 **4MB** (Serverless 요청 본문 한도)
 - `file.type`이 비어 있으면 확장자로 MIME 보조 판별
-- 게시글 수정 시 기존 이미지 URL 유지, 폼에서 삭제·순서 변경 후 저장 시 `syncContentImages`로 DB 동기화
+- 게시글·User 등 **기존 DB 데이터는 업로드와 무관** — `ContentImage` URL만 추가/갱신
+- 구현: `src/lib/contents/upload.ts`, `POST /api/admin/contents/upload`
 
 ---
 
@@ -709,7 +721,7 @@ import { ds } from '@/styles/design-system';
 | 역할·가입일 불일치 | `/admin/discord-sync` |
 | 졸업 취소 실패 | `status === graduated'` 확인, `/admin/users` 사용 |
 | 클래스 카드·선생님 카드 인원 0 | `getActiveStudentCountsByTeacher`가 User 전체 필드로 조회하는지 확인 (`enrollment/queries.ts`). 배정 후 `syncEnrollmentStats` 호출 여부 확인 |
-| 컨텐츠 이미지 업로드 실패 | `BLOB_READ_WRITE_TOKEN` 확인 또는 로컬 `public/uploads/contents` 권한 · 8MB·JPEG/PNG/WebP/GIF |
+| 컨텐츠 이미지 업로드 500/503 | Vercel **Storage → Blob → 프로젝트 Connect** 후 재배포 · 이미지 4MB 이하 · JPEG/PNG/WebP/GIF |
 | 학생관리 테이블 잘림·열 눌림 | `/admin/students`는 `layout="wide"` 적용 여부 확인 · 표 영역 좌우 스크롤 · `student-teacher-assign` Select 폭 |
 | 선생님 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 · 카드/상세는 `getActiveStudentCountsByTeacher` 통일 |
 | 졸업 DM 미발송 | `Teacher.discordUserId` 연결 확인 · `DISCORD_BOT_TOKEN` · 봇 DM 권한 |
