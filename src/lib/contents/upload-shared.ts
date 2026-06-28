@@ -63,8 +63,8 @@ export function blobStorageStatus() {
     hasReadWriteToken: !!process.env.BLOB_READ_WRITE_TOKEN?.trim(),
     hasOidcToken: !!process.env.VERCEL_OIDC_TOKEN?.trim(),
     hasStoreId: !!process.env.BLOB_STORE_ID?.trim(),
-    configured: isContentBlobConfigured() || isVercelDeployment(),
-    uploadMode: 'client' as const,
+    configured: isContentBlobConfigured(),
+    uploadMode: 'server' as const,
     maxBytes: maxUploadBytes(),
   };
 }

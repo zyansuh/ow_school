@@ -32,12 +32,18 @@ async function uploadContentImageBlob(file: File, mime: string): Promise<string>
   const pathname = buildContentImagePathname(mime);
   const body = Buffer.from(await file.arrayBuffer());
   const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  const storeId = process.env.BLOB_STORE_ID?.trim();
+
+  if (isVercelDeployment() && !token && !storeId) {
+    throw new Error('BLOB_NOT_CONFIGURED');
+  }
 
   const blob = await put(pathname, body, {
     access: 'public',
     addRandomSuffix: false,
     contentType: mime,
     ...(token ? { token } : {}),
+    ...(storeId ? { storeId } : {}),
   });
 
   return blob.url;

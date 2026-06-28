@@ -559,9 +559,11 @@ sequenceDiagram
 
 | 환경 | 방식 | 저장 위치 |
 |------|------|-----------|
-| **Vercel 배포** | 브라우저 → `@vercel/blob/client` `upload()` → `handleUpload` API | Vercel Blob `contents/` |
-| 로컬 + Blob 토큰 | 위와 동일 또는 FormData 서버 업로드 | Vercel Blob |
+| **Vercel 배포** | 브라우저 → **같은 출처** `POST /api/admin/contents/upload` (FormData) → 서버 `put()` | Vercel Blob `contents/` |
+| 로컬 + Blob 토큰 | 위와 동일 | Vercel Blob |
 | 로컬 + Blob 미설정 | FormData → `public/uploads/contents/` | `/uploads/contents/…` |
+
+> ⚠️ 브라우저에서 `@vercel/blob/client` `upload()`로 **직접** Blob API를 호출하면, Store 미연결 시 `vercel.com/api/blob`로 요청되어 **CORS 오류**가 납니다. 현재는 **서버 경유 업로드만** 사용합니다.
 
 **Vercel Blob 연결 (프로덕션 필수)**
 
@@ -576,10 +578,9 @@ sequenceDiagram
 **업로드 흐름 (프로덕션)**
 
 ```
-브라우저 upload() → POST /api/admin/contents/upload (JSON, handleUpload)
-  → 관리자 세션 확인 → Blob client token 발급
-  → 브라우저가 Vercel Blob에 직접 PUT (DB·User 데이터 변경 없음)
-  → URL을 게시글 저장 시 ContentImage에 기록
+브라우저 FormData → POST /api/admin/contents/upload (ow-school.vercel.app, CORS 없음)
+  → 관리자 세션 확인 → 서버 @vercel/blob put()
+  → public Blob URL 반환 → 게시글 저장 시 ContentImage에 기록
 ```
 
 > ⚠️ Blob Store 미연결 시 **503** + 「Storage에서 Blob Store 연결」 안내. 예전 서버 FormData 방식은 Vercel Serverless 디스크·인증 제한으로 실패하기 쉽습니다.
@@ -649,7 +650,7 @@ sequenceDiagram
 | GET | `/api/admin/teachers?for=student-assign` | 학생관리용 선생님 목록 (잔여 정원순) |
 | GET/POST/PATCH/DELETE | `/api/admin/teachers`, `[id]` | 선생님 CRUD |
 | GET/POST/PATCH/DELETE | `/api/admin/contents`, `[id]` | 컨텐츠 소개 CRUD |
-| POST | `/api/admin/contents/upload` | 이미지 업로드 (`handleUpload` JSON · 로컬 FormData 폴백) |
+| POST | `/api/admin/contents/upload` | FormData 이미지 → 서버 Blob `put` |
 | GET | `/api/admin/contents/upload` | Blob 연결 상태 (관리자, 토큰 값 미노출) |
 | GET | `/api/admin/applications`, `[id]` | 신청 |
 | GET/DELETE | `/api/admin/interviews`, `[id]` | 면담 |
@@ -732,7 +733,8 @@ import { ds } from '@/styles/design-system';
 | 역할·가입일 불일치 | `/admin/discord-sync` |
 | 졸업 취소 실패 | `status === graduated'` 확인, `/admin/users` 사용 |
 | 클래스 카드·선생님 카드 인원 0 | `getActiveStudentCountsByTeacher`가 User 전체 필드로 조회하는지 확인 (`enrollment/queries.ts`). 배정 후 `syncEnrollmentStats` 호출 여부 확인 |
-| 컨텐츠 이미지 업로드 503 | Vercel **Storage → Blob → Connect Project** 후 재배포 · 관리자로 `GET /api/admin/contents/upload`에서 `hasStoreId`/`hasReadWriteToken` 확인 · 4MB 이하 |
+| 컨텐츠 이미지 CORS / vercel.com/api/blob | 클라이언트 직접 업로드 사용 금지 — 서버 FormData 경유 확인 · Blob Store Connect 후 재배포 |
+| 컨텐츠 이미지 업로드 503 | Vercel **Storage → Blob → Connect Project** · `GET /api/admin/contents/upload`에서 `hasStoreId`/`hasReadWriteToken` · 4MB 이하 |
 | 학생관리 테이블 잘림·열 눌림 | `/admin/students`는 `layout="wide"` 적용 여부 확인 · 표 영역 좌우 스크롤 · `student-teacher-assign` Select 폭 |
 | 선생님 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 · 카드/상세는 `getActiveStudentCountsByTeacher` 통일 |
 | 졸업 DM 미발송 | `Teacher.discordUserId` 연결 확인 · `DISCORD_BOT_TOKEN` · 봇 DM 권한 |
