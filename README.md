@@ -155,7 +155,7 @@ node scripts/verify-user-role.mjs
 | 졸업생 | `/admin/graduated` | 졸업생 목록, **졸업 취소** |
 | **퇴교생** | `/admin/withdrawn` | 퇴교생 목록, **재학 복구** |
 | 선생님 관리 | `/admin/teachers` | CRUD, 활동/비활성, 정원, 복수 반 |
-| **컨텐츠 소개** | `/admin/contents` | 게시글·이미지 CRUD (Vercel Blob 또는 로컬 `public/uploads/contents`) |
+| **컨텐츠 소개** | `/admin/contents` | 게시글·이미지 CRUD (Vercel Blob → 실패 시 DB, 로컬 `public/uploads/contents`) |
 | 신청 관리 | `/admin/applications` | 수강 신청 내역 |
 | 졸업면담 | `/admin/interviews` | 조회·삭제 (감사 로그) |
 | 포인트 | `/admin/points` | 월별 집계, 엑셀, **졸업 포인트 대상 삭제** |
@@ -442,6 +442,7 @@ npm run dev         # http://localhost:3000
 | `20250625120000_user_site_role` | `siteRole` |
 | `20250625140000_user_guild_joined_at` | `guildJoinedAt` |
 | `20250625200000_content_posts` | `ContentPost` · `ContentImage` (컨텐츠 소개) |
+| `20250627120000_content_uploaded_file` | `ContentUploadedFile` (Blob 미연결 시 이미지 바이너리) |
 | `20250626100000_enrollment_stat` | `EnrollmentStat` — 공개 인원 집계 스냅샷 |
 
 > 메인 홈 레이아웃·통계는 DB 자동 집계입니다. `EnrollmentStat`은 표시용 캐시이며 User·Teacher 원본은 변경하지 않습니다.
@@ -559,37 +560,34 @@ sequenceDiagram
 
 | 환경 | 방식 | 저장 위치 |
 |------|------|-----------|
-| **Vercel 배포** | 브라우저 → **같은 출처** `POST /api/admin/contents/upload` (FormData) → 서버 `put()` | Vercel Blob `contents/` |
-| 로컬 + Blob 토큰 | 위와 동일 | Vercel Blob |
-| 로컬 + Blob 미설정 | FormData → `public/uploads/contents/` | `/uploads/contents/…` |
+| **Vercel 배포 + Blob 연결** | FormData → 서버 `put()` | Vercel Blob `contents/` (공개 URL) |
+| **Vercel 배포 + Blob 미연결/실패** | FormData → PostgreSQL | `/api/content-images/[id]` (DB `ContentUploadedFile`) |
+| 로컬 + Blob 토큰 | FormData → 서버 `put()` | Vercel Blob |
+| 로컬 + Blob 미설정 | FormData → 디스크 | `/uploads/contents/…` |
+
+> Blob이 설정돼 있어도 `put()` 실패 시 **자동으로 DB 저장**으로 전환됩니다. 503 없이 업로드 가능합니다.
 
 > ⚠️ 브라우저에서 `@vercel/blob/client` `upload()`로 **직접** Blob API를 호출하면, Store 미연결 시 `vercel.com/api/blob`로 요청되어 **CORS 오류**가 납니다. 현재는 **서버 경유 업로드만** 사용합니다.
 
-**Vercel Blob 연결 (프로덕션 필수)**
+**Vercel Blob 연결 (선택 — CDN·대용량에 유리)**
 
 1. [Vercel 대시보드](https://vercel.com) → **ow-school** 프로젝트
-2. **Storage** 탭 → **Blob** Store가 없으면 **Create** → 이름 예: `ow-school-blob`
-3. Store 상세 → **Connect to Project** → **ow-school** 선택 → Connect
-4. **Redeploy** (환경 변수 `BLOB_READ_WRITE_TOKEN` 또는 `BLOB_STORE_ID` + OIDC 자동 주입)
-5. 관리자 로그인 후 연결 확인: `GET /api/admin/contents/upload`
-   - `ready: true` · `probe.ok: true` → 업로드 가능
-   - `hasReadWriteToken: false` → Storage **Connect Project** 후 **Redeploy** 필수
-   - `probe.ok: false` → `probe.error` 메시지 확인 (토큰 만료·Store 불일치)
-6. **컨텐츠 소개** → 이미지 추가 (배포 환경 **4MB 이하**)
+2. **Storage** → **Blob** Store **Create** → **Connect to Project** → **ow-school**
+3. **Redeploy** (`BLOB_READ_WRITE_TOKEN` 자동 주입)
+4. 관리자 로그인 후 `GET /api/admin/contents/upload` → `probe.ok: true`면 Blob 사용
+5. **컨텐츠 소개** → 이미지 추가 (배포 **4MB 이하**)
 
-**업로드 흐름 (프로덕션)**
+**업로드 흐름 (프로덕션, Blob 미연결)**
 
 ```
-브라우저 FormData → POST /api/admin/contents/upload (ow-school.vercel.app, CORS 없음)
-  → 관리자 세션 확인 → 서버 @vercel/blob put()
-  → public Blob URL 반환 → 게시글 저장 시 ContentImage에 기록
+브라우저 FormData → POST /api/admin/contents/upload
+  → Blob 토큰 없음/실패 → ContentUploadedFile INSERT
+  → /api/content-images/{id} URL 반환 → ContentImage에 기록
 ```
-
-> ⚠️ Blob Store 미연결 시 **503** + 「Storage에서 Blob Store 연결」 안내. 예전 서버 FormData 방식은 Vercel Serverless 디스크·인증 제한으로 실패하기 쉽습니다.
 
 - JPEG·PNG·WebP·GIF · 로컬 8MB / 배포 4MB
 - `file.type` 비어 있으면 확장자로 MIME 보조 판별
-- 구현: `src/lib/contents/upload-client.ts`, `src/app/api/admin/contents/upload/route.ts`
+- 구현: `src/lib/contents/upload.ts`, `src/app/api/content-images/[id]/route.ts`
 
 ---
 
@@ -652,8 +650,9 @@ sequenceDiagram
 | GET | `/api/admin/teachers?for=student-assign` | 학생관리용 선생님 목록 (잔여 정원순) |
 | GET/POST/PATCH/DELETE | `/api/admin/teachers`, `[id]` | 선생님 CRUD |
 | GET/POST/PATCH/DELETE | `/api/admin/contents`, `[id]` | 컨텐츠 소개 CRUD |
-| POST | `/api/admin/contents/upload` | FormData 이미지 → 서버 Blob `put` |
+| POST | `/api/admin/contents/upload` | FormData 이미지 (Blob → 실패 시 DB) |
 | GET | `/api/admin/contents/upload` | Blob 연결 상태 (관리자, 토큰 값 미노출) |
+| GET | `/api/content-images/[id]` | DB 저장 이미지 바이너리 |
 | GET | `/api/admin/applications`, `[id]` | 신청 |
 | GET/DELETE | `/api/admin/interviews`, `[id]` | 면담 |
 | GET | `/api/admin/points` | 포인트 |
@@ -735,7 +734,7 @@ import { ds } from '@/styles/design-system';
 | 역할·가입일 불일치 | `/admin/discord-sync` |
 | 졸업 취소 실패 | `status === graduated'` 확인, `/admin/users` 사용 |
 | 클래스 카드·선생님 카드 인원 0 | `getActiveStudentCountsByTeacher`가 User 전체 필드로 조회하는지 확인 (`enrollment/queries.ts`). 배정 후 `syncEnrollmentStats` 호출 여부 확인 |
-| 컨텐츠 Blob 업로드 실패 | `GET /api/admin/contents/upload` → `ready`/`probe.ok` 확인 · `BLOB_READ_WRITE_TOKEN` 없으면 Storage Connect + **Redeploy** |
+| 컨텐츠 이미지 업로드 실패 (503) | **원인:** Vercel에 `BLOB_READ_WRITE_TOKEN` 없거나 Blob Store 미연결. **해결:** 배포 후 DB 폴백(`/api/content-images/…`) 자동 사용. Blob CDN 원하면 Storage Connect + Redeploy · `GET /api/admin/contents/upload`로 `probe.ok` 확인 |
 | 학생관리 테이블 잘림·열 눌림 | `/admin/students`는 `layout="wide"` 적용 여부 확인 · 표 영역 좌우 스크롤 · `student-teacher-assign` Select 폭 |
 | 선생님 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 · 카드/상세는 `getActiveStudentCountsByTeacher` 통일 |
 | 졸업 DM 미발송 | `Teacher.discordUserId` 연결 확인 · `DISCORD_BOT_TOKEN` · 봇 DM 권한 |

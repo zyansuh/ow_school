@@ -1,4 +1,5 @@
 import { list, put, BlobError } from '@vercel/blob';
+import { prisma } from '@/lib/prisma';
 import {
   buildContentImagePathname,
   isContentBlobConfigured,
@@ -16,57 +17,45 @@ export {
   resolveImageMime,
 } from '@/lib/contents/upload-shared';
 
-function getBlobReadWriteToken(): string {
+function getBlobReadWriteToken(): string | null {
   const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-  if (!token) {
-    throw new Error('BLOB_NOT_CONFIGURED');
-  }
-  if (!token.startsWith('vercel_blob_rw_')) {
-    throw new Error('BLOB_TOKEN_INVALID');
-  }
+  if (!token || !token.startsWith('vercel_blob_rw_')) return null;
   return token;
 }
 
 /** 관리자 진단 — list 1건으로 토큰·Store 연결 확인 */
 export async function probeBlobConnection(): Promise<{ ok: boolean; error?: string }> {
+  const token = getBlobReadWriteToken();
+  if (!token) {
+    return {
+      ok: false,
+      error:
+        'BLOB_READ_WRITE_TOKEN 없음 — DB 저장소로 자동 전환됩니다. Blob 사용 시 Storage → Connect Project 후 Redeploy.',
+    };
+  }
   try {
-    const token = getBlobReadWriteToken();
     await list({ limit: 1, token });
     return { ok: true };
   } catch (e) {
-    if (e instanceof Error && e.message === 'BLOB_NOT_CONFIGURED') {
-      return {
-        ok: false,
-        error:
-          'BLOB_READ_WRITE_TOKEN 환경 변수가 없습니다. Vercel → Storage → Blob → Connect Project 후 재배포하세요.',
-      };
-    }
-    if (e instanceof Error && e.message === 'BLOB_TOKEN_INVALID') {
-      return {
-        ok: false,
-        error: 'BLOB_READ_WRITE_TOKEN 형식이 올바르지 않습니다. Storage에서 Store를 다시 연결하세요.',
-      };
-    }
     const detail = e instanceof BlobError ? e.message : e instanceof Error ? e.message : 'unknown';
     return { ok: false, error: detail };
   }
 }
 
 export async function getBlobStorageStatusWithProbe() {
-  const base = {
+  const token = getBlobReadWriteToken();
+  const probe = await probeBlobConnection();
+  return {
     vercel: isVercelDeployment(),
-    hasReadWriteToken: !!process.env.BLOB_READ_WRITE_TOKEN?.trim(),
+    hasReadWriteToken: !!token,
     hasOidcToken: !!process.env.VERCEL_OIDC_TOKEN?.trim(),
     hasStoreId: !!process.env.BLOB_STORE_ID?.trim(),
     configured: isContentBlobConfigured(),
     uploadMode: 'server' as const,
+    storageFallback: isVercelDeployment() && !probe.ok ? 'database' : probe.ok ? 'blob' : 'local-or-database',
     maxBytes: maxUploadBytes(),
-  };
-  const probe = await probeBlobConnection();
-  return {
-    ...base,
     probe,
-    ready: probe.ok,
+    ready: probe.ok || isVercelDeployment(),
   };
 }
 
@@ -82,8 +71,22 @@ async function uploadContentImageLocal(file: File, mime: string): Promise<string
   return `/uploads/contents/${name}`;
 }
 
+async function uploadContentImageDatabase(file: File, mime: string): Promise<string> {
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const row = await prisma.contentUploadedFile.create({
+    data: {
+      mimeType: mime,
+      data: buffer,
+      size: buffer.length,
+    },
+  });
+  return `/api/content-images/${row.id}`;
+}
+
 async function uploadContentImageBlob(file: File, mime: string): Promise<string> {
   const token = getBlobReadWriteToken();
+  if (!token) throw new Error('BLOB_NOT_CONFIGURED');
+
   const pathname = buildContentImagePathname(mime);
   const body = Buffer.from(await file.arrayBuffer());
 
@@ -108,8 +111,16 @@ export async function uploadContentImageServer(file: File): Promise<string> {
     throw new Error(isVercelDeployment() ? 'IMAGE_TOO_LARGE_VERCEL' : 'IMAGE_TOO_LARGE');
   }
 
-  if (isVercelDeployment() || isContentBlobConfigured()) {
-    return uploadContentImageBlob(file, mime);
+  if (isContentBlobConfigured()) {
+    try {
+      return await uploadContentImageBlob(file, mime);
+    } catch (e) {
+      console.warn('[contents/upload] Vercel Blob failed, using database storage:', e);
+    }
+  }
+
+  if (isVercelDeployment()) {
+    return uploadContentImageDatabase(file, mime);
   }
 
   return uploadContentImageLocal(file, mime);
@@ -121,30 +132,12 @@ export function mapUploadErrorMessage(error: unknown): { status: number; message
   switch (error.message) {
     case 'INVALID_IMAGE_TYPE':
       return { status: 400, message: 'JPEG·PNG·WebP·GIF만 업로드할 수 있습니다' };
-    case 'INVALID_PATH':
-      return { status: 400, message: '허용되지 않은 업로드 경로입니다' };
-    case 'UNAUTHORIZED':
-      return { status: 401, message: '로그인이 필요합니다' };
-    case 'FORBIDDEN':
-      return { status: 403, message: '관리자만 업로드할 수 있습니다' };
     case 'IMAGE_TOO_LARGE':
       return { status: 400, message: '이미지는 8MB 이하여야 합니다' };
     case 'IMAGE_TOO_LARGE_VERCEL':
       return {
         status: 400,
         message: 'Vercel 배포 환경에서는 이미지가 4MB 이하여야 합니다',
-      };
-    case 'BLOB_NOT_CONFIGURED':
-      return {
-        status: 503,
-        message:
-          'BLOB_READ_WRITE_TOKEN이 없습니다. Vercel 대시보드 → ow-school → Storage → Blob Store → Connect Project → Redeploy 후 다시 시도하세요.',
-      };
-    case 'BLOB_TOKEN_INVALID':
-      return {
-        status: 503,
-        message:
-          'BLOB_READ_WRITE_TOKEN이 유효하지 않습니다. Storage에서 Blob Store 연결을 해제 후 다시 Connect하고 재배포하세요.',
       };
     default:
       break;
@@ -154,9 +147,7 @@ export function mapUploadErrorMessage(error: unknown): { status: number; message
     const detail = error.message?.trim();
     return {
       status: 503,
-      message: detail
-        ? `Vercel Blob 업로드 실패: ${detail}`
-        : 'Vercel Blob 업로드에 실패했습니다. GET /api/admin/contents/upload 에서 probe.ok 확인 후 Storage 연결을 점검하세요.',
+      message: detail ? `Vercel Blob 업로드 실패: ${detail}` : 'Vercel Blob 업로드에 실패했습니다.',
     };
   }
 

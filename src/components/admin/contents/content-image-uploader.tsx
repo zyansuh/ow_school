@@ -4,8 +4,9 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { ArrowDown, ArrowUp, ImagePlus, Star, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { isSelfHostedContentImage } from '@/lib/contents/image-url';
 import { uploadContentImageFile } from '@/lib/contents/upload-client';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 type ImageItem = { url: string; sortOrder: number };
@@ -102,7 +103,7 @@ export function ContentImageUploader({ images, thumbnailUrl, onChange, disabled 
                   fill
                   className="object-cover"
                   sizes="96px"
-                  unoptimized={img.url.startsWith('/uploads/')}
+                  unoptimized={isSelfHostedContentImage(img.url)}
                 />
               </div>
               <div className="flex-1 min-w-0">

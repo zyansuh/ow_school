@@ -237,3 +237,14 @@ model ContentImage {
 
   @@index([postId, sortOrder])
 }
+
+/** Vercel Blob 미연결 시 컨텐츠 이미지 바이너리 저장 (기존 ContentPost/Image URL 방식 유지) */
+model ContentUploadedFile {
+  id        String   @id @default(cuid())
+  mimeType  String
+  data      Bytes
+  size      Int
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { isSelfHostedContentImage } from '@/lib/contents/image-url';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -56,7 +57,7 @@ export function ContentImageGallery({ images, title }: Props) {
               fill
               sizes="(max-width: 640px) 100vw, 50vw"
               className="object-contain bg-black/20 transition-transform duration-300 group-hover:scale-[1.02]"
-              unoptimized={img.url.startsWith('/uploads/')}
+              unoptimized={isSelfHostedContentImage(img.url)}
             />
             <span className="absolute bottom-2 right-2 rounded-lg bg-background/80 backdrop-blur px-2 py-1 text-xs text-foreground flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <ZoomIn className="h-3.5 w-3.5" /> 확대
@@ -86,7 +87,7 @@ export function ContentImageGallery({ images, title }: Props) {
                   className="max-h-[80vh] w-auto h-auto object-contain"
                   sizes="96vw"
                   priority
-                  unoptimized={sorted[lightboxIndex].url.startsWith('/uploads/')}
+                  unoptimized={isSelfHostedContentImage(sorted[lightboxIndex].url)}
                 />
                 {sorted.length > 1 && (
                   <>
