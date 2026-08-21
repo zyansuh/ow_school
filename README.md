@@ -150,7 +150,7 @@ node scripts/verify-user-role.mjs
 |------|-----|-----------|
 | 대시보드 | `/admin` | 월별 차트, 반별 통계, Discord 동기화 요약 (졸업후기 미리보기 없음) |
 | Discord 동기화 | `/admin/discord-sync` | 전체 유저 닉·역할·가입일, 선생님 연결 검증 |
-| **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/퇴교/졸업 취소**, 서버 가입일 |
+| **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/퇴교/졸업 취소**, 서버 가입일 · **wide 가로 스크롤** |
 | 학생 관리 | `/admin/students` | 담당 선생님 변경(잔여 정원순), 졸업·**퇴교** 처리 |
 | 졸업생 | `/admin/graduated` | 졸업생 목록, **졸업 취소** |
 | **퇴교생** | `/admin/withdrawn` | 퇴교생 목록, **재학 복구** |
@@ -179,6 +179,8 @@ node scripts/verify-user-role.mjs
 **학생관리 담당 선생님 Select:** `GET /api/admin/teachers?for=student-assign` — DB 실시간 담당 학생 수 기준 **잔여 정원 많은 순**, 동일 시 이름순.
 
 **학생관리 테이블 열 순서:** 표시 이름 → 가입일 → 반 → 담당 선생님 → 관리 → 길드 닉 → Discord ID → 상태. `DataTable` `layout="wide"` + `scrollHint`로 가로 스크롤.
+
+**사이트 사용자 테이블:** `/admin/users`도 `layout="wide"` + `scrollHint` — 모바일·데스크톱 모두 표를 좌우로 스크롤해 전체 열을 볼 수 있음 (카드형으로 접지 않음).
 
 **선생님 정원·비활성:** 인원(최대 인원) 수정 시 `region: null` 등 빈 프로필 필드를 허용. `isActive`는 관리자 토글·정원 0(모집 마감)으로만 변경되며, 졸업·졸업면담·퇴교·담당 변경 시 `syncTeacherStudentCount`는 **인원 수만** 갱신해 비활성이 풀리지 않음.
 
@@ -760,16 +762,16 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "guildJoinedAt" TIMESTAMP(3);
 ## 🎨 UI / UX
 
 - 다크 테마 · 우주 배경 (`space-background`)
-- 모바일: Sheet 메뉴, `DataTable` 카드 뷰 (`md` 미만)
-- **관리자 넓은 테이블:** `DataTable`에 `layout="wide"` + `scrollHint` — 열 최소 너비 유지, 가로 스크롤. 학생 관리(`/admin/students`) 적용
+- 모바일: Sheet 메뉴, `DataTable` **compact**는 카드 뷰 (`md` 미만), **wide**는 가로 스크롤 테이블 유지
+- **관리자 넓은 테이블:** `DataTable`에 `layout="wide"` + `scrollHint` — 열 최소 너비 유지, 모바일·PC 공통 가로 스크롤. 학생 관리(`/admin/students`), 사이트 사용자(`/admin/users`) 적용
 - Sonner 토스트 · WebP 이미지 · 홈 ISR 60초
 
 ### `DataTable` 레이아웃
 
 | `layout` | 동작 | 사용처 예 |
 |----------|------|-----------|
-| `compact` (기본) | `table-fixed` + 뷰포트 너비에 맞춤 | 짧은 목록 |
-| `wide` | `table-auto` + `col minWidth` + 가로 스크롤 | 학생 관리 등 열이 많은 관리 화면 |
+| `compact` (기본) | 데스크톱 `table-fixed` · 모바일 카드형 | 짧은 목록 |
+| `wide` | `table-auto` + `col minWidth` + **모바일·데스크톱 가로 스크롤** | 학생 관리, 사이트 사용자 등 열이 많은 관리 화면 |
 
 ```tsx
 <DataTable layout="wide" scrollHint columns={...} data={...} keyExtractor={...} />

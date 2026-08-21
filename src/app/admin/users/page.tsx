@@ -128,6 +128,8 @@ export default function AdminSiteUsersPage() {
         <SkeletonTable rows={8} />
       ) : (
         <DataTable
+          layout="wide"
+          scrollHint
           className="mx-1 sm:mx-2"
           data={filtered}
           keyExtractor={(u) => u.id}
@@ -137,6 +139,7 @@ export default function AdminSiteUsersPage() {
               key: 'name',
               header: '표시 이름',
               width: '11rem',
+              cellClassName: 'whitespace-nowrap',
               cell: (u) => (
                 <UserDisplayNickEdit
                   userId={u.id}
@@ -152,18 +155,18 @@ export default function AdminSiteUsersPage() {
               key: 'discordId',
               header: 'Discord ID',
               width: '10.5rem',
-              cellClassName: 'font-mono text-xs text-muted-foreground',
+              cellClassName: 'font-mono text-xs text-muted-foreground whitespace-nowrap',
               cell: (u) => (
-                <span className="block truncate" title={u.discordId}>
+                <span className="block" title={u.discordId}>
                   {u.discordId}
                 </span>
               ),
-              hideOnMobile: true,
             },
             {
               key: 'role',
               header: '사이트 역할',
               width: '12.5rem',
+              cellClassName: 'whitespace-nowrap',
               cell: (u) => (
                 <UserSiteRoleEdit
                   userId={u.id}
@@ -179,20 +182,21 @@ export default function AdminSiteUsersPage() {
               key: 'class',
               header: '반',
               width: '5.5rem',
-              cell: (u) => <span className="block truncate">{u.className}</span>,
-              hideOnMobile: true,
+              cellClassName: 'whitespace-nowrap',
+              cell: (u) => u.className,
             },
             {
               key: 'teacher',
               header: '담당 선생님',
               width: '7rem',
-              cell: (u) => <span className="block truncate">{u.teacherName}</span>,
-              hideOnMobile: true,
+              cellClassName: 'whitespace-nowrap',
+              cell: (u) => u.teacherName,
             },
             {
               key: 'status',
               header: '상태',
               width: '4.5rem',
+              cellClassName: 'whitespace-nowrap',
               cell: (u) => (
                 <Badge
                   variant={
@@ -207,7 +211,7 @@ export default function AdminSiteUsersPage() {
               key: 'graduation',
               header: '졸업 관리',
               width: '9.5rem',
-              mobileFooter: true,
+              cellClassName: 'whitespace-nowrap',
               cell: (u) => (
                 <UserGraduationActions
                   userId={u.id}
@@ -225,32 +229,32 @@ export default function AdminSiteUsersPage() {
               key: 'guild',
               header: '서버',
               width: '4.5rem',
+              cellClassName: 'whitespace-nowrap',
               cell: (u) => (
                 <Badge variant={u.isInGuild ? 'success' : 'warning'}>
                   {u.isInGuild ? '가입' : '미가입'}
                 </Badge>
               ),
-              hideOnMobile: true,
             },
             {
               key: 'guildJoin',
               header: '서버 가입일',
               width: '6.5rem',
+              cellClassName: 'whitespace-nowrap',
               cell: (u) => (
-                <span className="text-muted-foreground text-xs whitespace-nowrap">
+                <span className="text-muted-foreground text-xs">
                   {u.guildJoinedAt ? formatDate(u.guildJoinedAt) : u.isInGuild ? '동기화 대기' : '-'}
                 </span>
               ),
-              hideOnMobile: true,
             },
             {
               key: 'joined',
               header: '최초 로그인',
               width: '6.5rem',
+              cellClassName: 'whitespace-nowrap',
               cell: (u) => (
-                <span className="text-muted-foreground text-xs whitespace-nowrap">{formatDate(u.createdAt)}</span>
+                <span className="text-muted-foreground text-xs">{formatDate(u.createdAt)}</span>
               ),
-              hideOnMobile: true,
             },
           ]}
         />
