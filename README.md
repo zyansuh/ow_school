@@ -188,6 +188,12 @@ node scripts/verify-user-role.mjs
 
 **포인트 관리:** `/admin/points` — 수달/사자/여우/미배정 **반별 섹션** + 반 필터. 엑셀에 `반` 컬럼 포함.
 
+**관리자 목록 편의 (공통):**
+- **반 필터:** 학생·사이트 사용자·신청·면담·졸업생·퇴교생·포인트에 `전체/수달반/사자반/여우반/미배정` 칩. URL `?class=수달반` 등으로 새로고침 유지 (`lib/admin/class-filter.ts`, `AdminClassFilterBar`).
+- **전역 검색:** 관리자 헤더 「닉 / Discord ID」 → `GET /api/admin/quick-search` → 사용자·학생·면담 바로가기. 목록은 `?q=`로 연동.
+- **반별 섹션:** `전체`일 때 접기/펼치기 + 건수 뱃지 (`AdminClassSections`). 특정 반 선택 시 단일 목록.
+- **더 보기:** 섹션·목록당 30명 단위 클라이언트 페이지네이션.
+
 **졸업 시 선생님 DM:** `/admin/students`, `/admin/users` 졸업 다이얼로그에서 발송 여부·수신 선생님 선택. 졸업면담 제출 시 담당 선생님에게 자동 DM (`lib/notifications/graduation-teacher-dm.ts`). DM 실패해도 졸업 처리는 유지됩니다.
 
 ### 🔗 Discord 연동 요약
@@ -764,6 +770,7 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "guildJoinedAt" TIMESTAMP(3);
 - 다크 테마 · 우주 배경 (`space-background`)
 - 모바일: Sheet 메뉴, `DataTable` **compact**는 카드 뷰 (`md` 미만), **wide**는 가로 스크롤 테이블 유지
 - **관리자 넓은 테이블:** `DataTable`에 `layout="wide"` + `scrollHint` — 열 최소 너비 유지, 모바일·PC 공통 가로 스크롤. 학생 관리(`/admin/students`), 사이트 사용자(`/admin/users`) 적용
+- **관리자 반 필터·검색·섹션·더보기:** 헤더 전역 검색, `?class=`/`?q=` URL 동기화, 반별 접기 섹션(건수), 30명 단위 더 보기
 - Sonner 토스트 · WebP 이미지 · 홈 ISR 60초
 
 ### `DataTable` 레이아웃
@@ -775,6 +782,13 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "guildJoinedAt" TIMESTAMP(3);
 
 ```tsx
 <DataTable layout="wide" scrollHint columns={...} data={...} keyExtractor={...} />
+```
+
+공통 반 필터·섹션:
+
+```tsx
+<AdminClassFilterBar />
+<AdminClassSections items={filtered} getClassName={(r) => r.className} flat={classFilter !== '전체'} renderList={(rows) => <DataTable ... />} />
 ```
 
 ---

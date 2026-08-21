@@ -1,34 +1,31 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/input';
 import { SkeletonTable, SkeletonStatGrid } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
 import { DataTable } from '@/components/ui/data-table';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { AdminClassFilterBar } from '@/components/admin/admin-class-filter-bar';
+import { AdminClassSections } from '@/components/admin/admin-class-sections';
 import { DeleteGraduationPointDialog } from '@/components/admin/points/delete-graduation-point-dialog';
 import { formatPoint } from '@/lib/points';
-import type {
-  MonthlyPointClassGroup,
-  MonthlyPointRow,
-  MonthlyPointSummary,
-} from '@/lib/admin/points';
+import type { MonthlyPointRow, MonthlyPointSummary } from '@/lib/admin/points';
 import { Download, Users, GraduationCap, Trophy, Coins, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { useAdminClassFilter } from '@/hooks/admin/use-admin-class-filter';
+import { ADMIN_CLASS_ALL, matchesClassFilter } from '@/lib/admin/class-filter';
 
 type Report = {
   year: number;
   month: number;
   summary: MonthlyPointSummary;
   rows: MonthlyPointRow[];
-  classGroups: MonthlyPointClassGroup[];
 };
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 const YEARS = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
-const CLASS_FILTERS = ['전체', '수달반', '사자반', '여우반', '미배정'] as const;
 
 function formatAmount(n: number) {
   return n.toLocaleString('ko-KR');
@@ -119,12 +116,28 @@ function PointRowsTable({
 }
 
 export default function AdminPointsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <AdminPageHeader title="포인트 관리" description="불러오는 중…" />
+          <SkeletonStatGrid />
+          <SkeletonTable rows={6} />
+        </div>
+      }
+    >
+      <AdminPointsInner />
+    </Suspense>
+  );
+}
+
+function AdminPointsInner() {
   const now = new Date();
+  const { classFilter } = useAdminClassFilter();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
-  const [classFilter, setClassFilter] = useState<(typeof CLASS_FILTERS)[number]>('전체');
   const [deleteTarget, setDeleteTarget] = useState<MonthlyPointRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -135,8 +148,10 @@ export default function AdminPointsPage() {
       const data = await res.json();
       if (res.ok) {
         setReport({
-          ...data,
-          classGroups: Array.isArray(data.classGroups) ? data.classGroups : [],
+          year: data.year,
+          month: data.month,
+          summary: data.summary,
+          rows: Array.isArray(data.rows) ? data.rows : [],
         });
       }
     } finally {
@@ -175,8 +190,17 @@ export default function AdminPointsPage() {
 
   const summary = report?.summary;
   const rows = report?.rows ?? [];
-  const classGroups = (report?.classGroups ?? []).filter(
-    (g) => classFilter === '전체' || g.className === classFilter,
+  const filtered = useMemo(
+    () => rows.filter((r) => matchesClassFilter(r.className, classFilter)),
+    [rows, classFilter],
+  );
+
+  const renderList = (list: MonthlyPointRow[]) => (
+    <PointRowsTable
+      rows={list}
+      emptyTitle={`${year}년 ${month}월 포인트 내역이 없습니다`}
+      onDelete={setDeleteTarget}
+    />
   );
 
   return (
@@ -188,12 +212,16 @@ export default function AdminPointsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Select value={String(year)} onChange={(e) => setYear(Number(e.target.value))} className="w-28">
               {YEARS.map((y) => (
-                <option key={y} value={y}>{y}년</option>
+                <option key={y} value={y}>
+                  {y}년
+                </option>
               ))}
             </Select>
             <Select value={String(month)} onChange={(e) => setMonth(Number(e.target.value))} className="w-24">
               {MONTHS.map((m) => (
-                <option key={m} value={m}>{m}월</option>
+                <option key={m} value={m}>
+                  {m}월
+                </option>
               ))}
             </Select>
             <Button
@@ -208,23 +236,7 @@ export default function AdminPointsPage() {
         }
       />
 
-      <div className="flex flex-wrap gap-2 mb-6">
-        {CLASS_FILTERS.map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setClassFilter(f)}
-            className={cn(
-              'px-4 py-2 rounded-xl text-sm transition-colors',
-              classFilter === f
-                ? 'bg-primary/15 text-primary font-medium'
-                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground',
-            )}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
+      <AdminClassFilterBar className="mb-6" />
 
       {loading && !summary ? (
         <>
@@ -236,43 +248,47 @@ export default function AdminPointsPage() {
           {summary && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <StatCard label="총 학생 수" value={summary.studentCount} suffix="명" icon={Users} />
-              <StatCard label="졸업 포인트 지급 예정" value={formatPoint(summary.graduationTotal)} icon={GraduationCap} />
-              <StatCard label="동호회 포인트 지급 예정" value={formatPoint(summary.clubTotal)} icon={Trophy} />
-              <StatCard label="총 지급 예정 포인트" value={formatPoint(summary.totalPoints)} icon={Coins} />
+              <StatCard
+                label="졸업 포인트 지급 예정"
+                value={formatPoint(summary.graduationTotal)}
+                icon={GraduationCap}
+              />
+              <StatCard
+                label="동호회 포인트 지급 예정"
+                value={formatPoint(summary.clubTotal)}
+                icon={Trophy}
+              />
+              <StatCard
+                label="총 지급 예정 포인트"
+                value={formatPoint(summary.totalPoints)}
+                icon={Coins}
+              />
             </div>
           )}
 
-          {classGroups.length === 0 ? (
-            <PointRowsTable
-              rows={[]}
-              emptyTitle={
-                classFilter === '전체'
-                  ? `${year}년 ${month}월 포인트 내역이 없습니다`
-                  : `${classFilter} 포인트 내역이 없습니다`
-              }
-              onDelete={setDeleteTarget}
-            />
-          ) : (
-            <div className="space-y-8">
-              {classGroups.map((group) => (
-                <section key={group.className} className="space-y-3">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
-                    <h2 className="text-base font-semibold text-foreground">{group.className}</h2>
-                    <p className="text-xs text-muted-foreground">
-                      {group.summary.studentCount}명 · 총 {formatAmount(group.summary.totalPoints)}P
-                      {' · '}졸업 {formatAmount(group.summary.graduationTotal)}P
-                      {' · '}동호회 {formatAmount(group.summary.clubTotal)}P
-                    </p>
-                  </div>
-                  <PointRowsTable
-                    rows={group.rows}
-                    emptyTitle={`${group.className} 포인트 내역이 없습니다`}
-                    onDelete={setDeleteTarget}
-                  />
-                </section>
-              ))}
-            </div>
-          )}
+          <AdminClassSections
+            items={filtered}
+            getClassName={(r) => r.className}
+            flat={classFilter !== ADMIN_CLASS_ALL}
+            emptyFallback={
+              <PointRowsTable
+                rows={[]}
+                emptyTitle={
+                  classFilter === ADMIN_CLASS_ALL
+                    ? `${year}년 ${month}월 포인트 내역이 없습니다`
+                    : `${classFilter} 포인트 내역이 없습니다`
+                }
+                onDelete={setDeleteTarget}
+              />
+            }
+            renderList={renderList}
+            renderMeta={(list) => {
+              const total = list.reduce((s, r) => s + r.totalPoint, 0);
+              const grad = list.reduce((s, r) => s + r.graduationPoint, 0);
+              const club = list.reduce((s, r) => s + r.clubPoint, 0);
+              return `총 ${formatAmount(total)}P · 졸업 ${formatAmount(grad)}P · 동호회 ${formatAmount(club)}P`;
+            }}
+          />
         </>
       )}
 

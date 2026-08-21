@@ -1,18 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
-import { DataTable } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { SkeletonTable } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { UserDisplayNickEdit } from '@/components/admin/user-display-nick-edit';
 import { UserSiteRoleEdit } from '@/components/admin/user-site-role-edit';
 import { UserGraduationActions } from '@/components/admin/user-graduation-actions';
+import { AdminClassFilterBar } from '@/components/admin/admin-class-filter-bar';
+import { AdminClassSections } from '@/components/admin/admin-class-sections';
 import { formatDate, cn } from '@/lib/utils';
 import { type SiteUserRole } from '@/lib/users/role';
 import { ds } from '@/styles/design-system';
 import { toast } from 'sonner';
+import { useAdminClassFilter, useAdminQueryParam } from '@/hooks/admin/use-admin-class-filter';
+import { ADMIN_CLASS_ALL, matchesClassFilter } from '@/lib/admin/class-filter';
 
 type SiteUser = {
   id: string;
@@ -46,9 +50,25 @@ const ROLE_FILTER_MAP: Record<(typeof ROLE_FILTERS)[number], SiteUserRole | null
 };
 
 export default function AdminSiteUsersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className={ds.pageGap}>
+          <AdminPageHeader title="사이트 사용자" description="불러오는 중…" />
+          <SkeletonTable rows={8} />
+        </div>
+      }
+    >
+      <AdminSiteUsersInner />
+    </Suspense>
+  );
+}
+
+function AdminSiteUsersInner() {
+  const { classFilter } = useAdminClassFilter();
+  const { query, setQuery } = useAdminQueryParam();
   const [users, setUsers] = useState<SiteUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<(typeof ROLE_FILTERS)[number]>('전체');
 
   const load = useCallback(() => {
@@ -75,16 +95,151 @@ export default function AdminSiteUsersPage() {
     const q = query.trim().toLowerCase();
     const role = ROLE_FILTER_MAP[roleFilter];
     return users.filter((u) => {
+      if (!matchesClassFilter(u.className, classFilter)) return false;
       if (role && u.role !== role) return false;
       if (!q) return true;
       return (
         u.displayName.toLowerCase().includes(q) ||
-        u.discordId.includes(q) ||
+        u.discordId.includes(query.trim()) ||
         u.discordUsername.toLowerCase().includes(q) ||
         u.guildNickname.toLowerCase().includes(q)
       );
     });
-  }, [users, query, roleFilter]);
+  }, [users, query, roleFilter, classFilter]);
+
+  const columns: DataTableColumn<SiteUser>[] = [
+    {
+      key: 'name',
+      header: '표시 이름',
+      width: '11rem',
+      cellClassName: 'whitespace-nowrap',
+      cell: (u) => (
+        <UserDisplayNickEdit
+          userId={u.id}
+          saveUrl={`/api/admin/site-users/${u.id}`}
+          currentDisplay={u.displayName}
+          displayNickname={u.displayNickname}
+          guildNickname={u.guildNickname}
+          onSaved={() => void load()}
+        />
+      ),
+    },
+    {
+      key: 'discordId',
+      header: 'Discord ID',
+      width: '10.5rem',
+      cellClassName: 'font-mono text-xs text-muted-foreground whitespace-nowrap',
+      cell: (u) => (
+        <span className="block" title={u.discordId}>
+          {u.discordId}
+        </span>
+      ),
+    },
+    {
+      key: 'role',
+      header: '사이트 역할',
+      width: '12.5rem',
+      cellClassName: 'whitespace-nowrap',
+      cell: (u) => (
+        <UserSiteRoleEdit
+          userId={u.id}
+          saveUrl={`/api/admin/site-users/${u.id}`}
+          role={u.role}
+          siteRole={u.siteRole}
+          inferredRole={u.inferredRole}
+          onSaved={() => void load()}
+        />
+      ),
+    },
+    {
+      key: 'class',
+      header: '반',
+      width: '5.5rem',
+      cellClassName: 'whitespace-nowrap',
+      cell: (u) => u.className,
+    },
+    {
+      key: 'teacher',
+      header: '담당 선생님',
+      width: '7rem',
+      cellClassName: 'whitespace-nowrap',
+      cell: (u) => u.teacherName,
+    },
+    {
+      key: 'status',
+      header: '상태',
+      width: '4.5rem',
+      cellClassName: 'whitespace-nowrap',
+      cell: (u) => (
+        <Badge
+          variant={u.status === 'graduated' || u.status === 'withdrawn' ? 'outline' : 'success'}
+        >
+          {u.status === 'graduated' ? '졸업' : u.status === 'withdrawn' ? '퇴교' : '활동'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'graduation',
+      header: '졸업 관리',
+      width: '9.5rem',
+      cellClassName: 'whitespace-nowrap',
+      cell: (u) => (
+        <UserGraduationActions
+          userId={u.id}
+          displayName={u.displayName}
+          status={u.status}
+          saveUrl={`/api/admin/site-users/${u.id}`}
+          canGraduate={u.role === 'student'}
+          assignedTeacherId={u.teacherId}
+          assignedTeacherName={u.teacherName !== '-' ? u.teacherName : null}
+          onSaved={() => void load()}
+        />
+      ),
+    },
+    {
+      key: 'guild',
+      header: '서버',
+      width: '4.5rem',
+      cellClassName: 'whitespace-nowrap',
+      cell: (u) => (
+        <Badge variant={u.isInGuild ? 'success' : 'warning'}>
+          {u.isInGuild ? '가입' : '미가입'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'guildJoin',
+      header: '서버 가입일',
+      width: '6.5rem',
+      cellClassName: 'whitespace-nowrap',
+      cell: (u) => (
+        <span className="text-muted-foreground text-xs">
+          {u.guildJoinedAt ? formatDate(u.guildJoinedAt) : u.isInGuild ? '동기화 대기' : '-'}
+        </span>
+      ),
+    },
+    {
+      key: 'joined',
+      header: '최초 로그인',
+      width: '6.5rem',
+      cellClassName: 'whitespace-nowrap',
+      cell: (u) => (
+        <span className="text-muted-foreground text-xs">{formatDate(u.createdAt)}</span>
+      ),
+    },
+  ];
+
+  const renderList = (rows: SiteUser[]) => (
+    <DataTable
+      layout="wide"
+      scrollHint
+      className="mx-1 sm:mx-2"
+      data={rows}
+      keyExtractor={(u) => u.id}
+      emptyTitle="사용자가 없습니다"
+      columns={columns}
+    />
+  );
 
   return (
     <div className={ds.pageGap}>
@@ -93,7 +248,9 @@ export default function AdminSiteUsersPage() {
         description="Discord 로그인 계정 전체 목록입니다. 자동 역할: 서버 가입 2달 미만은 학생, 그 외 일반 회원은 마을주민입니다. 졸업·퇴교·졸업 취소는 관리자가 처리할 수 있습니다."
       />
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <AdminClassFilterBar className="mb-4" />
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -121,142 +278,20 @@ export default function AdminSiteUsersPage() {
 
       <p className="text-sm text-muted-foreground mb-4">
         총 {filtered.length}명
-        {query || roleFilter !== '전체' ? ` (전체 ${users.length}명 중)` : ''}
+        {query || roleFilter !== '전체' || classFilter !== ADMIN_CLASS_ALL
+          ? ` (전체 ${users.length}명 중)`
+          : ''}
       </p>
 
       {loading ? (
         <SkeletonTable rows={8} />
       ) : (
-        <DataTable
-          layout="wide"
-          scrollHint
-          className="mx-1 sm:mx-2"
-          data={filtered}
-          keyExtractor={(u) => u.id}
-          emptyTitle="사용자가 없습니다"
-          columns={[
-            {
-              key: 'name',
-              header: '표시 이름',
-              width: '11rem',
-              cellClassName: 'whitespace-nowrap',
-              cell: (u) => (
-                <UserDisplayNickEdit
-                  userId={u.id}
-                  saveUrl={`/api/admin/site-users/${u.id}`}
-                  currentDisplay={u.displayName}
-                  displayNickname={u.displayNickname}
-                  guildNickname={u.guildNickname}
-                  onSaved={() => void load()}
-                />
-              ),
-            },
-            {
-              key: 'discordId',
-              header: 'Discord ID',
-              width: '10.5rem',
-              cellClassName: 'font-mono text-xs text-muted-foreground whitespace-nowrap',
-              cell: (u) => (
-                <span className="block" title={u.discordId}>
-                  {u.discordId}
-                </span>
-              ),
-            },
-            {
-              key: 'role',
-              header: '사이트 역할',
-              width: '12.5rem',
-              cellClassName: 'whitespace-nowrap',
-              cell: (u) => (
-                <UserSiteRoleEdit
-                  userId={u.id}
-                  saveUrl={`/api/admin/site-users/${u.id}`}
-                  role={u.role}
-                  siteRole={u.siteRole}
-                  inferredRole={u.inferredRole}
-                  onSaved={() => void load()}
-                />
-              ),
-            },
-            {
-              key: 'class',
-              header: '반',
-              width: '5.5rem',
-              cellClassName: 'whitespace-nowrap',
-              cell: (u) => u.className,
-            },
-            {
-              key: 'teacher',
-              header: '담당 선생님',
-              width: '7rem',
-              cellClassName: 'whitespace-nowrap',
-              cell: (u) => u.teacherName,
-            },
-            {
-              key: 'status',
-              header: '상태',
-              width: '4.5rem',
-              cellClassName: 'whitespace-nowrap',
-              cell: (u) => (
-                <Badge
-                  variant={
-                    u.status === 'graduated' || u.status === 'withdrawn' ? 'outline' : 'success'
-                  }
-                >
-                  {u.status === 'graduated' ? '졸업' : u.status === 'withdrawn' ? '퇴교' : '활동'}
-                </Badge>
-              ),
-            },
-            {
-              key: 'graduation',
-              header: '졸업 관리',
-              width: '9.5rem',
-              cellClassName: 'whitespace-nowrap',
-              cell: (u) => (
-                <UserGraduationActions
-                  userId={u.id}
-                  displayName={u.displayName}
-                  status={u.status}
-                  saveUrl={`/api/admin/site-users/${u.id}`}
-                  canGraduate={u.role === 'student'}
-                  assignedTeacherId={u.teacherId}
-                  assignedTeacherName={u.teacherName !== '-' ? u.teacherName : null}
-                  onSaved={() => void load()}
-                />
-              ),
-            },
-            {
-              key: 'guild',
-              header: '서버',
-              width: '4.5rem',
-              cellClassName: 'whitespace-nowrap',
-              cell: (u) => (
-                <Badge variant={u.isInGuild ? 'success' : 'warning'}>
-                  {u.isInGuild ? '가입' : '미가입'}
-                </Badge>
-              ),
-            },
-            {
-              key: 'guildJoin',
-              header: '서버 가입일',
-              width: '6.5rem',
-              cellClassName: 'whitespace-nowrap',
-              cell: (u) => (
-                <span className="text-muted-foreground text-xs">
-                  {u.guildJoinedAt ? formatDate(u.guildJoinedAt) : u.isInGuild ? '동기화 대기' : '-'}
-                </span>
-              ),
-            },
-            {
-              key: 'joined',
-              header: '최초 로그인',
-              width: '6.5rem',
-              cellClassName: 'whitespace-nowrap',
-              cell: (u) => (
-                <span className="text-muted-foreground text-xs">{formatDate(u.createdAt)}</span>
-              ),
-            },
-          ]}
+        <AdminClassSections
+          items={filtered}
+          getClassName={(u) => u.className}
+          flat={classFilter !== ADMIN_CLASS_ALL}
+          emptyFallback={renderList([])}
+          renderList={renderList}
         />
       )}
     </div>

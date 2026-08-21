@@ -1,13 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { SkeletonTable } from '@/components/ui/skeleton';
-import { DataTable } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { AdminClassFilterBar } from '@/components/admin/admin-class-filter-bar';
+import { AdminClassSections } from '@/components/admin/admin-class-sections';
 import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useAdminClassFilter } from '@/hooks/admin/use-admin-class-filter';
+import { ADMIN_CLASS_ALL, matchesClassFilter } from '@/lib/admin/class-filter';
 
 type Graduated = {
   id: string;
@@ -19,6 +23,22 @@ type Graduated = {
 };
 
 export default function AdminGraduatedPage() {
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <AdminPageHeader title="졸업생 목록" description="불러오는 중…" />
+          <SkeletonTable rows={5} />
+        </div>
+      }
+    >
+      <AdminGraduatedInner />
+    </Suspense>
+  );
+}
+
+function AdminGraduatedInner() {
+  const { classFilter } = useAdminClassFilter();
   const [users, setUsers] = useState<Graduated[]>([]);
   const [loading, setLoading] = useState(true);
   const [restoringId, setRestoringId] = useState<string | null>(null);
@@ -34,6 +54,11 @@ export default function AdminGraduatedPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  const filtered = useMemo(
+    () => users.filter((u) => matchesClassFilter(u.className, classFilter)),
+    [users, classFilter],
+  );
 
   const ungraduate = async (id: string, nickname: string) => {
     if (!confirm(`「${nickname}」님의 졸업을 취소하고 재학생으로 복구할까요?`)) return;
@@ -55,6 +80,38 @@ export default function AdminGraduatedPage() {
     }
   };
 
+  const columns: DataTableColumn<Graduated>[] = [
+    { key: 'nick', header: '표시 이름', cell: (u) => u.nickname },
+    { key: 'guild', header: '길드 닉', cell: (u) => u.guildNickname ?? '-' },
+    { key: 'class', header: '반', cell: (u) => u.className },
+    { key: 'teacher', header: '담당 선생님', cell: (u) => u.teacherName },
+    { key: 'date', header: '졸업 처리일', cell: (u) => formatDate(u.graduatedAt) },
+    {
+      key: 'action',
+      header: '관리',
+      mobileFooter: true,
+      cell: (u) => (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={restoringId === u.id}
+          onClick={() => void ungraduate(u.id, u.nickname)}
+        >
+          {restoringId === u.id ? '복구 중...' : '졸업 취소'}
+        </Button>
+      ),
+    },
+  ];
+
+  const renderList = (rows: Graduated[]) => (
+    <DataTable
+      data={rows}
+      keyExtractor={(u) => u.id}
+      emptyTitle="졸업생이 없습니다"
+      columns={columns}
+    />
+  );
+
   return (
     <div>
       <AdminPageHeader
@@ -66,35 +123,20 @@ export default function AdminGraduatedPage() {
           </Button>
         }
       />
+      <AdminClassFilterBar className="mb-4" />
+      <p className="text-sm text-muted-foreground mb-4">
+        {filtered.length}명
+        {classFilter !== ADMIN_CLASS_ALL ? ` (전체 ${users.length}명 중)` : ''}
+      </p>
       {loading ? (
         <SkeletonTable rows={5} />
       ) : (
-        <DataTable
-          data={users}
-          keyExtractor={(u) => u.id}
-          emptyTitle="졸업생이 없습니다"
-          columns={[
-            { key: 'nick', header: '표시 이름', cell: (u) => u.nickname },
-            { key: 'guild', header: '길드 닉', cell: (u) => u.guildNickname ?? '-' },
-            { key: 'class', header: '반', cell: (u) => u.className },
-            { key: 'teacher', header: '담당 선생님', cell: (u) => u.teacherName },
-            { key: 'date', header: '졸업 처리일', cell: (u) => formatDate(u.graduatedAt) },
-            {
-              key: 'action',
-              header: '관리',
-              mobileFooter: true,
-              cell: (u) => (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={restoringId === u.id}
-                  onClick={() => void ungraduate(u.id, u.nickname)}
-                >
-                  {restoringId === u.id ? '복구 중...' : '졸업 취소'}
-                </Button>
-              ),
-            },
-          ]}
+        <AdminClassSections
+          items={filtered}
+          getClassName={(u) => u.className}
+          flat={classFilter !== ADMIN_CLASS_ALL}
+          emptyFallback={renderList([])}
+          renderList={renderList}
         />
       )}
     </div>

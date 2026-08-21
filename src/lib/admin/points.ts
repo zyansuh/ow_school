@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { adminUserDisplayName, normalizeNickFields } from '@/lib/users/display';
+import { ADMIN_CLASS_ORDER } from '@/lib/admin/class-filter';
 
 export type MonthlyPointRow = {
   userId: string;
@@ -62,8 +63,6 @@ function summarizeRows(rows: MonthlyPointRow[]): MonthlyPointSummary {
   };
 }
 
-const CLASS_ORDER = ['수달반', '사자반', '여우반', '미배정'];
-
 export async function getMonthlyPointReport(year: number, month: number) {
   const { start, end } = monthRange(year, month);
 
@@ -109,8 +108,8 @@ export async function getMonthlyPointReport(year: number, month: number) {
 
   const rows = Array.from(byUser.values()).sort((a, b) => {
     const classCmp =
-      (CLASS_ORDER.indexOf(a.className) === -1 ? 99 : CLASS_ORDER.indexOf(a.className)) -
-      (CLASS_ORDER.indexOf(b.className) === -1 ? 99 : CLASS_ORDER.indexOf(b.className));
+      (ADMIN_CLASS_ORDER.indexOf(a.className) === -1 ? 99 : ADMIN_CLASS_ORDER.indexOf(a.className)) -
+      (ADMIN_CLASS_ORDER.indexOf(b.className) === -1 ? 99 : ADMIN_CLASS_ORDER.indexOf(b.className));
     if (classCmp !== 0) return classCmp;
     return a.serverNick.localeCompare(b.serverNick, 'ko');
   });
@@ -129,8 +128,8 @@ export async function getMonthlyPointReport(year: number, month: number) {
       summary: summarizeRows(classRows),
     }))
     .sort((a, b) => {
-      const ai = CLASS_ORDER.indexOf(a.className);
-      const bi = CLASS_ORDER.indexOf(b.className);
+      const ai = ADMIN_CLASS_ORDER.indexOf(a.className);
+      const bi = ADMIN_CLASS_ORDER.indexOf(b.className);
       return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
     });
 
