@@ -10,6 +10,7 @@ import { AdminClassFilterBar } from '@/components/admin/admin-class-filter-bar';
 import { AdminClassSections } from '@/components/admin/admin-class-sections';
 import { AdminOpsFilterBar } from '@/components/admin/admin-ops-filter-bar';
 import { AdminStudentBulkBar } from '@/components/admin/admin-student-bulk-bar';
+import { AdminSavedViewsBar } from '@/components/admin/admin-saved-views-bar';
 import { formatDate, STATUS_LABELS } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { GraduateStudentDialog } from '@/components/admin/graduate-student-dialog';
@@ -342,6 +343,7 @@ function AdminStudentsInner() {
         onQuickChange={setQuick}
         classFilterName={classFilter}
       />
+      <AdminSavedViewsBar className="mb-6" saveBasePath="/admin/students" />
       <p className="text-sm text-muted-foreground mb-4">
         {filtered.length}명
         {query.trim() ||

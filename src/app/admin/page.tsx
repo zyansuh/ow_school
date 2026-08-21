@@ -10,9 +10,13 @@ import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { MonthlyStatsEditor } from '@/components/admin/monthly-stats-editor';
 import { DiscordSyncPanel } from '@/components/admin/discord-sync/discord-sync-panel';
 import { AdminOpsTodosPanel } from '@/components/admin/admin-ops-todos-panel';
+import { AdminOpsNotesPanel } from '@/components/admin/admin-ops-notes-panel';
+import { AdminAlertQueuePanel } from '@/components/admin/admin-alert-queue-panel';
+import { AdminSavedViewsBar } from '@/components/admin/admin-saved-views-bar';
 import { ds } from '@/styles/design-system';
 import { toast } from 'sonner';
 import { Users, GraduationCap, FileText, Layers } from 'lucide-react';
+import { Suspense } from 'react';
 
 type MonthlyPoint = { month: string; count: number };
 
@@ -45,12 +49,17 @@ export default function AdminDashboard() {
   } | null>(null);
   const [noticesText, setNoticesText] = useState('');
   const [savingNotices, setSavingNotices] = useState(false);
+  const [classNotes, setClassNotes] = useState<Record<string, string>>({});
 
   const loadStats = () => fetch('/api/admin/stats').then((r) => r.json()).then((d) => setStats(d.stats));
 
   useEffect(() => {
     loadStats();
     fetch('/api/notices').then((r) => r.json()).then((d) => setNoticesText((d.items as string[]).join('\n')));
+    fetch('/api/admin/ops-notes')
+      .then((r) => r.json())
+      .then((d) => setClassNotes(d.classes ?? {}))
+      .catch(() => undefined);
   }, []);
 
   const saveNotices = async () => {
@@ -79,7 +88,18 @@ export default function AdminDashboard() {
 
       <DiscordSyncPanel onSynced={loadStats} />
 
-      <AdminOpsTodosPanel />
+      <Suspense fallback={null}>
+        <Card className={`${ds.card} ${ds.cardPad}`}>
+          <AdminSavedViewsBar saveBasePath="/admin/students" />
+        </Card>
+      </Suspense>
+
+      <div className="grid lg:grid-cols-2 gap-4">
+        <AdminOpsTodosPanel />
+        <AdminAlertQueuePanel />
+      </div>
+
+      <AdminOpsNotesPanel />
 
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className={`${ds.card} ${ds.cardPad}`}>
@@ -96,9 +116,16 @@ export default function AdminDashboard() {
         <h2 className={ds.sectionTitle}>반별 학생 수</h2>
         <div className="mt-4 space-y-2">
           {Object.entries(stats.byClass).map(([name, count]) => (
-            <div key={name} className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{name}</span>
-              <span className="text-primary font-medium">{count}명</span>
+            <div key={name} className="flex justify-between text-sm gap-3">
+              <span className="text-muted-foreground min-w-0">
+                {name}
+                {classNotes[name] && (
+                  <span className="block text-[11px] text-muted-foreground/80 mt-0.5 truncate">
+                    {classNotes[name]}
+                  </span>
+                )}
+              </span>
+              <span className="text-primary font-medium shrink-0">{count}명</span>
             </div>
           ))}
         </div>

@@ -148,7 +148,7 @@ node scripts/verify-user-role.mjs
 
 | 메뉴 | URL | 핵심 기능 |
 |------|-----|-----------|
-| 대시보드 | `/admin` | 월별 차트, 반별 통계, **오늘 할 일**, Discord 동기화 요약 |
+| 대시보드 | `/admin` | 월별 차트, 반별 통계, **오늘 할 일**, **알림 큐**, **운영 메모**, **저장된 보기**, Discord 동기화 |
 | Discord 동기화 | `/admin/discord-sync` | 전체 유저 닉·역할·가입일, 선생님 연결 검증 |
 | **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/퇴교/졸업 취소**, 서버 가입일 · **wide 가로 스크롤** |
 | 학생 관리 | `/admin/students` | 담당 선생님 변경(잔여 정원순), 졸업·**퇴교** 처리 |
@@ -199,6 +199,11 @@ node scripts/verify-user-role.mjs
 - **상태 필터:** `/admin/users` — 활동/졸업/퇴교. `/admin/teachers` — 전체·정원 임박(`?nearFull=1`)·비활성.
 - **대시보드 오늘 할 일:** `GET /api/admin/ops-todos` — 반별 미승인 신청·면담 미제출·정원 임박·비활성 선생님 담당 수 (`AdminOpsTodosPanel`).
 - **일괄 액션:** 학생 관리 체크박스 → 담당 변경·선택/필터 엑셀·일괄 졸업·퇴교. `POST /api/admin/students/bulk` (최대 100명).
+
+**중장기 운영 도구:**
+- **저장된 보기:** 기본 프리셋(반별 학생·면담 미제출·정원 임박 등) + 현재 URL 필터를 이름으로 저장. `SiteSetting` `admin_saved_views` · `GET/POST/DELETE /api/admin/saved-views` · 대시보드·학생·선생님 UI.
+- **반·선생님 운영 메모:** 「이번 주 휴식」 등 짧은 메모. `SiteSetting` `admin_ops_notes` · `GET/PUT /api/admin/ops-notes` · 대시보드 편집·반별 학생 수·선생님 목록에 표시.
+- **알림 큐:** 최근 7일 신규 신청·면담을 반별로 묶음. `GET/POST /api/admin/alert-queue` (`admin_alert_ack_at`로 확인 처리).
 
 **졸업 시 선생님 DM:** `/admin/students`, `/admin/users` 졸업 다이얼로그에서 발송 여부·수신 선생님 선택. 졸업면담 제출 시 담당 선생님에게 자동 DM (`lib/notifications/graduation-teacher-dm.ts`). DM 실패해도 졸업 처리는 유지됩니다.
 

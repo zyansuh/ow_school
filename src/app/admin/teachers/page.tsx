@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { SkeletonTable } from '@/components/ui/skeleton';
@@ -20,6 +20,10 @@ import {
 } from '@/hooks/admin/use-admin-teachers';
 import { TeacherFormDialog } from '@/components/admin/teachers/teacher-form-dialog';
 import { LoadingSpinner } from '@/components/ui/loading';
+import { AdminSavedViewsBar } from '@/components/admin/admin-saved-views-bar';
+import { AdminClassFilterBar } from '@/components/admin/admin-class-filter-bar';
+import { useAdminClassFilter } from '@/hooks/admin/use-admin-class-filter';
+import { ADMIN_CLASS_ALL, matchesClassFilter } from '@/lib/admin/class-filter';
 
 function classLabels(t: AdminTeacher) {
   const names = t.classes?.map((c) => c.name) ?? [t.class.name];
@@ -53,6 +57,7 @@ function AdminTeachersInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { classFilter } = useAdminClassFilter();
   const viewFilter: TeacherViewFilter = searchParams.get('nearFull')
     ? 'nearFull'
     : searchParams.get('inactive')
@@ -74,12 +79,30 @@ function AdminTeachersInner() {
   const [form, setForm] = useState<TeacherFormState>(emptyTeacherForm);
   const [editing, setEditing] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [opsNotes, setOpsNotes] = useState<Record<string, string>>({});
+  const [classNotes, setClassNotes] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch('/api/admin/ops-notes')
+      .then((r) => r.json())
+      .then((d) => {
+        setOpsNotes(d.teachers ?? {});
+        setClassNotes(d.classes ?? {});
+      })
+      .catch(() => undefined);
+  }, []);
 
   const filtered = useMemo(() => {
-    if (viewFilter === 'nearFull') return teachers.filter(isNearFull);
-    if (viewFilter === 'inactive') return teachers.filter((t) => !t.isActive);
-    return teachers;
-  }, [teachers, viewFilter]);
+    let list = teachers;
+    if (viewFilter === 'nearFull') list = list.filter(isNearFull);
+    if (viewFilter === 'inactive') list = list.filter((t) => !t.isActive);
+    if (classFilter !== ADMIN_CLASS_ALL) {
+      list = list.filter((t) =>
+        classLabels(t).some((name) => matchesClassFilter(name, classFilter)),
+      );
+    }
+    return list;
+  }, [teachers, viewFilter, classFilter]);
 
   const openCreate = () => {
     setEditing(null);
@@ -142,6 +165,7 @@ function AdminTeachersInner() {
         }
       />
 
+      <AdminClassFilterBar className="mb-3" />
       <div className="flex flex-wrap gap-2 mb-4">
         {VIEW_FILTERS.map((f) => (
           <button
@@ -159,6 +183,14 @@ function AdminTeachersInner() {
           </button>
         ))}
       </div>
+      <AdminSavedViewsBar className="mb-4" saveBasePath="/admin/teachers" />
+
+      {classFilter !== ADMIN_CLASS_ALL && classNotes[classFilter] && (
+        <p className="text-sm text-muted-foreground mb-4 rounded-lg border border-border bg-muted/30 px-3 py-2">
+          <span className="font-medium text-foreground">{classFilter} 메모 · </span>
+          {classNotes[classFilter]}
+        </p>
+      )}
 
       <TeacherFormDialog
         open={formOpen}
@@ -179,7 +211,7 @@ function AdminTeachersInner() {
           description={
             viewFilter === 'all'
               ? '「추가」 버튼으로 선생님을 등록하세요.'
-              : '해당 조건의 맞는 선생님이 없습니다.'
+              : '해당 조건에 맞는 선생님이 없습니다.'
           }
         />
       ) : (
@@ -188,7 +220,18 @@ function AdminTeachersInner() {
           keyExtractor={(t) => t.id}
           emptyTitle="선생님이 없습니다"
           columns={[
-            { key: 'name', header: '이름', cell: (t) => <span className="font-medium">{t.name}</span> },
+            {
+              key: 'name',
+              header: '이름',
+              cell: (t) => (
+                <div>
+                  <span className="font-medium">{t.name}</span>
+                  {opsNotes[t.id] && (
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{opsNotes[t.id]}</p>
+                  )}
+                </div>
+              ),
+            },
             {
               key: 'class',
               header: '담당 반',
