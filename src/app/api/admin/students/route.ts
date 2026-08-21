@@ -28,6 +28,7 @@ export async function GET() {
           teacherName: u.teacher?.name ?? '-',
           status: u.status,
           createdAt: u.createdAt,
+          interviewCount: u._count.interviews,
         };
       }),
     );

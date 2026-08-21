@@ -49,6 +49,14 @@ const ROLE_FILTER_MAP: Record<(typeof ROLE_FILTERS)[number], SiteUserRole | null
   관리자: 'admin',
 };
 
+const STATUS_FILTERS = ['전체', '활동', '졸업', '퇴교'] as const;
+const STATUS_FILTER_MAP: Record<(typeof STATUS_FILTERS)[number], string | null> = {
+  전체: null,
+  활동: 'active',
+  졸업: 'graduated',
+  퇴교: 'withdrawn',
+};
+
 export default function AdminSiteUsersPage() {
   return (
     <Suspense
@@ -70,6 +78,7 @@ function AdminSiteUsersInner() {
   const [users, setUsers] = useState<SiteUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState<(typeof ROLE_FILTERS)[number]>('전체');
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>('전체');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -94,9 +103,11 @@ function AdminSiteUsersInner() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const role = ROLE_FILTER_MAP[roleFilter];
+    const status = STATUS_FILTER_MAP[statusFilter];
     return users.filter((u) => {
       if (!matchesClassFilter(u.className, classFilter)) return false;
       if (role && u.role !== role) return false;
+      if (status && u.status !== status) return false;
       if (!q) return true;
       return (
         u.displayName.toLowerCase().includes(q) ||
@@ -105,7 +116,7 @@ function AdminSiteUsersInner() {
         u.guildNickname.toLowerCase().includes(q)
       );
     });
-  }, [users, query, roleFilter, classFilter]);
+  }, [users, query, roleFilter, statusFilter, classFilter]);
 
   const columns: DataTableColumn<SiteUser>[] = [
     {
@@ -276,9 +287,30 @@ function AdminSiteUsersInner() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2 mb-4">
+        {STATUS_FILTERS.map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setStatusFilter(f)}
+            className={cn(
+              'px-3 py-1.5 rounded-lg text-xs transition-colors',
+              statusFilter === f
+                ? 'bg-secondary/20 text-foreground font-medium border border-border'
+                : 'text-muted-foreground hover:bg-accent',
+            )}
+          >
+            상태 · {f}
+          </button>
+        ))}
+      </div>
+
       <p className="text-sm text-muted-foreground mb-4">
         총 {filtered.length}명
-        {query || roleFilter !== '전체' || classFilter !== ADMIN_CLASS_ALL
+        {query ||
+        roleFilter !== '전체' ||
+        statusFilter !== '전체' ||
+        classFilter !== ADMIN_CLASS_ALL
           ? ` (전체 ${users.length}명 중)`
           : ''}
       </p>

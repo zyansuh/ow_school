@@ -9,6 +9,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { MonthlyStatsEditor } from '@/components/admin/monthly-stats-editor';
 import { DiscordSyncPanel } from '@/components/admin/discord-sync/discord-sync-panel';
+import { AdminOpsTodosPanel } from '@/components/admin/admin-ops-todos-panel';
 import { ds } from '@/styles/design-system';
 import { toast } from 'sonner';
 import { Users, GraduationCap, FileText, Layers } from 'lucide-react';
@@ -77,6 +78,8 @@ export default function AdminDashboard() {
       </div>
 
       <DiscordSyncPanel onSynced={loadStats} />
+
+      <AdminOpsTodosPanel />
 
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className={`${ds.card} ${ds.cardPad}`}>

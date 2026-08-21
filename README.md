@@ -148,7 +148,7 @@ node scripts/verify-user-role.mjs
 
 | 메뉴 | URL | 핵심 기능 |
 |------|-----|-----------|
-| 대시보드 | `/admin` | 월별 차트, 반별 통계, Discord 동기화 요약 (졸업후기 미리보기 없음) |
+| 대시보드 | `/admin` | 월별 차트, 반별 통계, **오늘 할 일**, Discord 동기화 요약 |
 | Discord 동기화 | `/admin/discord-sync` | 전체 유저 닉·역할·가입일, 선생님 연결 검증 |
 | **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/퇴교/졸업 취소**, 서버 가입일 · **wide 가로 스크롤** |
 | 학생 관리 | `/admin/students` | 담당 선생님 변경(잔여 정원순), 졸업·**퇴교** 처리 |
@@ -193,6 +193,12 @@ node scripts/verify-user-role.mjs
 - **전역 검색:** 관리자 헤더 「닉 / Discord ID」 → `GET /api/admin/quick-search` → 사용자·학생·면담 바로가기. 목록은 `?q=`로 연동.
 - **반별 섹션:** `전체`일 때 접기/펼치기 + 건수 뱃지 (`AdminClassSections`). 특정 반 선택 시 단일 목록.
 - **더 보기:** 섹션·목록당 30명 단위 클라이언트 페이지네이션.
+
+**운영 편의 (반 단위):**
+- **담당 선생님 필터:** `/admin/students` — `?teacherId=` + 이번 달 가입·면담 미제출 퀵 필터 (`AdminOpsFilterBar`).
+- **상태 필터:** `/admin/users` — 활동/졸업/퇴교. `/admin/teachers` — 전체·정원 임박(`?nearFull=1`)·비활성.
+- **대시보드 오늘 할 일:** `GET /api/admin/ops-todos` — 반별 미승인 신청·면담 미제출·정원 임박·비활성 선생님 담당 수 (`AdminOpsTodosPanel`).
+- **일괄 액션:** 학생 관리 체크박스 → 담당 변경·선택/필터 엑셀·일괄 졸업·퇴교. `POST /api/admin/students/bulk` (최대 100명).
 
 **졸업 시 선생님 DM:** `/admin/students`, `/admin/users` 졸업 다이얼로그에서 발송 여부·수신 선생님 선택. 졸업면담 제출 시 담당 선생님에게 자동 DM (`lib/notifications/graduation-teacher-dm.ts`). DM 실패해도 졸업 처리는 유지됩니다.
 

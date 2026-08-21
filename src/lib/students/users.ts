@@ -25,7 +25,12 @@ export async function findActiveStudentUsers(
   const roleCtx = ctx ?? (await loadUserRoleContext());
   const users = await prisma.user.findMany({
     where: activeStudentBaseWhere,
-    include: { class: true, teacher: true, adminRole: true },
+    include: {
+      class: true,
+      teacher: true,
+      adminRole: true,
+      _count: { select: { interviews: true } },
+    },
     orderBy,
   });
   return filterStudentUsers(users, roleCtx);

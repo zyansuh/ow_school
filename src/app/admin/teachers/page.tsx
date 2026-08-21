@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { SkeletonTable } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/loading';
@@ -9,6 +10,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { ds } from '@/styles/design-system';
+import { cn } from '@/lib/utils';
 import {
   emptyTeacherForm,
   parseActivityDays,
@@ -24,11 +26,60 @@ function classLabels(t: AdminTeacher) {
   return names;
 }
 
+type TeacherViewFilter = 'all' | 'nearFull' | 'inactive';
+
+function isNearFull(t: AdminTeacher) {
+  if (!t.isActive || t.maxStudents <= 0) return false;
+  const remaining = t.maxStudents - t.currentStudents;
+  return remaining <= 1 && remaining >= 0;
+}
+
 export default function AdminTeachersPage() {
-  const { teachers, classes, loading, saving, deletingId, save, remove, toggleActive } = useAdminTeachers();
+  return (
+    <Suspense
+      fallback={
+        <div className={ds.pageGap}>
+          <AdminPageHeader title="선생님 관리" description="불러오는 중…" />
+          <SkeletonTable rows={5} />
+        </div>
+      }
+    >
+      <AdminTeachersInner />
+    </Suspense>
+  );
+}
+
+function AdminTeachersInner() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const viewFilter: TeacherViewFilter = searchParams.get('nearFull')
+    ? 'nearFull'
+    : searchParams.get('inactive')
+      ? 'inactive'
+      : 'all';
+
+  const setViewFilter = (v: TeacherViewFilter) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('nearFull');
+    params.delete('inactive');
+    if (v === 'nearFull') params.set('nearFull', '1');
+    if (v === 'inactive') params.set('inactive', '1');
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
+
+  const { teachers, classes, loading, saving, deletingId, save, remove, toggleActive } =
+    useAdminTeachers();
   const [form, setForm] = useState<TeacherFormState>(emptyTeacherForm);
   const [editing, setEditing] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+
+  const filtered = useMemo(() => {
+    if (viewFilter === 'nearFull') return teachers.filter(isNearFull);
+    if (viewFilter === 'inactive') return teachers.filter((t) => !t.isActive);
+    return teachers;
+  }, [teachers, viewFilter]);
 
   const openCreate = () => {
     setEditing(null);
@@ -73,6 +124,12 @@ export default function AdminTeachersPage() {
 
   const busy = deletingId !== null || saving;
 
+  const VIEW_FILTERS: { value: TeacherViewFilter; label: string }[] = [
+    { value: 'all', label: '전체' },
+    { value: 'nearFull', label: '정원 임박' },
+    { value: 'inactive', label: '비활성' },
+  ];
+
   return (
     <div className={ds.pageGap}>
       <AdminPageHeader
@@ -84,6 +141,24 @@ export default function AdminTeachersPage() {
           </Button>
         }
       />
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        {VIEW_FILTERS.map((f) => (
+          <button
+            key={f.value}
+            type="button"
+            onClick={() => setViewFilter(f.value)}
+            className={cn(
+              'px-4 py-2 rounded-xl text-sm transition-colors min-h-10',
+              viewFilter === f.value
+                ? 'bg-primary/15 text-primary font-medium'
+                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground',
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
       <TeacherFormDialog
         open={formOpen}
@@ -98,11 +173,18 @@ export default function AdminTeachersPage() {
 
       {loading ? (
         <SkeletonTable rows={5} />
-      ) : teachers.length === 0 ? (
-        <EmptyState title="선생님이 없습니다" description="「추가」 버튼으로 선생님을 등록하세요." />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title="선생님이 없습니다"
+          description={
+            viewFilter === 'all'
+              ? '「추가」 버튼으로 선생님을 등록하세요.'
+              : '해당 조건의 맞는 선생님이 없습니다.'
+          }
+        />
       ) : (
         <DataTable
-          data={teachers}
+          data={filtered}
           keyExtractor={(t) => t.id}
           emptyTitle="선생님이 없습니다"
           columns={[
@@ -113,19 +195,32 @@ export default function AdminTeachersPage() {
               cell: (t) => (
                 <div className="flex flex-wrap gap-1">
                   {classLabels(t).map((name) => (
-                    <Badge key={name} variant="outline" className="text-xs">{name}</Badge>
+                    <Badge key={name} variant="outline" className="text-xs">
+                      {name}
+                    </Badge>
                   ))}
                 </div>
               ),
             },
             { key: 'mbti', header: 'MBTI', cell: (t) => t.mbti || '-', hideOnMobile: true },
-            { key: 'count', header: '인원', cell: (t) => `${t.currentStudents}/${t.maxStudents}` },
+            {
+              key: 'count',
+              header: '인원',
+              cell: (t) => (
+                <span className={cn(isNearFull(t) && 'text-warning font-medium')}>
+                  {t.currentStudents}/{t.maxStudents}
+                  {isNearFull(t) ? ' · 임박' : ''}
+                </span>
+              ),
+            },
             {
               key: 'discord',
               header: 'Discord ID',
               cell: (t) =>
                 t.discordUserId ? (
-                  <Badge variant="success" className="font-mono text-[10px]">{t.discordUserId.slice(0, 8)}…</Badge>
+                  <Badge variant="success" className="font-mono text-[10px]">
+                    {t.discordUserId.slice(0, 8)}…
+                  </Badge>
                 ) : (
                   <Badge variant="warning">미연결</Badge>
                 ),
@@ -134,7 +229,11 @@ export default function AdminTeachersPage() {
             {
               key: 'status',
               header: '상태',
-              cell: (t) => <Badge variant={t.isActive ? 'success' : 'danger'}>{t.isActive ? '활동' : '비활성'}</Badge>,
+              cell: (t) => (
+                <Badge variant={t.isActive ? 'success' : 'danger'}>
+                  {t.isActive ? '활동' : '비활성'}
+                </Badge>
+              ),
             },
             {
               key: 'action',
@@ -148,7 +247,12 @@ export default function AdminTeachersPage() {
                       <Pencil className="h-3.5 w-3.5" />
                       수정
                     </Button>
-                    <Button size="sm" variant="outline" disabled={busy} onClick={() => void toggleActive(t)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => void toggleActive(t)}
+                    >
                       {t.isActive ? '비활성' : '활성'}
                     </Button>
                     <Button
@@ -165,7 +269,11 @@ export default function AdminTeachersPage() {
                       }}
                       className="text-danger border-danger/30"
                     >
-                      {isDeleting ? <LoadingSpinner className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      {isDeleting ? (
+                        <LoadingSpinner className="h-3.5 w-3.5" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
                       삭제
                     </Button>
                   </div>
