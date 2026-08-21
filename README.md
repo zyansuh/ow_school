@@ -150,7 +150,7 @@ node scripts/verify-user-role.mjs
 |------|-----|-----------|
 | 대시보드 | `/admin` | 월별 차트, 반별 통계, **오늘 할 일**, **알림 큐**, **운영 메모**, **저장된 보기**, Discord 동기화 |
 | Discord 동기화 | `/admin/discord-sync` | 전체 유저 닉·역할·가입일, 선생님 연결 검증 |
-| **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/퇴교/졸업 취소**, 서버 가입일 · **wide 가로 스크롤** |
+| **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/퇴교/졸업 취소**, 서버 가입일 · **wide 가로 스크롤** · Discord ID는 맨 뒤 열 |
 | 학생 관리 | `/admin/students` | 담당 선생님 변경(잔여 정원순), 졸업·**퇴교** 처리 |
 | 졸업생 | `/admin/graduated` | 졸업생 목록, **졸업 취소** |
 | **퇴교생** | `/admin/withdrawn` | 퇴교생 목록, **재학 복구** |
@@ -180,7 +180,9 @@ node scripts/verify-user-role.mjs
 
 **학생관리 테이블 열 순서:** 표시 이름 → 가입일 → 반 → 담당 선생님 → 관리 → 길드 닉 → Discord ID → 상태. `DataTable` `layout="wide"` + `scrollHint`로 가로 스크롤.
 
-**사이트 사용자 테이블:** `/admin/users`도 `layout="wide"` + `scrollHint` — 모바일·데스크톱 모두 표를 좌우로 스크롤해 전체 열을 볼 수 있음 (카드형으로 접지 않음).
+**사이트 사용자 테이블:** `/admin/users`도 `layout="wide"` + `scrollHint` — 모바일·데스크톱 모두 표를 좌우로 스크롤해 전체 열을 볼 수 있음 (카드형으로 접지 않음). 열 끝: **Discord ID**.
+
+**컨텐츠 이미지 URL 검증:** 게시글 저장 시 Blob `https://…`뿐 아니라 DB/로컬 상대 경로(`/api/content-images/…`, `/uploads/…`)도 허용 (`lib/contents/image-url.ts`). Blob 미연결 폴백 업로드 후 저장이 `Invalid url`로 막히던 문제 수정. 목록 카드는 self-hosted URL에 `unoptimized` 적용.
 
 **선생님 정원·비활성:** 인원(최대 인원) 수정 시 `region: null` 등 빈 프로필 필드를 허용. `isActive`는 관리자 토글·정원 0(모집 마감)으로만 변경되며, 졸업·졸업면담·퇴교·담당 변경 시 `syncTeacherStudentCount`는 **인원 수만** 갱신해 비활성이 풀리지 않음.
 
@@ -591,6 +593,8 @@ sequenceDiagram
 | 로컬 + Blob 미설정 | FormData → 디스크 | `/uploads/contents/…` |
 
 > Blob이 설정돼 있어도 `put()` 실패 시 **자동으로 DB 저장**으로 전환됩니다. 503 없이 업로드 가능합니다.
+>
+> 게시글 **저장** API는 `/api/content-images/…`·`/uploads/…` 상대 URL을 허용합니다. (예전 `z.string().url()`만 쓰면 폴백 업로드 후 저장이 실패했습니다.)
 
 > ⚠️ 브라우저에서 `@vercel/blob/client` `upload()`로 **직접** Blob API를 호출하면, Store 미연결 시 `vercel.com/api/blob`로 요청되어 **CORS 오류**가 납니다. 현재는 **서버 경유 업로드만** 사용합니다.
 

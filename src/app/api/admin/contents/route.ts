@@ -4,9 +4,10 @@ import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { prisma } from '@/lib/prisma';
 import { contentPostInclude, syncContentImages } from '@/lib/contents/images';
 import { serializeContentDetail } from '@/lib/contents/serialize';
+import { contentImageUrlSchema, contentThumbnailUrlSchema } from '@/lib/contents/image-url';
 
 const imageSchema = z.object({
-  url: z.string().url(),
+  url: contentImageUrlSchema,
   sortOrder: z.number().int().min(0),
 });
 
@@ -14,7 +15,7 @@ const postSchema = z.object({
   title: z.string().min(1, '제목을 입력하세요').max(200),
   summary: z.string().max(300).optional().nullable(),
   body: z.string().max(50000).optional().default(''),
-  thumbnailUrl: z.string().url().optional().nullable(),
+  thumbnailUrl: contentThumbnailUrlSchema,
   published: z.boolean().optional().default(true),
   images: z.array(imageSchema).optional().default([]),
 });

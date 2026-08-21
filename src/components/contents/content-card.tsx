@@ -4,6 +4,7 @@ import { Calendar } from 'lucide-react';
 import { PageCard, PageCardBody, PageCardHeader } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils';
 import type { ContentPostListItem } from '@/lib/contents/types';
+import { isSelfHostedContentImage } from '@/lib/contents/image-url';
 
 type Props = {
   post: ContentPostListItem;
@@ -25,6 +26,7 @@ export function ContentCard({ post, priority = false }: Props) {
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
               priority={priority}
+              unoptimized={isSelfHostedContentImage(post.thumbnailUrl)}
               className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
             />
           ) : (

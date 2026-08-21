@@ -136,17 +136,6 @@ function AdminSiteUsersInner() {
       ),
     },
     {
-      key: 'discordId',
-      header: 'Discord ID',
-      width: '10.5rem',
-      cellClassName: 'font-mono text-xs text-muted-foreground whitespace-nowrap',
-      cell: (u) => (
-        <span className="block" title={u.discordId}>
-          {u.discordId}
-        </span>
-      ),
-    },
-    {
       key: 'role',
       header: '사이트 역할',
       width: '12.5rem',
@@ -236,6 +225,17 @@ function AdminSiteUsersInner() {
       cellClassName: 'whitespace-nowrap',
       cell: (u) => (
         <span className="text-muted-foreground text-xs">{formatDate(u.createdAt)}</span>
+      ),
+    },
+    {
+      key: 'discordId',
+      header: 'Discord ID',
+      width: '10.5rem',
+      cellClassName: 'font-mono text-xs text-muted-foreground whitespace-nowrap',
+      cell: (u) => (
+        <span className="block" title={u.discordId}>
+          {u.discordId}
+        </span>
       ),
     },
   ];
