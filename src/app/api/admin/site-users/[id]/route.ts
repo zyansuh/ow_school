@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { apiError, requireAdminUser } from '@/lib/api-helpers';
 import { logAdminRoleAction } from '@/lib/admin/role-requests';
 import { graduateUser, restoreGraduatedUser } from '@/lib/students/graduation';
+import { withdrawStudent } from '@/lib/students/withdrawal';
 import { adminUserDisplayName, guildNicknameOnly, normalizeNickFields } from '@/lib/users/display';
 import {
   getUserRole,
@@ -17,12 +18,12 @@ import {
 const patchSchema = z.object({
   displayNickname: z.string().max(32).nullable().optional(),
   siteRole: z.enum(['resident', 'student', 'teacher', 'admin']).nullable().optional(),
-  statusAction: z.enum(['graduate', 'ungraduate']).optional(),
+  statusAction: z.enum(['graduate', 'ungraduate', 'withdraw']).optional(),
   sendTeacherDm: z.boolean().optional(),
   dmTeacherId: z.string().nullable().optional(),
 });
 
-/** 표시 닉네임·사이트 역할·졸업 상태만 수정 — 다른 User 필드는 변경하지 않음 */
+/** 표시 닉네임·사이트 역할·졸업/퇴교 상태만 수정 — 다른 User 필드는 변경하지 않음 */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const actor = await requireAdminUser();
@@ -67,6 +68,45 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         role,
         roleLabel: SITE_ROLE_LABELS[role],
       });
+    }
+
+    if (body.statusAction === 'withdraw') {
+      if (!isStudentUser(existing, roleCtx)) {
+        return NextResponse.json({ error: '학생만 퇴교 처리할 수 있습니다' }, { status: 400 });
+      }
+      if (existing.status === 'graduated') {
+        return NextResponse.json({ error: '졸업생은 퇴교 처리할 수 없습니다' }, { status: 400 });
+      }
+      if (existing.status === 'withdrawn') {
+        return NextResponse.json({ error: '이미 퇴교 처리된 사용자입니다' }, { status: 400 });
+      }
+      try {
+        const withdrawn = await withdrawStudent(id);
+        const full = await prisma.user.findUnique({
+          where: { id },
+          include: { adminRole: true },
+        });
+        const role = full ? getUserRole(full, roleCtx) : inferredRole;
+        return NextResponse.json({
+          id,
+          status: withdrawn?.status ?? 'withdrawn',
+          role,
+          roleLabel: SITE_ROLE_LABELS[role],
+        });
+      } catch (err) {
+        if (err instanceof Error) {
+          if (err.message === 'STUDENT_NOT_FOUND') {
+            return NextResponse.json({ error: '학생만 퇴교 처리할 수 있습니다' }, { status: 400 });
+          }
+          if (err.message === 'GRADUATED') {
+            return NextResponse.json({ error: '졸업생은 퇴교 처리할 수 없습니다' }, { status: 400 });
+          }
+          if (err.message === 'ALREADY_WITHDRAWN') {
+            return NextResponse.json({ error: '이미 퇴교 처리된 사용자입니다' }, { status: 400 });
+          }
+        }
+        throw err;
+      }
     }
 
     if (body.statusAction === 'graduate') {

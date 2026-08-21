@@ -150,15 +150,15 @@ node scripts/verify-user-role.mjs
 |------|-----|-----------|
 | 대시보드 | `/admin` | 월별 차트, 반별 통계, Discord 동기화 요약 (졸업후기 미리보기 없음) |
 | Discord 동기화 | `/admin/discord-sync` | 전체 유저 닉·역할·가입일, 선생님 연결 검증 |
-| **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/졸업 취소**, 서버 가입일 |
+| **사이트 사용자** | `/admin/users` | 역할 지정, 표시 닉, **졸업/퇴교/졸업 취소**, 서버 가입일 |
 | 학생 관리 | `/admin/students` | 담당 선생님 변경(잔여 정원순), 졸업·**퇴교** 처리 |
 | 졸업생 | `/admin/graduated` | 졸업생 목록, **졸업 취소** |
 | **퇴교생** | `/admin/withdrawn` | 퇴교생 목록, **재학 복구** |
 | 선생님 관리 | `/admin/teachers` | CRUD, 활동/비활성, 정원, 복수 반 |
 | **컨텐츠 소개** | `/admin/contents` | 게시글·이미지 CRUD (Vercel Blob → 실패 시 DB, 로컬 `public/uploads/contents`) |
 | 신청 관리 | `/admin/applications` | 수강 신청 내역 |
-| 졸업면담 | `/admin/interviews` | 조회·삭제 (감사 로그) |
-| 포인트 | `/admin/points` | 월별 집계, 엑셀, **졸업 포인트 대상 삭제** |
+| 졸업면담 | `/admin/interviews` | 조회(다이얼로그)·삭제 (감사 로그) |
+| 포인트 | `/admin/points` | 월별·**반별** 집계, 엑셀, **졸업 포인트 대상 삭제** |
 | 졸업후기 | `/admin/graduation-reviews` | 조회 (대시보드 카드는 제거됨) |
 | 관리자 목록 | `/admin/admins` | 권한 부여·해제 |
 | 권한 요청 | `/admin/roles` | `AdminRoleRequest` 승인·거절 |
@@ -172,13 +172,19 @@ node scripts/verify-user-role.mjs
 | **퇴교** | `status → withdrawn`, `classId`/`teacherId` null | 레코드 삭제 없음 · 일반 학생 목록에서 제외 |
 | **퇴교 복구** | `status → active` | `/admin/withdrawn` — 담당 선생님은 자동 복원되지 않음 |
 
-**졸업 취소 UI:** `/admin/graduated`, `/admin/users` (졸업 관리 열), API `PATCH` `action: ungraduate`
+**졸업 취소 UI:** `/admin/graduated`, `/admin/users` (졸업 관리 열), API `PATCH` `action: ungraduate` / `statusAction: ungraduate`
 
-**퇴교 UI:** `/admin/students` 관리 열 **퇴교** 버튼 → 확인 모달. 목록은 `/admin/withdrawn`.
+**퇴교 UI:** `/admin/students`·`/admin/users`(졸업 관리 열) **퇴교** 버튼 → 확인 모달. 목록은 `/admin/withdrawn`. 사이트 사용자는 `PATCH /api/admin/site-users/[id]` `statusAction: withdraw`.
 
 **학생관리 담당 선생님 Select:** `GET /api/admin/teachers?for=student-assign` — DB 실시간 담당 학생 수 기준 **잔여 정원 많은 순**, 동일 시 이름순.
 
-**학생관리 테이블 UI:** `DataTable` `layout="wide"` — 열 **최소 너비** 유지 + **가로 스크롤** (`overflow-x-auto`). `table-fixed`로 뷰포트에 눌리며 잘리던 문제 방지. 반·상태·관리 열 `whitespace-nowrap`. 담당 선생님 Select `17rem` 고정 + 변경 버튼 `flex-nowrap`. PC에서 열이 많으면 표 상단 안내 문구 표시 (`scrollHint`).
+**학생관리 테이블 열 순서:** 표시 이름 → 가입일 → 반 → 담당 선생님 → 관리 → 길드 닉 → Discord ID → 상태. `DataTable` `layout="wide"` + `scrollHint`로 가로 스크롤.
+
+**선생님 정원·비활성:** 인원(최대 인원) 수정 시 `region: null` 등 빈 프로필 필드를 허용. `isActive`는 관리자 토글·정원 0(모집 마감)으로만 변경되며, 졸업·졸업면담·퇴교·담당 변경 시 `syncTeacherStudentCount`는 **인원 수만** 갱신해 비활성이 풀리지 않음.
+
+**졸업면담 보기:** `/admin/interviews` 「보기」는 페이지 하단 카드가 아니라 **다이얼로그**로 바로 표시.
+
+**포인트 관리:** `/admin/points` — 수달/사자/여우/미배정 **반별 섹션** + 반 필터. 엑셀에 `반` 컬럼 포함.
 
 **졸업 시 선생님 DM:** `/admin/students`, `/admin/users` 졸업 다이얼로그에서 발송 여부·수신 선생님 선택. 졸업면담 제출 시 담당 선생님에게 자동 DM (`lib/notifications/graduation-teacher-dm.ts`). DM 실패해도 졸업 처리는 유지됩니다.
 

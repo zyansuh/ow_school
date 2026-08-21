@@ -6,8 +6,6 @@ import { assertDiscordUserIdAvailable } from '@/lib/teacher/auth';
 import { deleteTeacherById } from '@/lib/teacher/delete';
 import { mapTeacherWithClasses, syncTeacherClasses } from '@/lib/teacher/classes';
 import { assertValidTeacherDiscordField } from '@/lib/teacher/discord-field';
-import { countActiveStudentsForTeacher } from '@/lib/teacher/counts';
-import { computeTeacherIsActive } from '@/lib/teacher/recruiting';
 import {
   teacherBirthYearField,
   teacherGenderField,
@@ -64,9 +62,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const { data, classIds } = serializeTeacherData(body);
 
-    if (body.maxStudents !== undefined) {
-      const activeCount = await countActiveStudentsForTeacher(id);
-      data.isActive = computeTeacherIsActive(body.maxStudents, activeCount);
+    // 정원 0 = 모집 마감 → 비활성. 그 외에는 관리자가 보낸 isActive를 유지(자동 재계산 없음).
+    if (body.maxStudents !== undefined && body.maxStudents <= 0) {
+      data.isActive = false;
     }
 
     const teacher = await prisma.teacher.update({

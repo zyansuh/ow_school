@@ -90,7 +90,7 @@ export default function AdminSiteUsersPage() {
     <div className={ds.pageGap}>
       <AdminPageHeader
         title="사이트 사용자"
-        description="Discord 로그인 계정 전체 목록입니다. 자동 역할: 서버 가입 2달 미만은 학생, 그 외 일반 회원은 마을주민입니다. 졸업·졸업 취소는 관리자가 처리할 수 있습니다."
+        description="Discord 로그인 계정 전체 목록입니다. 자동 역할: 서버 가입 2달 미만은 학생, 그 외 일반 회원은 마을주민입니다. 졸업·퇴교·졸업 취소는 관리자가 처리할 수 있습니다."
       />
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -194,15 +194,19 @@ export default function AdminSiteUsersPage() {
               header: '상태',
               width: '4.5rem',
               cell: (u) => (
-                <Badge variant={u.status === 'graduated' ? 'outline' : 'success'}>
-                  {u.status === 'graduated' ? '졸업' : '활동'}
+                <Badge
+                  variant={
+                    u.status === 'graduated' || u.status === 'withdrawn' ? 'outline' : 'success'
+                  }
+                >
+                  {u.status === 'graduated' ? '졸업' : u.status === 'withdrawn' ? '퇴교' : '활동'}
                 </Badge>
               ),
             },
             {
               key: 'graduation',
               header: '졸업 관리',
-              width: '7.5rem',
+              width: '9.5rem',
               mobileFooter: true,
               cell: (u) => (
                 <UserGraduationActions

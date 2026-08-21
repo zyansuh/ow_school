@@ -5,7 +5,6 @@ import {
   findActiveAssignedStudents,
 } from '@/lib/enrollment/queries';
 import { syncEnrollmentStats } from '@/lib/enrollment/persist';
-import { computeTeacherIsActive } from '@/lib/teacher/recruiting';
 
 /** teacherId 기준 활성 담당 학생 (Discord userId로 User 연결) */
 export function activeAssignedStudentWhere(teacherId: string) {
@@ -25,7 +24,10 @@ export async function countActiveStudentsForTeacher(teacherId: string) {
   return filterStudentUsers(users, ctx).length;
 }
 
-/** Teacher.currentStudents를 실제 활성 담당 학생 수와 동기화 */
+/**
+ * Teacher.currentStudents만 실제 활성 담당 학생 수와 동기화.
+ * isActive는 관리자 수동 토글·정원 0 설정으로만 변경 (졸업·면담·퇴교 시 자동 재활성 방지).
+ */
 export async function syncTeacherStudentCount(teacherId: string) {
   const teacher = await prisma.teacher.findUnique({ where: { id: teacherId } });
   if (!teacher) return 0;
@@ -33,10 +35,7 @@ export async function syncTeacherStudentCount(teacherId: string) {
   const count = await countActiveStudentsForTeacher(teacherId);
   await prisma.teacher.update({
     where: { id: teacherId },
-    data: {
-      currentStudents: count,
-      isActive: computeTeacherIsActive(teacher.maxStudents, count),
-    },
+    data: { currentStudents: count },
   });
   return count;
 }

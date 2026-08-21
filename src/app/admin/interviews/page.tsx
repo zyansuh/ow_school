@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/input';
 import { SkeletonTable } from '@/components/ui/skeleton';
@@ -16,6 +15,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Trash2 } from 'lucide-react';
 
@@ -129,42 +129,51 @@ export default function AdminInterviewsPage() {
         />
       )}
 
-      {selected && (
-        <Card className={`${ds.card} ${ds.cardPad}`}>
-          <div className="space-y-4">
-            <h2 className={ds.sectionTitle}>
-              {selected.nickname} · {selected.className || '미배정'}
-            </h2>
-            <div>
-              <p className={ds.caption}>질문 1 · 평겜마 콘텐츠 참여 경험</p>
-              <p className="text-sm text-foreground whitespace-pre-wrap mt-1">{selected.contentExperience}</p>
+      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selected?.nickname} · {selected?.className || '미배정'}
+            </DialogTitle>
+            <DialogDescription className="sr-only">졸업면담 상세</DialogDescription>
+          </DialogHeader>
+          {selected && (
+            <div className="space-y-4">
+              <div>
+                <p className={ds.caption}>질문 1 · 평겜마 콘텐츠 참여 경험</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap mt-1">{selected.contentExperience}</p>
+              </div>
+              <div>
+                <p className={ds.caption}>질문 2 · 인상 깊었던 사람</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap mt-1">{selected.memorablePerson}</p>
+              </div>
+              <div>
+                <p className={ds.caption}>질문 3 · 동호회 가입</p>
+                <p className="text-sm text-foreground mt-1">{selected.joinedClub ? '예' : '아니오'}</p>
+                {selected.joinedClub && parseClubNames(selected.clubNames).length > 0 && (
+                  <ul className="mt-2 text-sm text-muted-foreground list-disc list-inside">
+                    {parseClubNames(selected.clubNames).map((name) => (
+                      <li key={name}>{name}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Link href="/interview" className="text-sm text-primary hover:underline">
+                  학생 수정 페이지
+                </Link>
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                  onClick={() => setSelected(null)}
+                >
+                  닫기
+                </button>
+              </div>
             </div>
-            <div>
-              <p className={ds.caption}>질문 2 · 인상 깊었던 사람</p>
-              <p className="text-sm text-foreground whitespace-pre-wrap mt-1">{selected.memorablePerson}</p>
-            </div>
-            <div>
-              <p className={ds.caption}>질문 3 · 동호회 가입</p>
-              <p className="text-sm text-foreground mt-1">{selected.joinedClub ? '예' : '아니오'}</p>
-              {selected.joinedClub && parseClubNames(selected.clubNames).length > 0 && (
-                <ul className="mt-2 text-sm text-muted-foreground list-disc list-inside">
-                  {parseClubNames(selected.clubNames).map((name) => (
-                    <li key={name}>{name}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Link href="/interview" className="text-sm text-primary hover:underline">
-                학생 수정 페이지
-              </Link>
-              <button type="button" className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setSelected(null)}>
-                닫기
-              </button>
-            </div>
-          </div>
-        </Card>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>

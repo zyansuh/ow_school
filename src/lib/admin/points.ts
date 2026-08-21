@@ -5,6 +5,7 @@ export type MonthlyPointRow = {
   userId: string;
   serverNick: string;
   teacherName: string;
+  className: string;
   graduationPoint: number;
   clubPoint: number;
   otherPoint: number;
@@ -17,6 +18,12 @@ export type MonthlyPointSummary = {
   clubTotal: number;
   otherTotal: number;
   totalPoints: number;
+};
+
+export type MonthlyPointClassGroup = {
+  className: string;
+  rows: MonthlyPointRow[];
+  summary: MonthlyPointSummary;
 };
 
 function monthRange(year: number, month: number) {
@@ -32,6 +39,31 @@ function resolveTeacherName(user: {
   return user.teacher?.name ?? user.interviews?.[0]?.teacher?.name ?? '-';
 }
 
+function resolveClassName(user: {
+  class?: { name: string } | null;
+  interviews?: Array<{ className?: string | null }>;
+  teacher?: { class?: { name: string } | null } | null;
+}) {
+  return (
+    user.class?.name ??
+    user.interviews?.[0]?.className ??
+    user.teacher?.class?.name ??
+    '미배정'
+  );
+}
+
+function summarizeRows(rows: MonthlyPointRow[]): MonthlyPointSummary {
+  return {
+    studentCount: rows.length,
+    graduationTotal: rows.reduce((s, r) => s + r.graduationPoint, 0),
+    clubTotal: rows.reduce((s, r) => s + r.clubPoint, 0),
+    otherTotal: rows.reduce((s, r) => s + r.otherPoint, 0),
+    totalPoints: rows.reduce((s, r) => s + r.totalPoint, 0),
+  };
+}
+
+const CLASS_ORDER = ['수달반', '사자반', '여우반', '미배정'];
+
 export async function getMonthlyPointReport(year: number, month: number) {
   const { start, end } = monthRange(year, month);
 
@@ -40,7 +72,8 @@ export async function getMonthlyPointReport(year: number, month: number) {
     include: {
       user: {
         include: {
-          teacher: true,
+          class: true,
+          teacher: { include: { class: true } },
           interviews: {
             include: { teacher: true },
             orderBy: { createdAt: 'desc' },
@@ -59,6 +92,7 @@ export async function getMonthlyPointReport(year: number, month: number) {
       userId: h.userId,
       serverNick: adminUserDisplayName(normalizeNickFields(h.user)),
       teacherName: resolveTeacherName(h.user),
+      className: resolveClassName(h.user),
       graduationPoint: 0,
       clubPoint: 0,
       otherPoint: 0,
@@ -73,19 +107,36 @@ export async function getMonthlyPointReport(year: number, month: number) {
     byUser.set(h.userId, row);
   }
 
-  const rows = Array.from(byUser.values()).sort((a, b) =>
-    a.serverNick.localeCompare(b.serverNick, 'ko'),
-  );
+  const rows = Array.from(byUser.values()).sort((a, b) => {
+    const classCmp =
+      (CLASS_ORDER.indexOf(a.className) === -1 ? 99 : CLASS_ORDER.indexOf(a.className)) -
+      (CLASS_ORDER.indexOf(b.className) === -1 ? 99 : CLASS_ORDER.indexOf(b.className));
+    if (classCmp !== 0) return classCmp;
+    return a.serverNick.localeCompare(b.serverNick, 'ko');
+  });
 
-  const summary: MonthlyPointSummary = {
-    studentCount: rows.length,
-    graduationTotal: rows.reduce((s, r) => s + r.graduationPoint, 0),
-    clubTotal: rows.reduce((s, r) => s + r.clubPoint, 0),
-    otherTotal: rows.reduce((s, r) => s + r.otherPoint, 0),
-    totalPoints: rows.reduce((s, r) => s + r.totalPoint, 0),
-  };
+  const byClass = new Map<string, MonthlyPointRow[]>();
+  for (const row of rows) {
+    const list = byClass.get(row.className) ?? [];
+    list.push(row);
+    byClass.set(row.className, list);
+  }
 
-  return { year, month, summary, rows };
+  const classGroups: MonthlyPointClassGroup[] = Array.from(byClass.entries())
+    .map(([className, classRows]) => ({
+      className,
+      rows: classRows,
+      summary: summarizeRows(classRows),
+    }))
+    .sort((a, b) => {
+      const ai = CLASS_ORDER.indexOf(a.className);
+      const bi = CLASS_ORDER.indexOf(b.className);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+
+  const summary = summarizeRows(rows);
+
+  return { year, month, summary, rows, classGroups };
 }
 
 function monthRangeBounds(year: number, month: number) {

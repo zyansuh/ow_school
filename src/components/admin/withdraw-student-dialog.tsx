@@ -16,6 +16,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   studentId: string;
   studentName: string;
+  /** 사이트 사용자 API 등 — 미지정 시 `/api/admin/students/:id` */
+  saveUrl?: string;
   onWithdrawn: () => void;
 };
 
@@ -24,6 +26,7 @@ export function WithdrawStudentDialog({
   onOpenChange,
   studentId,
   studentName,
+  saveUrl,
   onWithdrawn,
 }: Props) {
   const [loading, setLoading] = useState(false);
@@ -31,10 +34,14 @@ export function WithdrawStudentDialog({
   const submit = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/students/${studentId}`, {
+      const url = saveUrl ?? `/api/admin/students/${studentId}`;
+      const body = saveUrl?.includes('/site-users/')
+        ? { statusAction: 'withdraw' }
+        : { action: 'withdraw' };
+      const res = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'withdraw' }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '퇴교 처리 실패');

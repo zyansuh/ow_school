@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { GraduateStudentDialog } from '@/components/admin/graduate-student-dialog';
+import { WithdrawStudentDialog } from '@/components/admin/withdraw-student-dialog';
 
 type Props = {
   userId: string;
@@ -28,6 +29,7 @@ export function UserGraduationActions({
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [graduateOpen, setGraduateOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   const ungraduate = async () => {
     if (!window.confirm(`「${displayName}」님의 졸업을 취소하고 재학생으로 복구할까요?`)) return;
@@ -64,17 +66,32 @@ export function UserGraduationActions({
     );
   }
 
+  if (status === 'withdrawn') {
+    return <span className="text-xs text-muted-foreground">퇴교</span>;
+  }
+
   if (canGraduate && status === 'active') {
     return (
       <>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => setGraduateOpen(true)}
-        >
-          졸업
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setGraduateOpen(true)}
+          >
+            졸업
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="text-danger border-danger/40 hover:bg-danger/10"
+            onClick={() => setWithdrawOpen(true)}
+          >
+            퇴교
+          </Button>
+        </div>
         <GraduateStudentDialog
           open={graduateOpen}
           onOpenChange={setGraduateOpen}
@@ -85,6 +102,14 @@ export function UserGraduationActions({
           saveUrl={saveUrl}
           apiMode={saveUrl.includes('/site-users/') ? 'site-users' : 'students'}
           onGraduated={onSaved}
+        />
+        <WithdrawStudentDialog
+          open={withdrawOpen}
+          onOpenChange={setWithdrawOpen}
+          studentId={userId}
+          studentName={displayName}
+          saveUrl={saveUrl.includes('/site-users/') ? saveUrl : undefined}
+          onWithdrawn={onSaved}
         />
       </>
     );

@@ -122,18 +122,11 @@ export default function AdminStudentsPage() {
               ),
             },
             {
-              key: 'guild',
-              header: '길드 닉',
-              width: '9rem',
+              key: 'date',
+              header: '가입일',
+              width: '8.5rem',
               cellClassName: 'whitespace-nowrap',
-              cell: (u) => u.guildNickname,
-            },
-            {
-              key: 'discord',
-              header: 'Discord ID',
-              width: '11rem',
-              cellClassName: 'whitespace-nowrap',
-              cell: (u) => <span className="font-mono text-xs text-muted-foreground">{u.discordId}</span>,
+              cell: (u) => <span className="text-muted-foreground">{formatDate(u.createdAt)}</span>,
               hideOnMobile: true,
             },
             {
@@ -159,21 +152,6 @@ export default function AdminStudentsPage() {
               ),
             },
             {
-              key: 'status',
-              header: '상태',
-              width: '5rem',
-              cellClassName: 'whitespace-nowrap',
-              cell: (u) => <Badge variant="outline">{STATUS_LABELS[u.status] || u.status}</Badge>,
-            },
-            {
-              key: 'date',
-              header: '가입일',
-              width: '8.5rem',
-              cellClassName: 'whitespace-nowrap',
-              cell: (u) => <span className="text-muted-foreground">{formatDate(u.createdAt)}</span>,
-              hideOnMobile: true,
-            },
-            {
               key: 'action',
               header: '관리',
               width: '11.5rem',
@@ -194,6 +172,28 @@ export default function AdminStudentsPage() {
                   </Button>
                 </div>
               ),
+            },
+            {
+              key: 'guild',
+              header: '길드 닉',
+              width: '9rem',
+              cellClassName: 'whitespace-nowrap',
+              cell: (u) => u.guildNickname,
+            },
+            {
+              key: 'discord',
+              header: 'Discord ID',
+              width: '11rem',
+              cellClassName: 'whitespace-nowrap',
+              cell: (u) => <span className="font-mono text-xs text-muted-foreground">{u.discordId}</span>,
+              hideOnMobile: true,
+            },
+            {
+              key: 'status',
+              header: '상태',
+              width: '5rem',
+              cellClassName: 'whitespace-nowrap',
+              cell: (u) => <Badge variant="outline">{STATUS_LABELS[u.status] || u.status}</Badge>,
             },
           ]}
         />

@@ -9,7 +9,11 @@ import { DataTable } from '@/components/ui/data-table';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { DeleteGraduationPointDialog } from '@/components/admin/points/delete-graduation-point-dialog';
 import { formatPoint } from '@/lib/points';
-import type { MonthlyPointRow, MonthlyPointSummary } from '@/lib/admin/points';
+import type {
+  MonthlyPointClassGroup,
+  MonthlyPointRow,
+  MonthlyPointSummary,
+} from '@/lib/admin/points';
 import { Download, Users, GraduationCap, Trophy, Coins, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -18,6 +22,7 @@ type Report = {
   month: number;
   summary: MonthlyPointSummary;
   rows: MonthlyPointRow[];
+  classGroups: MonthlyPointClassGroup[];
 };
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -30,6 +35,7 @@ function formatAmount(n: number) {
 async function downloadExcel(report: Report) {
   const XLSX = await import('xlsx');
   const sheetRows = report.rows.map((r) => ({
+    반: r.className,
     서버닉네임: r.serverNick,
     '담당 선생님': r.teacherName,
     '졸업 포인트': r.graduationPoint,
@@ -41,6 +47,73 @@ async function downloadExcel(report: Report) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '포인트');
   XLSX.writeFile(wb, `포인트_${report.year}년_${report.month}월.xlsx`);
+}
+
+function PointRowsTable({
+  rows,
+  emptyTitle,
+  onDelete,
+}: {
+  rows: MonthlyPointRow[];
+  emptyTitle: string;
+  onDelete: (row: MonthlyPointRow) => void;
+}) {
+  return (
+    <DataTable
+      data={rows}
+      keyExtractor={(r) => r.userId}
+      emptyTitle={emptyTitle}
+      columns={[
+        { key: 'nick', header: '서버닉네임', cell: (r) => r.serverNick },
+        { key: 'teacher', header: '담당 선생님', cell: (r) => r.teacherName },
+        {
+          key: 'grad',
+          header: '졸업 포인트',
+          cell: (r) => <span className="tabular-nums">{formatAmount(r.graduationPoint)}</span>,
+        },
+        {
+          key: 'club',
+          header: '동호회 포인트',
+          cell: (r) => <span className="tabular-nums">{formatAmount(r.clubPoint)}</span>,
+          hideOnMobile: true,
+        },
+        {
+          key: 'other',
+          header: '기타 포인트',
+          cell: (r) => <span className="tabular-nums">{formatAmount(r.otherPoint)}</span>,
+          hideOnMobile: true,
+        },
+        {
+          key: 'total',
+          header: '총 포인트',
+          cell: (r) => (
+            <span className="tabular-nums font-semibold text-primary">{formatAmount(r.totalPoint)}</span>
+          ),
+        },
+        {
+          key: 'action',
+          header: '관리',
+          width: '5.5rem',
+          cellClassName: 'whitespace-nowrap',
+          mobileFooter: true,
+          cell: (r) =>
+            r.graduationPoint > 0 ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-danger border-danger/40 hover:bg-danger/10"
+                onClick={() => onDelete(r)}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                삭제
+              </Button>
+            ) : (
+              <span className="text-xs text-muted-foreground">—</span>
+            ),
+        },
+      ]}
+    />
+  );
 }
 
 export default function AdminPointsPage() {
@@ -57,7 +130,12 @@ export default function AdminPointsPage() {
     try {
       const res = await fetch(`/api/admin/points?year=${y}&month=${m}`);
       const data = await res.json();
-      if (res.ok) setReport(data);
+      if (res.ok) {
+        setReport({
+          ...data,
+          classGroups: Array.isArray(data.classGroups) ? data.classGroups : [],
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -94,12 +172,13 @@ export default function AdminPointsPage() {
 
   const summary = report?.summary;
   const rows = report?.rows ?? [];
+  const classGroups = report?.classGroups ?? [];
 
   return (
     <div>
       <AdminPageHeader
         title="포인트 관리"
-        description="월별 포인트 지급 현황 (캡처·엑셀 전달용)"
+        description="월별 포인트 지급 현황을 반별로 구분합니다 (캡처·엑셀 전달용)"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Select value={String(year)} onChange={(e) => setYear(Number(e.target.value))} className="w-28">
@@ -140,58 +219,33 @@ export default function AdminPointsPage() {
             </div>
           )}
 
-          <DataTable
-            data={rows}
-            keyExtractor={(r) => r.userId}
-            emptyTitle={`${year}년 ${month}월 포인트 내역이 없습니다`}
-            columns={[
-              { key: 'nick', header: '서버닉네임', cell: (r) => r.serverNick },
-              { key: 'teacher', header: '담당 선생님', cell: (r) => r.teacherName },
-              {
-                key: 'grad',
-                header: '졸업 포인트',
-                cell: (r) => <span className="tabular-nums">{formatAmount(r.graduationPoint)}</span>,
-              },
-              {
-                key: 'club',
-                header: '동호회 포인트',
-                cell: (r) => <span className="tabular-nums">{formatAmount(r.clubPoint)}</span>,
-                hideOnMobile: true,
-              },
-              {
-                key: 'other',
-                header: '기타 포인트',
-                cell: (r) => <span className="tabular-nums">{formatAmount(r.otherPoint)}</span>,
-                hideOnMobile: true,
-              },
-              {
-                key: 'total',
-                header: '총 포인트',
-                cell: (r) => <span className="tabular-nums font-semibold text-primary">{formatAmount(r.totalPoint)}</span>,
-              },
-              {
-                key: 'action',
-                header: '관리',
-                width: '5.5rem',
-                cellClassName: 'whitespace-nowrap',
-                mobileFooter: true,
-                cell: (r) =>
-                  r.graduationPoint > 0 ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-danger border-danger/40 hover:bg-danger/10"
-                      onClick={() => setDeleteTarget(r)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" />
-                      삭제
-                    </Button>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  ),
-              },
-            ]}
-          />
+          {classGroups.length === 0 ? (
+            <PointRowsTable
+              rows={rows}
+              emptyTitle={`${year}년 ${month}월 포인트 내역이 없습니다`}
+              onDelete={setDeleteTarget}
+            />
+          ) : (
+            <div className="space-y-8">
+              {classGroups.map((group) => (
+                <section key={group.className} className="space-y-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
+                    <h2 className="text-base font-semibold text-foreground">{group.className}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {group.summary.studentCount}명 · 총 {formatAmount(group.summary.totalPoints)}P
+                      {' · '}졸업 {formatAmount(group.summary.graduationTotal)}P
+                      {' · '}동호회 {formatAmount(group.summary.clubTotal)}P
+                    </p>
+                  </div>
+                  <PointRowsTable
+                    rows={group.rows}
+                    emptyTitle={`${group.className} 포인트 내역이 없습니다`}
+                    onDelete={setDeleteTarget}
+                  />
+                </section>
+              ))}
+            </div>
+          )}
         </>
       )}
 

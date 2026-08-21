@@ -48,10 +48,9 @@ export const teacherGenderField = z
   });
 
 export const teacherRegionField = z
-  .string()
-  .max(64)
+  .union([z.string().max(64), z.null()])
   .optional()
-  .transform((v) => v?.trim() || null);
+  .transform((v) => (typeof v === 'string' ? v.trim() || null : null));
 
 export const teacherBirthYearField = z
   .union([
