@@ -154,7 +154,7 @@ node scripts/verify-user-role.mjs
 | 학생 관리 | `/admin/students` | 담당 선생님 변경(잔여 정원순), 졸업·**퇴교** 처리 |
 | 졸업생 | `/admin/graduated` | 졸업생 목록, **졸업 취소** |
 | **퇴교생** | `/admin/withdrawn` | 퇴교생 목록, **재학 복구** |
-| 선생님 관리 | `/admin/teachers` | CRUD, 활동/비활성, 정원, 복수 반 |
+| 선생님 관리 | `/admin/teachers` | CRUD, 활동/비활성, 정원(인원) — 비활성은 졸업·면담 시 자동 해제 안 됨, 복수 반 |
 | **컨텐츠 소개** | `/admin/contents` | 게시글·이미지 CRUD (Vercel Blob → 실패 시 DB, 로컬 `public/uploads/contents`) |
 | 신청 관리 | `/admin/applications` | 수강 신청 내역 |
 | 졸업면담 | `/admin/interviews` | 조회(다이얼로그)·삭제 (감사 로그) |

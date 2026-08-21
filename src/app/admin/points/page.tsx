@@ -16,6 +16,7 @@ import type {
 } from '@/lib/admin/points';
 import { Download, Users, GraduationCap, Trophy, Coins, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 type Report = {
   year: number;
@@ -27,6 +28,7 @@ type Report = {
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 const YEARS = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+const CLASS_FILTERS = ['전체', '수달반', '사자반', '여우반', '미배정'] as const;
 
 function formatAmount(n: number) {
   return n.toLocaleString('ko-KR');
@@ -122,6 +124,7 @@ export default function AdminPointsPage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
+  const [classFilter, setClassFilter] = useState<(typeof CLASS_FILTERS)[number]>('전체');
   const [deleteTarget, setDeleteTarget] = useState<MonthlyPointRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -172,7 +175,9 @@ export default function AdminPointsPage() {
 
   const summary = report?.summary;
   const rows = report?.rows ?? [];
-  const classGroups = report?.classGroups ?? [];
+  const classGroups = (report?.classGroups ?? []).filter(
+    (g) => classFilter === '전체' || g.className === classFilter,
+  );
 
   return (
     <div>
@@ -203,6 +208,24 @@ export default function AdminPointsPage() {
         }
       />
 
+      <div className="flex flex-wrap gap-2 mb-6">
+        {CLASS_FILTERS.map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setClassFilter(f)}
+            className={cn(
+              'px-4 py-2 rounded-xl text-sm transition-colors',
+              classFilter === f
+                ? 'bg-primary/15 text-primary font-medium'
+                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground',
+            )}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
+
       {loading && !summary ? (
         <>
           <SkeletonStatGrid />
@@ -221,8 +244,12 @@ export default function AdminPointsPage() {
 
           {classGroups.length === 0 ? (
             <PointRowsTable
-              rows={rows}
-              emptyTitle={`${year}년 ${month}월 포인트 내역이 없습니다`}
+              rows={[]}
+              emptyTitle={
+                classFilter === '전체'
+                  ? `${year}년 ${month}월 포인트 내역이 없습니다`
+                  : `${classFilter} 포인트 내역이 없습니다`
+              }
               onDelete={setDeleteTarget}
             />
           ) : (
