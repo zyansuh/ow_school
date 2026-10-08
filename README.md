@@ -314,7 +314,7 @@ peaceful_game/
 | | `points.ts` | 졸업·동호회 포인트 상수 |
 | | `monthly-stats.ts` | 관리자 월별 통계 오버라이드 |
 | | `db-fallbacks.ts` | DB 실패 시 기본값 |
-| **auth/** | `config.ts`, `url.ts`, `errors.ts`, `rbac.ts` | OAuth 설정, URL, 오류, 관리자 RBAC |
+| **auth/** | `config.ts`, `url.ts`, `errors.ts`, `last-error.ts`, `rbac.ts` | OAuth(issuer·client_secret_post), URL, 오류, lastAuthError, RBAC |
 | **discord/** | `guild.ts` | Bot API · 닉·역할·가입일 sync |
 | | `id.ts` | Snowflake 검증 |
 | | `guild-membership.ts` | DB `isInGuild` 단일 기준 |
@@ -417,17 +417,19 @@ npm run dev         # http://localhost:3000
 | `DATABASE_URL` | ✅ | Neon **Pooled** (`...-pooler...`) |
 | `DIRECT_URL` | ⭐ | Neon **Direct** — `migrate deploy`용 |
 | `AUTH_SECRET` | ✅ | `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | ✅ | 로컬 `http://localhost:3000` |
-| `DISCORD_CLIENT_ID` / `SECRET` | ✅ | OAuth |
+| `NEXTAUTH_URL` | ✅ | 로컬 `http://localhost:3000` · Production `https://ow-school.vercel.app` |
+| `DISCORD_CLIENT_ID` / `SECRET` | ✅ | OAuth (Developer Portal과 동일 앱) |
 | `DISCORD_GUILD_ID` | ⭐ | 서버 ID (미가입 로그인 차단) |
 | `DISCORD_BOT_TOKEN` | ⭐ | 닉 변경·동기화 |
+| `AUTH_DEBUG` | — | `true`일 때만 Auth.js 상세 로그. **Production에서는 끄기**(Secret 노출) |
 | `GUILD_SYNC_TTL_SEC` | — | 캐시 TTL (기본 300) |
 | `DEFAULT_ADMIN_DISCORD_IDS` | — | 쉼표 구분 기본 관리자 ID |
 | `DISCORD_WEBHOOK_URL` | — | 면담·권한 알림 |
 | `CRON_SECRET` | — | Cron 인증 |
 | `RUN_DB_SEED` | — | Vercel 빌드 시 seed (`true`만) |
 
-**Redirect URI:** `{NEXTAUTH_URL}/api/auth/callback/discord`
+**Redirect URI:** `{NEXTAUTH_URL}/api/auth/callback/discord`  
+**Auth.js Discord:** `issuer=https://discord.com`, 토큰 교환 `client_secret_post`. 진단은 `GET /api/health` (`DISCORD_OAUTH_CREDENTIALS`, `lastAuthError`).
 
 ### npm 스크립트
 
