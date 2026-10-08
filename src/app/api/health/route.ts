@@ -10,6 +10,7 @@ import {
 import { isBotInGuild } from '@/lib/discord/guild';
 import { buildDiscordBotInviteUrl } from '@/lib/discord/bot-invite';
 import { DISCORD_OAUTH_SCOPES } from '@/lib/auth/config';
+import { getLastAuthError } from '@/lib/auth/last-error';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,6 +120,7 @@ export async function GET() {
     oauthRedirectUri,
     oauthCredentials,
     discordSetup,
+    lastAuthError: getLastAuthError(),
     warnings,
   });
 }

@@ -1,7 +1,8 @@
 import NextAuth from 'next-auth';
-import { prisma, db } from '@/lib/prisma';
+import { db } from '@/lib/prisma';
 import { ensureDefaultAdmin, isAdmin } from '@/lib/auth/rbac';
-import { authConfig } from '@/lib/auth/config';
+import { createAuthConfig } from '@/lib/auth/config';
+import { recordAuthError } from '@/lib/auth/last-error';
 import {
   checkUserGuildMembership,
   getGuildConfig,
@@ -82,152 +83,166 @@ async function syncTokenFromUser(userId: string, token: Record<string, unknown>)
   return token;
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  ...authConfig,
-  debug: process.env.NODE_ENV === 'development' || process.env.AUTH_DEBUG === 'true',
-  logger: {
-    error(error) {
-      console.error('[auth]', error);
-      const cause = error instanceof Error ? error.cause : undefined;
-      if (cause) {
-        console.error('[auth] cause:', cause);
-        if (cause instanceof Error && cause.message) {
-          console.error('[auth] cause message:', cause.message);
+export const { handlers, auth, signIn, signOut } = NextAuth(() => {
+  const base = createAuthConfig();
+  return {
+    ...base,
+    debug: process.env.NODE_ENV === 'development' || process.env.AUTH_DEBUG === 'true',
+    logger: {
+      error(error) {
+        const recorded = recordAuthError(error);
+        console.error('[auth]', recorded.type, recorded.message, recorded.cause ?? '');
+        const cause = error instanceof Error ? error.cause : undefined;
+        if (cause) {
+          console.error('[auth] cause:', cause);
         }
-      }
-      if (error && typeof error === 'object' && 'type' in error) {
-        console.error('[auth] error type:', (error as { type?: string }).type);
-      }
-    },
-    warn(code) {
-      console.warn('[auth]', code);
-    },
-    debug(message, metadata) {
-      if (process.env.AUTH_DEBUG === 'true') {
-        console.debug('[auth]', message, metadata ?? '');
-      }
-    },
-  },
-  callbacks: {
-    ...authConfig.callbacks,
-    async signIn({ profile, account }) {
-      try {
-        const p = profile as DiscordProfile | undefined;
-        const username = p ? discordUsernameFromProfile(p) : '';
-        if (!p?.id || !username) {
-          console.warn('[auth] signIn rejected: missing discord id/username', profile);
-          return '/login?error=AccessDenied';
+      },
+      warn(code) {
+        console.warn('[auth]', code);
+      },
+      debug(message, metadata) {
+        if (process.env.AUTH_DEBUG === 'true') {
+          console.debug('[auth]', message, metadata ?? '');
         }
-
-        if (getGuildConfig()) {
-          const membership = await checkUserGuildMembership(
-            p.id,
-            account?.access_token,
-          );
-          if (membership === 'out') return '/login?error=NotInGuild';
-          if (membership === 'unknown') {
-            console.warn('[auth] guild membership unknown — allowing login');
+      },
+    },
+    callbacks: {
+      ...base.callbacks,
+      async signIn({ profile, account }) {
+        try {
+          const p = profile as DiscordProfile | undefined;
+          const username = p ? discordUsernameFromProfile(p) : '';
+          if (!p?.id || !username) {
+            console.warn('[auth] signIn rejected: missing discord id/username', profile);
+            return '/login?error=AccessDenied';
           }
-        }
-
-        return true;
-      } catch (e) {
-        console.error('[auth] signIn failed:', e);
-        return '/login?error=AuthError';
-      }
-    },
-    async jwt({ token, profile, account, trigger }) {
-      const p = profile as DiscordProfile | undefined;
-      try {
-        if (p?.id) {
-          const username = discordUsernameFromProfile(p);
-          const discordAvatar = p.avatar
-            ? `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.png`
-            : null;
-
-          const user = await db((client) =>
-            client.user.upsert({
-              where: { discordId: p.id },
-              create: {
-                discordId: p.id,
-                discordUsername: username,
-                discordNickname: p.global_name?.trim() || null,
-                discordAvatar,
-              },
-              update: {
-                discordUsername: username,
-                discordNickname: p.global_name?.trim() || null,
-                discordAvatar,
-              },
-            }),
-          );
 
           if (getGuildConfig()) {
-            try {
-              await syncUserGuildDataBestEffort(p.id, account?.access_token);
-            } catch (e) {
-              console.warn('[auth] guild sync on sign-in failed:', e);
+            const membership = await checkUserGuildMembership(
+              p.id,
+              account?.access_token,
+            );
+            if (membership === 'out') return '/login?error=NotInGuild';
+            if (membership === 'unknown') {
+              console.warn('[auth] guild membership unknown — allowing login');
             }
           }
 
-          await backfillTeacherDiscordUserId(p.id, username);
+          return true;
+        } catch (e) {
+          console.error('[auth] signIn failed:', e);
+          recordAuthError(e);
+          return '/login?error=AuthError';
+        }
+      },
+      async jwt({ token, profile, account, trigger }) {
+        const p = profile as DiscordProfile | undefined;
+        try {
+          if (p?.id) {
+            const username = discordUsernameFromProfile(p);
+            const discordAvatar = p.avatar
+              ? `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.png`
+              : null;
 
-          await db((client) => ensureDefaultAdmin(p.id, username, user.id, client));
+            const user = await db((client) =>
+              client.user.upsert({
+                where: { discordId: p.id },
+                create: {
+                  discordId: p.id,
+                  discordUsername: username,
+                  discordNickname: p.global_name?.trim() || null,
+                  discordAvatar,
+                },
+                update: {
+                  discordUsername: username,
+                  discordNickname: p.global_name?.trim() || null,
+                  discordAvatar,
+                },
+              }),
+            );
 
-          await resolveTeacherEntityForUser({
-            id: user.id,
-            discordId: user.discordId,
-            discordUsername: user.discordUsername,
-            discordRoleNames: user.discordRoleNames,
-          });
+            if (getGuildConfig()) {
+              try {
+                await syncUserGuildDataBestEffort(p.id, account?.access_token);
+              } catch (e) {
+                console.warn('[auth] guild sync on sign-in failed:', e);
+              }
+            }
 
-          await syncTokenFromUser(user.id, token);
-          console.info('[auth] login ok', { discordId: p.id, userId: user.id });
-        } else if (token.userId) {
-          if (trigger === 'update' && token.discordId) {
-            await syncUserGuildData(token.discordId as string);
+            try {
+              await backfillTeacherDiscordUserId(p.id, username);
+            } catch (e) {
+              console.warn('[auth] teacher backfill failed:', e);
+            }
+
+            try {
+              await db((client) => ensureDefaultAdmin(p.id, username, user.id, client));
+            } catch (e) {
+              console.warn('[auth] ensureDefaultAdmin failed:', e);
+            }
+
+            try {
+              await resolveTeacherEntityForUser({
+                id: user.id,
+                discordId: user.discordId,
+                discordUsername: user.discordUsername,
+                discordRoleNames: user.discordRoleNames,
+              });
+            } catch (e) {
+              console.warn('[auth] resolveTeacherEntity failed:', e);
+            }
+
+            await syncTokenFromUser(user.id, token);
+            console.info('[auth] login ok', { discordId: p.id, userId: user.id });
+          } else if (token.userId) {
+            if (trigger === 'update' && token.discordId) {
+              try {
+                await syncUserGuildData(token.discordId as string);
+              } catch (e) {
+                console.warn('[auth] guild sync on update failed:', e);
+              }
+            }
+            await syncTokenFromUser(token.userId as string, token);
+            token.isAdmin = await db((client) => isAdmin(token.userId as string, client));
           }
-          await syncTokenFromUser(token.userId as string, token);
-          token.isAdmin = await db((client) => isAdmin(token.userId as string, client));
+        } catch (e) {
+          console.error('[auth] jwt failed:', e);
+          recordAuthError(e);
+          // Auth.js는 jwt throw를 Configuration으로 숨김 — 로그인 자체는 유지
         }
-      } catch (e) {
-        console.error('[auth] jwt failed:', e);
-        if (p?.id) {
-          throw e;
-        }
-      }
 
-      return token;
-    },
-    async session({ session, token }) {
-      const userFields = normalizeNickFields({
-        discordUsername: token.discordUsername as string,
-        discordNickname: (token.discordNickname as string) ?? null,
-        discordServerNick: (token.discordServerNick as string) ?? null,
-      });
-      const displayName = userDisplayName(userFields);
+        return token;
+      },
+      async session({ session, token }) {
+        const userFields = normalizeNickFields({
+          discordUsername: token.discordUsername as string,
+          discordNickname: (token.discordNickname as string) ?? null,
+          discordServerNick: (token.discordServerNick as string) ?? null,
+        });
+        const displayName = userDisplayName(userFields);
 
-      return {
-        ...session,
-        user: {
-          id: token.userId as string,
-          discordId: token.discordId as string,
-          discordUsername: userFields.discordUsername,
-          discordNickname: userFields.discordDisplayName ?? null,
-          discordAvatar: (token.discordAvatar as string) ?? null,
-          discordServerNick: userFields.discordServerNickname ?? null,
-          discordRoleNames: (token.discordRoleNames as string[]) ?? [],
-          isInGuild: !!token.isInGuild,
-          isAdmin: !!token.isAdmin,
-          isTeacher: !!token.isTeacher,
-          className: (token.className as string) ?? null,
-          teacherName: (token.teacherName as string) ?? null,
-          status: (token.status as string) ?? 'active',
-          name: displayName,
-          email: session.user?.email ?? null,
-          image: (token.discordAvatar as string) ?? null,
-        },
-      };
+        return {
+          ...session,
+          user: {
+            id: token.userId as string,
+            discordId: token.discordId as string,
+            discordUsername: userFields.discordUsername,
+            discordNickname: userFields.discordDisplayName ?? null,
+            discordAvatar: (token.discordAvatar as string) ?? null,
+            discordServerNick: userFields.discordServerNickname ?? null,
+            discordRoleNames: (token.discordRoleNames as string[]) ?? [],
+            isInGuild: !!token.isInGuild,
+            isAdmin: !!token.isAdmin,
+            isTeacher: !!token.isTeacher,
+            className: (token.className as string) ?? null,
+            teacherName: (token.teacherName as string) ?? null,
+            status: (token.status as string) ?? 'active',
+            name: displayName,
+            email: session.user?.email ?? null,
+            image: (token.discordAvatar as string) ?? null,
+          },
+        };
+      },
     },
-  },
+  };
 });

@@ -39,18 +39,18 @@ export async function checkDiscordOAuthCredentials(
   const clientSecret = getDiscordClientSecret();
   if (!clientId || !clientSecret) return { status: 'missing' };
 
+  // Auth.js Discord와 동일: client_secret_post (Basic 헤더는 Secret 특수문자에서 어긋날 수 있음)
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code: 'ow_school_credential_probe',
     redirect_uri: redirectUri,
+    client_id: clientId,
+    client_secret: clientSecret,
   });
 
   const res = await fetch('https://discord.com/api/oauth2/token', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
-    },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
   });
 

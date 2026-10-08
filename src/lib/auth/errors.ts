@@ -1,6 +1,6 @@
 export const AUTH_ERROR_MESSAGES: Record<string, string> = {
   Configuration:
-    'Discord OAuth 설정 오류입니다. Vercel Production(또는 로컬 .env)의 DISCORD_CLIENT_ID·DISCORD_CLIENT_SECRET이 Developer Portal과 같은 앱인지 확인하고, Secret 재발급 후 Vercel은 Redeploy, 로컬은 npm run dev 재시작하세요. OAuth2 Redirects에 콜백 URL이 등록됐는지도 확인하세요. 아래 「Discord로 계속하기」로 다시 시도해 보세요(PKCE·쿠키 문제일 수 있음).',
+    '로그인 콜백이 실패했습니다. Client ID·Secret이 맞아도 Auth.js는 내부 오류를 Configuration으로 표시합니다. 아래 「Discord로 계속하기」로 다시 시도하고, 계속되면 /api/health 의 lastAuthError를 확인하세요.',
   AccessDenied: '로그인이 거부되었습니다. Discord 계정 정보를 확인하거나 잠시 후 다시 시도해 주세요.',
   InvalidCheck:
     '로그인 세션이 만료되었습니다. 주소창의 callback URL로 직접 들어가지 말고, 아래 버튼으로 다시 로그인해 주세요. (모바일 인앱 브라우저는 Safari·Chrome에서 열어 주세요.)',

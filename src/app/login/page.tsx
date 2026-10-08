@@ -79,9 +79,6 @@ function LoginContent() {
             {message && (
               <div className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-left space-y-3">
                 <p>{message}</p>
-                {(error === 'Configuration' || error === 'OAuthCallbackError' || error === 'OAuthSignin') && (
-                  <p className="text-xs text-amber-300/90 leading-relaxed">{AUTH_BOT_VS_LOGIN_NOTE}</p>
-                )}
                 {oauthInvalid && (
                   <p className="text-xs text-red-300/90">
                     서버 점검: Client ID·Secret이 Discord에서 거부되고 있습니다. Vercel Production 환경 변수를
@@ -90,7 +87,7 @@ function LoginContent() {
                 )}
                 {botMissing && botInviteUrl && (
                   <p className="text-xs text-amber-200/90">
-                    봇이 아직 서버에 없습니다.{' '}
+                    {AUTH_BOT_VS_LOGIN_NOTE}{' '}
                     <a
                       href={botInviteUrl}
                       target="_blank"
@@ -99,14 +96,13 @@ function LoginContent() {
                     >
                       Discord에서 봇 초대하기
                     </a>
-                    {' '}후 아래 버튼으로 본인 계정 로그인을 시도하세요.
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
                   <Link href="/api/health" className="underline hover:text-foreground" target="_blank">
                     /api/health
                   </Link>
-                  에서 OAuth·봇 상태를 확인할 수 있습니다.
+                  에서 OAuth·lastAuthError를 확인할 수 있습니다.
                 </p>
               </div>
             )}
