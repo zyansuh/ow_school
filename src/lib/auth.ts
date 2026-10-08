@@ -87,7 +87,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
   const base = createAuthConfig();
   return {
     ...base,
-    debug: process.env.NODE_ENV === 'development' || process.env.AUTH_DEBUG === 'true',
+    // Production에서 debug=true면 clientSecret이 로그에 노출될 수 있음. AUTH_DEBUG만 허용.
+    debug: process.env.AUTH_DEBUG === 'true',
     logger: {
       error(error) {
         const recorded = recordAuthError(error);

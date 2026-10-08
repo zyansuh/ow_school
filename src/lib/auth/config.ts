@@ -57,6 +57,9 @@ export function createAuthConfig(): NextAuthConfig {
       Discord({
         clientId: getDiscordClientId(),
         clientSecret: getDiscordClientSecret(),
+        // Discord가 콜백에 iss=https://discord.com 을 붙임. 미설정 시 Auth.js가
+        // https://authjs.dev 를 기대해 CallbackRouteError → Configuration 이 납니다.
+        issuer: 'https://discord.com',
         client: { token_endpoint_auth_method: 'client_secret_post' },
         authorization: { params: { scope: DISCORD_OAUTH_SCOPES } },
         profile: discordProfile,
