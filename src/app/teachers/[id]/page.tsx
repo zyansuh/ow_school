@@ -13,7 +13,7 @@ import { ds } from '@/styles/design-system';
 import { getRecruitmentStatus, recruitmentStatusLabel } from '@/lib/teacher/recruiting';
 import { formatMainActivityTime, teacherProfileMetaLine, teacherRoleLabel } from '@/lib/teacher/display';
 
-export { dynamic } from '@/lib/utils/segment';
+export const revalidate = 60;
 
 function parseDays(json: string | null) {
   if (!json) return [] as string[];

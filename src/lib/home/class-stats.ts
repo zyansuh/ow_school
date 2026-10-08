@@ -2,7 +2,6 @@ import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { defaultClassStats } from '@/lib/db-fallbacks';
 import { countByClassId, findActiveStudentsByClass } from '@/lib/enrollment/queries';
-import { syncEnrollmentStats } from '@/lib/enrollment/persist';
 import { getActiveStudentCountsByTeacher } from '@/lib/teacher/counts';
 
 export type HomeClassStats = Record<string, { recruiting: boolean; current: number; max: number }>;
@@ -44,17 +43,12 @@ async function computeHomeClassStats(): Promise<HomeClassStats> {
     },
   });
 
+  // 읽기 경로에서 syncEnrollmentStats(쓰기)를 돌리지 않음 — 홈 cold path 지연 완화
   const [liveTeacherCounts, classStudents] = await Promise.all([
     getActiveStudentCountsByTeacher(),
     findActiveStudentsByClass(),
   ]);
   const liveClassCounts = countByClassId(classStudents);
-
-  try {
-    await syncEnrollmentStats();
-  } catch (e) {
-    console.error('[home] syncEnrollmentStats failed:', e);
-  }
 
   return Object.fromEntries(
     classes.map((c) => {

@@ -759,7 +759,7 @@ import { ds } from '@/styles/design-system';
 | 증상 | 해결 |
 |------|------|
 | 로그인 Configuration 오류 | Discord 콜백 `iss`와 Auth.js `issuer`(https://discord.com) 불일치가 흔한 원인. `/api/health`의 `lastAuthError` 확인. Vercel `AUTH_DEBUG`는 끄기(Secret 로그 노출) |
-| 페이지 로딩이 느림 | 세션 JWT DB 동기화는 5분 간격·탭 포커스 refetch 끔. `/api/health` Discord 프로브 60초 캐시. Vercel `AUTH_DEBUG` 제거 · 최근 Redeploy 직후는 콜드스타트 가능 |
+| 페이지 로딩이 느림 | 세션 JWT DB 동기화 5분 간격·탭 포커스 refetch 끔. 홈에서 enrollment 쓰기 제거. 클래스/선생님 상세 `revalidate=60`. `/api/health` Discord 프로브 60초 캐시. `AUTH_DEBUG` 끄기 |
 | 서버 미가입 | Discord 서버 가입, `DISCORD_GUILD_ID` |
 | P1002 migrate timeout | `DIRECT_URL` 설정 후 `npx prisma migrate deploy` |
 | P3009 failed migration | `prisma migrate resolve` — **백업 후** 진행 |

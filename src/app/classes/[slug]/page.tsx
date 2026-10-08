@@ -13,7 +13,7 @@ import { findTeachersForClassSlug } from '@/lib/teacher/query';
 import { TeacherCard } from '@/components/cards';
 import { EmptyState } from '@/components/ui/loading';
 
-export { dynamic } from '@/lib/utils/segment';
+export const revalidate = 60;
 
 export default async function ClassPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
