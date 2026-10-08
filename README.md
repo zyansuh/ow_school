@@ -756,7 +756,7 @@ import { ds } from '@/styles/design-system';
 
 | 증상 | 해결 |
 |------|------|
-| 로그인 Configuration 오류 | Auth.js가 PKCE·토큰교환·jwt 실패를 Configuration으로 숨김. `/api/health`의 `DISCORD_OAUTH_CREDENTIALS`·`lastAuthError` 확인. Discord는 `client_secret_post` 사용 |
+| 로그인 Configuration 오류 | Discord 콜백 `iss`와 Auth.js `issuer`(https://discord.com) 불일치가 흔한 원인. `/api/health`의 `lastAuthError` 확인. Vercel `AUTH_DEBUG`는 끄기(Secret 로그 노출) |
 | 서버 미가입 | Discord 서버 가입, `DISCORD_GUILD_ID` |
 | P1002 migrate timeout | `DIRECT_URL` 설정 후 `npx prisma migrate deploy` |
 | P3009 failed migration | `prisma migrate resolve` — **백업 후** 진행 |
