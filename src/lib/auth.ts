@@ -1,6 +1,6 @@
 import NextAuth from 'next-auth';
 import { db } from '@/lib/prisma';
-import { ensureDefaultAdmin, isAdmin } from '@/lib/auth/rbac';
+import { ensureDefaultAdmin } from '@/lib/auth/rbac';
 import { createAuthConfig } from '@/lib/auth/config';
 import { recordAuthError } from '@/lib/auth/last-error';
 import {
@@ -196,15 +196,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
             await syncTokenFromUser(user.id, token);
             console.info('[auth] login ok', { discordId: p.id, userId: user.id });
           } else if (token.userId) {
-            if (trigger === 'update' && token.discordId) {
-              try {
-                await syncUserGuildData(token.discordId as string);
-              } catch (e) {
-                console.warn('[auth] guild sync on update failed:', e);
+            // 매 session 요청마다 DB 동기화하면 전 페이지가 느려짐 — update 또는 5분마다만 갱신
+            const SYNC_MS = 5 * 60 * 1000;
+            const lastSyncedAt = typeof token.lastSyncedAt === 'number' ? token.lastSyncedAt : 0;
+            const shouldRefresh =
+              trigger === 'update' || !token.discordId || Date.now() - lastSyncedAt > SYNC_MS;
+
+            if (shouldRefresh) {
+              if (trigger === 'update' && token.discordId) {
+                try {
+                  await syncUserGuildData(token.discordId as string);
+                } catch (e) {
+                  console.warn('[auth] guild sync on update failed:', e);
+                }
               }
+              await syncTokenFromUser(token.userId as string, token);
+              token.lastSyncedAt = Date.now();
             }
-            await syncTokenFromUser(token.userId as string, token);
-            token.isAdmin = await db((client) => isAdmin(token.userId as string, client));
           }
         } catch (e) {
           console.error('[auth] jwt failed:', e);

@@ -11,10 +11,14 @@ import { isBotInGuild } from '@/lib/discord/guild';
 import { buildDiscordBotInviteUrl } from '@/lib/discord/bot-invite';
 import { DISCORD_OAUTH_SCOPES } from '@/lib/auth/config';
 import { getLastAuthError } from '@/lib/auth/last-error';
+import { withTtlCache } from '@/lib/auth/health-cache';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+const DISCORD_PROBE_TTL_MS = 60_000;
+
+export async function GET(request: Request) {
+  const lite = new URL(request.url).searchParams.get('lite') === '1';
   const rawNextAuthUrl = process.env.NEXTAUTH_URL ?? 'missing';
   const effectiveAuthUrl = resolveAuthUrl();
   const oauthRedirectUri = `${effectiveAuthUrl}/api/auth/callback/discord`;
@@ -54,8 +58,10 @@ export async function GET() {
   }
 
   let oauthCredentials: Awaited<ReturnType<typeof checkDiscordOAuthCredentials>> | null = null;
-  if (discordClientId && process.env.DISCORD_CLIENT_SECRET) {
-    oauthCredentials = await checkDiscordOAuthCredentials(oauthRedirectUri);
+  if (!lite && discordClientId && process.env.DISCORD_CLIENT_SECRET) {
+    oauthCredentials = await withTtlCache(`oauth:${oauthRedirectUri}`, DISCORD_PROBE_TTL_MS, () =>
+      checkDiscordOAuthCredentials(oauthRedirectUri),
+    );
     checks.DISCORD_OAUTH_CREDENTIALS = oauthCredentials.status;
     if (oauthCredentials.status === 'invalid_client') {
       warnings.push(
@@ -90,8 +96,8 @@ export async function GET() {
     db = e instanceof Error ? e.message : 'error';
   }
 
-  if (process.env.DISCORD_GUILD_ID && process.env.DISCORD_BOT_TOKEN) {
-    const botOk = await isBotInGuild();
+  if (!lite && process.env.DISCORD_GUILD_ID && process.env.DISCORD_BOT_TOKEN) {
+    const botOk = await withTtlCache('bot-in-guild', DISCORD_PROBE_TTL_MS, () => isBotInGuild());
     checks.DISCORD_BOT_IN_GUILD = botOk ? 'yes' : 'no';
     if (!botOk) {
       warnings.push(

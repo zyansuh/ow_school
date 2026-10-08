@@ -10,6 +10,9 @@ function generateStarField(count: number, size: number): string {
   return stars.join(', ');
 }
 
+/** 렌더마다 재계산하지 않도록 모듈 상수로 고정 */
+const STAR_FIELD_BG = generateStarField(50, 1);
+
 export function SpaceBackground() {
   return (
     <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none motion-reduce:opacity-90" aria-hidden>
@@ -19,7 +22,7 @@ export function SpaceBackground() {
       </div>
       <div
         className="absolute inset-0 motion-reduce:animate-none"
-        style={{ backgroundImage: generateStarField(50, 1) }}
+        style={{ backgroundImage: STAR_FIELD_BG }}
       />
       <div className="absolute inset-0 bg-gray-950/40" />
     </div>

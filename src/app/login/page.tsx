@@ -42,6 +42,7 @@ function LoginContent() {
 
   useEffect(() => {
     if (!error || !RETRY_ERRORS.has(error)) return;
+    // Discord 프로브는 health 측 60초 캐시 — 로그인 오류 안내용
     void fetch('/api/health')
       .then((r) => r.json())
       .then((data: HealthPayload) => setHealth(data))
