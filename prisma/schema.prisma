@@ -248,3 +248,46 @@ model ContentUploadedFile {
 
   @@index([createdAt])
 }
+
+/**
+ * Discord Bot DM 발송 기록 — OAuth 로그인과 별개.
+ * 서버 가입·DM 수신 설정·봇 권한 문제로 실패할 수 있어 재시도용으로 남긴다.
+ */
+model DiscordDmLog {
+  id                 String    @id @default(cuid())
+  /** admission_student | graduation_student | graduation_teacher | application_teacher | interview_teacher | manual */
+  type               String
+  recipientDiscordId String
+  userId             String?
+  teacherId          String?
+  content            String
+  /** pending | sent | failed | skipped */
+  status             String    @default("pending")
+  skipReason         String?
+  error              String?
+  attempts           Int       @default(0)
+  lastAttemptAt      DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([status, createdAt])
+  @@index([type, createdAt])
+  @@index([recipientDiscordId])
+  @@index([userId])
+}
+
+/** 학생↔선생님 배정 이력 — 졸업·퇴교·재배정 후에도 보존 */
+model AssignmentHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  teacherId String?
+  classId   String?
+  /** assigned | reassigned | graduated | withdrawn | restored */
+  action    String
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([teacherId, createdAt])
+  @@index([action, createdAt])
+}
