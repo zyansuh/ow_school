@@ -2,15 +2,20 @@ import { prisma } from '@/lib/prisma';
 import { syncEnrollmentStats } from '@/lib/enrollment/persist';
 import { syncTeacherStudentCount } from '@/lib/teacher/counts';
 import { isStudentUser, loadUserRoleContext } from '@/lib/users/role';
+import {
+  findLastAssignedHistory,
+  recordAssignmentHistory,
+} from '@/lib/students/assignment-history';
 
 export type StudentAssignment = {
   teacherId: string;
   classId: string;
 };
 
-/** 졸업 전 마지막 담당 정보 (면담 → 승인 신청 순) */
+/** 졸업·퇴교 전 마지막 담당 정보 (배정 이력 → 면담 → 승인 신청 순) */
 export async function resolveLastStudentAssignment(userId: string): Promise<StudentAssignment | null> {
-  const [interview, application] = await Promise.all([
+  const [history, interview, application] = await Promise.all([
+    findLastAssignedHistory(userId),
     prisma.interview.findFirst({
       where: { userId, teacherId: { not: null } },
       orderBy: { createdAt: 'desc' },
@@ -22,6 +27,16 @@ export async function resolveLastStudentAssignment(userId: string): Promise<Stud
       select: { teacherId: true, classId: true },
     }),
   ]);
+
+  if (history?.teacherId) {
+    const teacher = await prisma.teacher.findUnique({
+      where: { id: history.teacherId },
+      select: { id: true, classId: true },
+    });
+    if (teacher) {
+      return { teacherId: teacher.id, classId: history.classId ?? teacher.classId };
+    }
+  }
 
   if (interview?.teacherId && interview.teacher) {
     return { teacherId: interview.teacherId, classId: interview.teacher.classId };
@@ -46,6 +61,13 @@ export async function assignStudentTeacher(userId: string, teacherId: string | n
       where: { id: userId },
       data: { teacherId: null, classId: null },
     });
+    await recordAssignmentHistory({
+      userId,
+      teacherId: null,
+      classId: null,
+      action: 'reassigned',
+      note: '담당 해제',
+    });
     if (previousTeacherId) await syncTeacherStudentCount(previousTeacherId);
     await syncEnrollmentStats();
     return prisma.user.findUnique({ where: { id: userId }, include: { teacher: true, class: true } });
@@ -61,6 +83,14 @@ export async function assignStudentTeacher(userId: string, teacherId: string | n
       classId: teacher.classId,
       status: 'active',
     },
+  });
+
+  await recordAssignmentHistory({
+    userId,
+    teacherId: teacher.id,
+    classId: teacher.classId,
+    action: previousTeacherId ? 'reassigned' : 'assigned',
+    note: previousTeacherId ? `재배정 ← ${previousTeacherId}` : '관리자 배정',
   });
 
   const recounts = [syncTeacherStudentCount(teacherId)];

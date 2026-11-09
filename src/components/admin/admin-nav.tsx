@@ -14,6 +14,7 @@ const links = [
   { href: '/admin/teachers', label: '선생님 관리' },
   { href: '/admin/contents', label: '컨텐츠 소개' },
   { href: '/admin/applications', label: '신청 관리' },
+  { href: '/admin/dm-logs', label: 'DM 발송 내역' },
   { href: '/admin/interviews', label: '졸업면담' },
   { href: '/admin/points', label: '포인트 관리' },
   { href: '/admin/graduation-reviews', label: '졸업후기' },

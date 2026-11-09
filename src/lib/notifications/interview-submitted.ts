@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { adminUserDisplayName, normalizeNickFields } from '@/lib/users/display';
-import { sendDiscordDirectMessage, sendDiscordWebhook } from '@/lib/discord/notify';
+import { sendDiscordWebhook } from '@/lib/discord/notify';
+import { sendTrackedDiscordDm } from '@/lib/discord/dm-service';
 import { formatDateTime } from '@/lib/utils';
 import { SITE_NAME } from '@/lib/site-brand';
 
@@ -41,16 +42,38 @@ export async function notifyInterviewSubmitted(payload: InterviewNotifyPayload) 
 
     await Promise.allSettled([
       sendDiscordWebhook(webhookSummary),
-      payload.teacherId
-        ? (async () => {
-            const teacher = await prisma.teacher.findUnique({
-              where: { id: payload.teacherId! },
-              select: { discordUserId: true },
-            });
-            if (!teacher?.discordUserId) return false;
-            return sendDiscordDirectMessage(teacher.discordUserId, dmBody);
-          })()
-        : Promise.resolve(false),
+      (async () => {
+        if (!payload.teacherId) {
+          return sendTrackedDiscordDm({
+            type: 'interview_teacher',
+            recipientDiscordId: null,
+            content: dmBody,
+            userId: user.id,
+            skipReason: 'no_recipient',
+          });
+        }
+        const teacher = await prisma.teacher.findUnique({
+          where: { id: payload.teacherId },
+          select: { id: true, discordUserId: true },
+        });
+        if (!teacher?.discordUserId) {
+          return sendTrackedDiscordDm({
+            type: 'interview_teacher',
+            recipientDiscordId: null,
+            content: dmBody,
+            userId: user.id,
+            teacherId: payload.teacherId,
+            skipReason: 'no_recipient',
+          });
+        }
+        return sendTrackedDiscordDm({
+          type: 'interview_teacher',
+          recipientDiscordId: teacher.discordUserId,
+          content: dmBody,
+          userId: user.id,
+          teacherId: teacher.id,
+        });
+      })(),
     ]);
   } catch (e) {
     console.warn('[notify-interview] failed:', e);

@@ -1,4 +1,4 @@
-import { sendDiscordDirectMessage } from '@/lib/discord/notify';
+import { sendTrackedDiscordDm } from '@/lib/discord/dm-service';
 
 export type GraduationTeacherDmPayload = {
   studentDisplayName: string;
@@ -21,18 +21,10 @@ export function buildGraduationTeacherDmMessage(payload: GraduationTeacherDmPayl
     .join('\n');
 }
 
-/** 졸업 시 담당 선생님 Discord DM — 실패해도 졸업 처리는 유지 */
-export async function sendGraduationTeacherDm(
-  discordUserId: string,
-  payload: GraduationTeacherDmPayload,
-): Promise<boolean> {
-  const content = buildGraduationTeacherDmMessage(payload);
-  return sendDiscordDirectMessage(discordUserId, content);
-}
-
 export type GraduationDmOutcome = {
   sent: boolean;
-  skippedReason?: 'disabled' | 'no_teacher' | 'no_discord_user_id' | 'send_failed';
+  skippedReason?: 'disabled' | 'no_teacher' | 'no_discord_user_id' | 'send_failed' | 'no_bot_token';
+  logId?: string;
 };
 
 export async function notifyTeacherOnGraduation(options: {
@@ -40,6 +32,7 @@ export async function notifyTeacherOnGraduation(options: {
   dmTeacherId: string | null | undefined;
   studentDisplayName: string;
   className?: string | null;
+  studentUserId?: string | null;
 }): Promise<GraduationDmOutcome> {
   if (!options.sendTeacherDm) {
     return { sent: false, skippedReason: 'disabled' };
@@ -53,18 +46,40 @@ export async function notifyTeacherOnGraduation(options: {
   const { prisma } = await import('@/lib/prisma');
   const teacher = await prisma.teacher.findUnique({
     where: { id: teacherId },
-    select: { name: true, discordUserId: true },
+    select: { id: true, name: true, discordUserId: true },
+  });
+
+  const content = buildGraduationTeacherDmMessage({
+    studentDisplayName: options.studentDisplayName,
+    className: options.className,
+    teacherName: teacher?.name ?? '',
   });
 
   if (!teacher?.discordUserId) {
-    return { sent: false, skippedReason: 'no_discord_user_id' };
+    const result = await sendTrackedDiscordDm({
+      type: 'graduation_teacher',
+      recipientDiscordId: null,
+      content,
+      userId: options.studentUserId,
+      teacherId,
+      skipReason: 'no_recipient',
+    });
+    return { sent: false, skippedReason: 'no_discord_user_id', logId: result.logId };
   }
 
-  const sent = await sendGraduationTeacherDm(teacher.discordUserId, {
-    studentDisplayName: options.studentDisplayName,
-    className: options.className,
-    teacherName: teacher.name,
+  const result = await sendTrackedDiscordDm({
+    type: 'graduation_teacher',
+    recipientDiscordId: teacher.discordUserId,
+    content,
+    userId: options.studentUserId,
+    teacherId: teacher.id,
   });
 
-  return sent ? { sent: true } : { sent: false, skippedReason: 'send_failed' };
+  if (result.status === 'skipped' && result.skipReason === 'no_bot_token') {
+    return { sent: false, skippedReason: 'no_bot_token', logId: result.logId };
+  }
+
+  return result.sent
+    ? { sent: true, logId: result.logId }
+    : { sent: false, skippedReason: 'send_failed', logId: result.logId };
 }
