@@ -56,14 +56,19 @@ export function TeacherTable({ teachers, deletingId, onEdit, onToggleActive, onR
                 )}
               </td>
               <td className="p-4">
-                {(() => {
-                  const status = getRecruitmentStatus(t.maxStudents, t.currentStudents, t.isActive);
-                  return (
-                    <Badge variant={status === 'open' ? 'success' : 'danger'}>
-                      {recruitmentStatusLabel(status)}
-                    </Badge>
-                  );
-                })()}
+                <div className="flex flex-col gap-1">
+                  <Badge variant={t.isActive ? 'success' : 'warning'}>
+                    {t.isActive ? '활성' : '비활성(숨김)'}
+                  </Badge>
+                  {(() => {
+                    const status = getRecruitmentStatus(t.maxStudents, t.currentStudents);
+                    return (
+                      <Badge variant={status === 'open' ? 'success' : 'danger'}>
+                        {recruitmentStatusLabel(status)}
+                      </Badge>
+                    );
+                  })()}
+                </div>
               </td>
               <td className="p-4 flex gap-1 items-center">
                 <Button size="sm" variant="ghost" disabled={busy} onClick={() => onEdit(t)}>

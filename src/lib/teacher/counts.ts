@@ -25,8 +25,8 @@ export async function countActiveStudentsForTeacher(teacherId: string) {
 }
 
 /**
- * Teacher.currentStudents만 실제 활성 담당 학생 수와 동기화.
- * isActive는 관리자 수동 토글·정원 0 설정으로만 변경 (졸업·면담·퇴교 시 자동 재활성 방지).
+ * Teacher.currentStudents만 동기화한다.
+ * isActive(비활성)는 관리자 토글 전용 — 정원 마감·모집마감과 섞지 않는다.
  */
 export async function syncTeacherStudentCount(teacherId: string) {
   const teacher = await prisma.teacher.findUnique({ where: { id: teacherId } });

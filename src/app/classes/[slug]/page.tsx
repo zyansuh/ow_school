@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Users, ArrowLeft } from 'lucide-react';
 import { getClassBySlug } from '@/lib/constants';
 import { getActiveStudentCountsByTeacher } from '@/lib/teacher/counts';
-import { isRecruitmentOpen } from '@/lib/teacher/recruiting';
+import { canAcceptNewStudent } from '@/lib/teacher/recruiting';
 import { findTeachersForClassSlug } from '@/lib/teacher/query';
 import { TeacherCard } from '@/components/cards';
 import { EmptyState } from '@/components/ui/loading';
@@ -20,7 +20,8 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
   const clsInfo = getClassBySlug(slug);
   if (!clsInfo) notFound();
 
-  const result = await findTeachersForClassSlug(slug);
+  // 비활성 선생님은 신규 학생에게 숨김 (모집마감은 노출하되 선택 불가)
+  const result = await findTeachersForClassSlug(slug, { activeOnly: true });
   if (!result) notFound();
 
   const { dbClass, teachers: classTeachers } = result;
@@ -32,8 +33,8 @@ export default async function ClassPage({ params }: { params: Promise<{ slug: st
   }));
 
   const available = teachers
-    .filter((t) => isRecruitmentOpen(t.maxStudents, t.activeStudents, t.isActive))
-    .reduce((sum, t) => sum + (t.maxStudents - t.activeStudents), 0);
+    .filter((t) => canAcceptNewStudent(t.maxStudents, t.activeStudents, t.isActive))
+    .reduce((sum, t) => sum + Math.max(0, t.maxStudents - t.activeStudents), 0);
 
   const totalStudents = teachers.reduce((sum, t) => sum + t.activeStudents, 0);
 

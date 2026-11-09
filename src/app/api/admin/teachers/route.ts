@@ -5,7 +5,6 @@ import { assertDiscordUserIdAvailable } from '@/lib/teacher/auth';
 import { mapTeacherWithClasses, syncTeacherClasses, teacherInclude } from '@/lib/teacher/classes';
 import { listTeachersForStudentAssign } from '@/lib/teacher/student-assign';
 import { assertValidTeacherDiscordField } from '@/lib/teacher/discord-field';
-import { computeTeacherIsActive } from '@/lib/teacher/recruiting';
 import {
   teacherBirthYearField,
   teacherGenderField,
@@ -59,13 +58,14 @@ export async function POST(req: NextRequest) {
       await assertDiscordUserIdAvailable(body.discordUserId);
     }
 
-    const { activityDays, classIds, discordUserId, maxStudents, ...rest } = body;
+    const { activityDays, classIds, discordUserId, maxStudents, isActive, ...rest } = body;
     const resolvedMax = maxStudents ?? 5;
     const teacher = await prisma.teacher.create({
       data: {
         ...rest,
         maxStudents: resolvedMax,
-        isActive: computeTeacherIsActive(resolvedMax, 0),
+        // 비활성은 관리자 명시값만 — 정원(maxStudents)과 분리
+        isActive: isActive ?? true,
         classId: classIds[0],
         discordUserId,
         activityDays: activityDays?.length ? JSON.stringify(activityDays) : undefined,

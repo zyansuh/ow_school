@@ -20,7 +20,7 @@ export async function GET() {
   return NextResponse.json(
     classes.map((c) => ({
       ...c,
-      recruiting: c.teachers.some((t) => isRecruitmentOpen(t.maxStudents, liveCounts[t.id] ?? 0, t.isActive)),
+      recruiting: c.teachers.some((t) => isRecruitmentOpen(t.maxStudents, liveCounts[t.id] ?? 0)),
       totalCapacity: c.teachers.reduce((s, t) => s + t.maxStudents, 0),
       currentStudents: c.teachers.reduce((s, t) => s + (liveCounts[t.id] ?? 0), 0),
     })),

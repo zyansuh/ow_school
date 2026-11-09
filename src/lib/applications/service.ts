@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { applyApplicationStatusChange } from '@/lib/applications/status';
 import { countActiveStudentsForTeacher } from '@/lib/teacher/counts';
-import { isRecruitmentOpen } from '@/lib/teacher/recruiting';
+import { canAcceptNewStudent } from '@/lib/teacher/recruiting';
 import { initialApplicationStatus } from '@/lib/applications/policy';
 import { notifyApplicationSubmitted } from '@/lib/notifications/application-submitted';
 import { adminUserDisplayName, normalizeNickFields } from '@/lib/users/display';
@@ -24,8 +24,12 @@ export async function assertCanApply(userId: string, teacherId: string) {
     throw new Error('TEACHER_NOT_FOUND');
   }
 
+  if (!teacher.isActive) {
+    throw new Error('TEACHER_INACTIVE');
+  }
+
   const activeCount = await countActiveStudentsForTeacher(teacher.id);
-  if (!isRecruitmentOpen(teacher.maxStudents, activeCount, teacher.isActive)) {
+  if (!canAcceptNewStudent(teacher.maxStudents, activeCount, teacher.isActive)) {
     throw new Error('TEACHER_FULL');
   }
 

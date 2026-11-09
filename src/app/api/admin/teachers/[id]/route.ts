@@ -62,10 +62,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const { data, classIds } = serializeTeacherData(body);
 
-    // 정원 0 = 모집 마감 → 비활성. 그 외에는 관리자가 보낸 isActive를 유지(자동 재계산 없음).
-    if (body.maxStudents !== undefined && body.maxStudents <= 0) {
-      data.isActive = false;
-    }
+    // maxStudents(모집 정원/마감) 변경이 isActive(비활성·숨김)를 덮어쓰지 않음
 
     const teacher = await prisma.teacher.update({
       where: { id },
