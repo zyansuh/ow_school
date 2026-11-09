@@ -5,7 +5,7 @@ import { isStudentUser, loadUserRoleContext } from '@/lib/users/role';
 import { recordAssignmentHistory } from '@/lib/students/assignment-history';
 import { resolveLastStudentAssignment } from '@/lib/students/assignment';
 
-/** 학생 퇴교 처리 — 레코드 삭제 없이 status만 변경 */
+/** 학생 퇴교 — User + AssignmentHistory 트랜잭션 */
 export async function withdrawStudent(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -19,21 +19,25 @@ export async function withdrawStudent(userId: string) {
   const teacherId = user.teacherId;
   const classId = user.classId;
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      status: 'withdrawn',
-      teacherId: null,
-      classId: null,
-    },
-  });
-
-  await recordAssignmentHistory({
-    userId,
-    teacherId,
-    classId,
-    action: 'withdrawn',
-    note: '퇴교',
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        status: 'withdrawn',
+        teacherId: null,
+        classId: null,
+      },
+    });
+    await recordAssignmentHistory(
+      {
+        userId,
+        teacherId,
+        classId,
+        action: 'withdrawn',
+        note: '퇴교',
+      },
+      tx,
+    );
   });
 
   if (teacherId) {
@@ -44,7 +48,7 @@ export async function withdrawStudent(userId: string) {
   return prisma.user.findUnique({ where: { id: userId } });
 }
 
-/** 퇴교 취소 — 재학(active) 복구 + 가능하면 마지막 담당 복원 */
+/** 퇴교 취소 — User + AssignmentHistory 트랜잭션 */
 export async function restoreWithdrawnStudent(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -54,21 +58,25 @@ export async function restoreWithdrawnStudent(userId: string) {
 
   const assignment = await resolveLastStudentAssignment(userId);
 
-  const updated = await prisma.user.update({
-    where: { id: userId },
-    data: {
-      status: 'active',
-      teacherId: assignment?.teacherId ?? null,
-      classId: assignment?.classId ?? null,
-    },
-  });
-
-  await recordAssignmentHistory({
-    userId,
-    teacherId: assignment?.teacherId,
-    classId: assignment?.classId,
-    action: 'restored',
-    note: '퇴교 취소',
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        status: 'active',
+        teacherId: assignment?.teacherId ?? null,
+        classId: assignment?.classId ?? null,
+      },
+    });
+    await recordAssignmentHistory(
+      {
+        userId,
+        teacherId: assignment?.teacherId,
+        classId: assignment?.classId,
+        action: 'restored',
+        note: '퇴교 취소',
+      },
+      tx,
+    );
   });
 
   if (assignment?.teacherId) {
@@ -76,5 +84,5 @@ export async function restoreWithdrawnStudent(userId: string) {
     await syncEnrollmentStats();
   }
 
-  return updated;
+  return prisma.user.findUnique({ where: { id: userId } });
 }

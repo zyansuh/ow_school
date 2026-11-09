@@ -47,7 +47,7 @@ export async function resolveLastStudentAssignment(userId: string): Promise<Stud
   return null;
 }
 
-/** 관리자: 담당 선생님 변경 (정원·비활성 선생님도 허용) */
+/** 관리자: 담당 선생님 변경 — User + AssignmentHistory 동일 트랜잭션 */
 export async function assignStudentTeacher(userId: string, teacherId: string | null) {
   const user = await prisma.user.findUnique({ where: { id: userId }, include: { adminRole: true } });
   const ctx = await loadUserRoleContext();
@@ -57,16 +57,21 @@ export async function assignStudentTeacher(userId: string, teacherId: string | n
   const previousTeacherId = user.teacherId;
 
   if (!teacherId) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { teacherId: null, classId: null },
-    });
-    await recordAssignmentHistory({
-      userId,
-      teacherId: null,
-      classId: null,
-      action: 'reassigned',
-      note: '담당 해제',
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { teacherId: null, classId: null },
+      });
+      await recordAssignmentHistory(
+        {
+          userId,
+          teacherId: null,
+          classId: null,
+          action: 'reassigned',
+          note: '담당 해제',
+        },
+        tx,
+      );
     });
     if (previousTeacherId) await syncTeacherStudentCount(previousTeacherId);
     await syncEnrollmentStats();
@@ -76,21 +81,25 @@ export async function assignStudentTeacher(userId: string, teacherId: string | n
   const teacher = await prisma.teacher.findUnique({ where: { id: teacherId } });
   if (!teacher) throw new Error('TEACHER_NOT_FOUND');
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      teacherId: teacher.id,
-      classId: teacher.classId,
-      status: 'active',
-    },
-  });
-
-  await recordAssignmentHistory({
-    userId,
-    teacherId: teacher.id,
-    classId: teacher.classId,
-    action: previousTeacherId ? 'reassigned' : 'assigned',
-    note: previousTeacherId ? `재배정 ← ${previousTeacherId}` : '관리자 배정',
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        teacherId: teacher.id,
+        classId: teacher.classId,
+        status: 'active',
+      },
+    });
+    await recordAssignmentHistory(
+      {
+        userId,
+        teacherId: teacher.id,
+        classId: teacher.classId,
+        action: previousTeacherId ? 'reassigned' : 'assigned',
+        note: previousTeacherId ? `재배정 ← ${previousTeacherId}` : '관리자 배정',
+      },
+      tx,
+    );
   });
 
   const recounts = [syncTeacherStudentCount(teacherId)];

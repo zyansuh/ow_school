@@ -5,6 +5,11 @@ import { recordAssignmentHistory } from '@/lib/students/assignment-history';
 
 type AppWithTeacher = Prisma.ApplicationGetPayload<{ include: { teacher: true } }>;
 
+/**
+ * 신청 상태 변경.
+ * User 배정과 AssignmentHistory는 동일 트랜잭션으로 커밋한다.
+ * Discord DM은 호출하지 않음(알림은 service 레이어에서 트랜잭션 밖 fire-and-forget).
+ */
 export async function applyApplicationStatusChange(app: AppWithTeacher, oldStatus: string, newStatus: string) {
   if (newStatus === oldStatus) return;
 
@@ -20,16 +25,21 @@ export async function applyApplicationStatusChange(app: AppWithTeacher, oldStatu
     }
 
     if (app.userId) {
-      await prisma.user.update({
-        where: { id: app.userId },
-        data: { classId: app.classId, teacherId: app.teacherId, status: 'active' },
-      });
-      await recordAssignmentHistory({
-        userId: app.userId,
-        teacherId: app.teacherId,
-        classId: app.classId,
-        action: 'assigned',
-        note: `신청 승인 · ${app.id}`,
+      await prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: app.userId! },
+          data: { classId: app.classId, teacherId: app.teacherId, status: 'active' },
+        });
+        await recordAssignmentHistory(
+          {
+            userId: app.userId!,
+            teacherId: app.teacherId,
+            classId: app.classId,
+            action: 'assigned',
+            note: `신청 승인 · ${app.id}`,
+          },
+          tx,
+        );
       });
     }
     await syncTeacherStudentCount(teacher.id);
@@ -38,15 +48,26 @@ export async function applyApplicationStatusChange(app: AppWithTeacher, oldStatu
 
   if (newStatus === 'rejected' && oldStatus === 'approved') {
     if (app.userId) {
-      const user = await prisma.user.findUnique({ where: { id: app.userId } });
-      if (user?.teacherId === app.teacherId) {
-        await prisma.user.update({
-          where: { id: app.userId },
-          data: { classId: null, teacherId: null },
-        });
-      }
+      await prisma.$transaction(async (tx) => {
+        const user = await tx.user.findUnique({ where: { id: app.userId! } });
+        if (user?.teacherId === app.teacherId) {
+          await tx.user.update({
+            where: { id: app.userId! },
+            data: { classId: null, teacherId: null },
+          });
+          await recordAssignmentHistory(
+            {
+              userId: app.userId!,
+              teacherId: app.teacherId,
+              classId: app.classId,
+              action: 'reassigned',
+              note: `신청 거절·배정 해제 · ${app.id}`,
+            },
+            tx,
+          );
+        }
+      });
     }
-    const teacher = app.teacher;
-    await syncTeacherStudentCount(teacher.id);
+    await syncTeacherStudentCount(app.teacher.id);
   }
 }

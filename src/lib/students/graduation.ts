@@ -22,7 +22,11 @@ export type GraduateResult = {
   studentDm: Awaited<ReturnType<typeof notifyStudentOnGraduation>> | { sent: false; skippedReason: 'disabled' };
 };
 
-/** 학생을 졸업생으로 전환하고 반·담당 선생님 배정을 해제한다 */
+/**
+ * 졸업 처리.
+ * User 상태 변경 + AssignmentHistory는 트랜잭션.
+ * Discord DM은 커밋 이후 호출(실패해도 DB 롤백 없음).
+ */
 export async function graduateUser(userId: string, options: GraduateOptions = {}): Promise<GraduateResult> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -42,17 +46,21 @@ export async function graduateUser(userId: string, options: GraduateOptions = {}
   const className = user.class?.name ?? null;
   const teacherName = user.teacher?.name ?? null;
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { status: 'graduated', classId: null, teacherId: null },
-  });
-
-  await recordAssignmentHistory({
-    userId,
-    teacherId,
-    classId: user.classId,
-    action: 'graduated',
-    note: className ? `졸업 · ${className}` : '졸업',
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: { status: 'graduated', classId: null, teacherId: null },
+    });
+    await recordAssignmentHistory(
+      {
+        userId,
+        teacherId,
+        classId: user.classId,
+        action: 'graduated',
+        note: className ? `졸업 · ${className}` : '졸업',
+      },
+      tx,
+    );
   });
 
   if (teacherId) {
@@ -81,28 +89,32 @@ export async function graduateUser(userId: string, options: GraduateOptions = {}
   return { user: updated, dm, studentDm };
 }
 
-/** 졸업 취소 — active로 복구, 마지막 담당 선생님·반 복원 */
+/** 졸업 취소 — User + AssignmentHistory 트랜잭션, DM 없음 */
 export async function restoreGraduatedUser(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || user.status !== 'graduated') return user;
 
   const assignment = await resolveLastStudentAssignment(userId);
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      status: 'active',
-      teacherId: assignment?.teacherId ?? null,
-      classId: assignment?.classId ?? null,
-    },
-  });
-
-  await recordAssignmentHistory({
-    userId,
-    teacherId: assignment?.teacherId,
-    classId: assignment?.classId,
-    action: 'restored',
-    note: '졸업 취소',
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        status: 'active',
+        teacherId: assignment?.teacherId ?? null,
+        classId: assignment?.classId ?? null,
+      },
+    });
+    await recordAssignmentHistory(
+      {
+        userId,
+        teacherId: assignment?.teacherId,
+        classId: assignment?.classId,
+        action: 'restored',
+        note: '졸업 취소',
+      },
+      tx,
+    );
   });
 
   if (assignment?.teacherId) {

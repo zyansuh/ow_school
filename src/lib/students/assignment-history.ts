@@ -1,3 +1,4 @@
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 export type AssignmentHistoryAction =
@@ -7,14 +8,19 @@ export type AssignmentHistoryAction =
   | 'withdrawn'
   | 'restored';
 
-export async function recordAssignmentHistory(input: {
-  userId: string;
-  teacherId?: string | null;
-  classId?: string | null;
-  action: AssignmentHistoryAction;
-  note?: string | null;
-}) {
-  return prisma.assignmentHistory.create({
+type Db = PrismaClient | Prisma.TransactionClient;
+
+export async function recordAssignmentHistory(
+  input: {
+    userId: string;
+    teacherId?: string | null;
+    classId?: string | null;
+    action: AssignmentHistoryAction;
+    note?: string | null;
+  },
+  db: Db = prisma,
+) {
+  return db.assignmentHistory.create({
     data: {
       userId: input.userId,
       teacherId: input.teacherId ?? null,
@@ -26,8 +32,8 @@ export async function recordAssignmentHistory(input: {
 }
 
 /** 졸업·퇴교 복구 시 마지막 배정 추론용 */
-export async function findLastAssignedHistory(userId: string) {
-  return prisma.assignmentHistory.findFirst({
+export async function findLastAssignedHistory(userId: string, db: Db = prisma) {
+  return db.assignmentHistory.findFirst({
     where: {
       userId,
       action: { in: ['assigned', 'reassigned', 'restored'] },
