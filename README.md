@@ -76,7 +76,7 @@
 | 표시 | DB 값 | 자동 분류 우선순위 |
 |------|-------|-------------------|
 | 관리자 | `admin` | `AdminRole` 테이블 존재 |
-| 선생님 | `teacher` | Discord `신입반교사` 역할 · `Teacher.discordUserId` · Teacher 닉 매칭 |
+| 선생님 | `teacher` | **선생님 관리 등록**(`Teacher.discordUserId`) 우선 · Discord 역할(`신입반 주임교사`/`신입반 교사`/`신입반 보조교사`, `/admin/teachers`에서 편집) |
 | 학생 | `student` | Discord **서버 가입 2달 미만** (`guildJoinedAt` 기준) |
 | 마을주민 | `resident` | 가입 2달 이상 · 미가입 · 위에 해당 없음 |
 
@@ -88,24 +88,47 @@ flowchart TD
     B -->|예| C[siteRole 그대로 사용]
     B -->|아니오| D{AdminRole?}
     D -->|예| E[admin]
-    D -->|아니오| F{선생님 판별}
+    D -->|아니오| F{Teacher.discordUserId 등록?}
     F -->|예| G[teacher]
-    F -->|아니오| H{가입 2달 미만?}
-    H -->|예| I[student]
-    H -->|아니오| J[resident]
+    F -->|아니오| H{Teacher.discord 닉 매칭?}
+    H -->|예| G
+    H -->|아니오| I{Discord 선생님 역할?}
+    I -->|예| G
+    I -->|아니오| J{가입 2달 미만?}
+    J -->|예| K[student]
+    J -->|아니오| L[resident]
 ```
+
+### Discord 선생님 역할 (관리자 설정)
+
+`/admin/teachers` 상단에서 Discord 역할명·우선순위를 **직접 입력·저장**합니다 (`SiteSetting` 키 `teacher_discord_roles`).
+
+| 기본 역할명 | 우선순위 | 의미 |
+|-------------|----------|------|
+| `신입반 주임교사` | 1 | 주임 |
+| `신입반 교사` | 2 | 일반 교사 |
+| `신입반 보조교사` | 3 | 보조 |
+| `신입반교사` | 2 | 레거시(공백 없음) 호환 |
+
+- Discord 서버 역할명과 **글자 단위 동일**해야 매칭됩니다 (공백 포함).
+- **수강 신청·선생님 카드·배정**은 Discord 역할만으로 동작하지 않고, **선생님 관리에 등록된 `Teacher` 레코드**만 사용합니다.
+- 사이트 역할 `teacher` 자동 분류는 **등록된 사람 우선**, Discord 역할은 보조입니다.
 
 ### 구현 · 검증
 
 | 파일 | 역할 |
 |------|------|
 | `src/lib/users/role.ts` | `getUserRole`, `inferUserRole`, `isStudentUser` |
+| `src/lib/teacher/discord-roles.ts` | Discord 선생님 역할 기본값·SiteSetting CRUD |
+| `src/lib/teacher/recruiting.ts` | 비활성 vs 모집마감 분리 |
 | `src/lib/discord/guild-tenure.ts` | `guildJoinedAt`, 2달 기준 `isStudentByGuildTenure` |
 | `src/lib/users/display.ts` | 관리자 화면 `displayNickname` 우선 표시 |
 
 ```bash
 # DB 없이 역할 분류 순수 함수 검증
 node scripts/verify-user-role.mjs
+# 비활성 vs 모집마감 분리 검증
+node scripts/verify-recruiting.mjs
 ```
 
 **참고**
@@ -154,7 +177,8 @@ node scripts/verify-user-role.mjs
 | 학생 관리 | `/admin/students` | 담당 선생님 변경(잔여 정원순), 졸업·**퇴교** 처리 |
 | 졸업생 | `/admin/graduated` | 졸업생 목록, **졸업 취소** |
 | **퇴교생** | `/admin/withdrawn` | 퇴교생 목록, **재학 복구** |
-| 선생님 관리 | `/admin/teachers` | CRUD, 활동/비활성, 정원(인원) — 비활성은 졸업·면담 시 자동 해제 안 됨, 복수 반 |
+| 선생님 관리 | `/admin/teachers` | CRUD, **비활성**(숨김) / **모집마감**(노출·선택불가) 분리, Discord 역할명 설정, 정원, 복수 반 — 비활성은 졸업·면담 시 자동 해제 안 됨 |
+| **DM 발송 내역** | `/admin/dm-logs` | Discord Bot DM 기록·재시도 |
 | **컨텐츠 소개** | `/admin/contents` | 게시글·이미지 CRUD (Vercel Blob → 실패 시 DB, 로컬 `public/uploads/contents`) |
 | 신청 관리 | `/admin/applications` | 수강 신청 내역 |
 | 졸업면담 | `/admin/interviews` | 조회(다이얼로그)·삭제 (감사 로그) |
@@ -167,10 +191,10 @@ node scripts/verify-user-role.mjs
 
 | 동작 | DB 변경 | 비고 |
 |------|---------|------|
-| **졸업** | `status → graduated`, `classId`/`teacherId` null | 선생님 `currentStudents` 재계산 · **담당 선생님 DM 알림** (선택) |
-| **졸업 취소** | `status → active`, 마지막 담당·반 복원 | 면담·승인 신청 이력 기준 (`students/assignment.ts`) |
-| **퇴교** | `status → withdrawn`, `classId`/`teacherId` null | 레코드 삭제 없음 · 일반 학생 목록에서 제외 |
-| **퇴교 복구** | `status → active` | `/admin/withdrawn` — 담당 선생님은 자동 복원되지 않음 |
+| **졸업** | `status → graduated`, `classId`/`teacherId` null | `AssignmentHistory(graduated)` · 학생·선생님 DM · 인원 재계산 |
+| **졸업 취소** | `status → active`, 마지막 담당·반 복원 | `AssignmentHistory` → 면담 → 승인 신청 순으로 복원 |
+| **퇴교** | `status → withdrawn`, `classId`/`teacherId` null | `AssignmentHistory(withdrawn)` · 레코드 삭제 없음 |
+| **퇴교 복구** | `status → active` + 가능하면 담당 복원 | `/admin/withdrawn` · 이력 기반 복원 |
 
 **졸업 취소 UI:** `/admin/graduated`, `/admin/users` (졸업 관리 열), API `PATCH` `action: ungraduate` / `statusAction: ungraduate`
 
@@ -207,7 +231,9 @@ node scripts/verify-user-role.mjs
 - **반·선생님 운영 메모:** 「이번 주 휴식」 등 짧은 메모. `SiteSetting` `admin_ops_notes` · `GET/PUT /api/admin/ops-notes` · 대시보드 편집·반별 학생 수·선생님 목록에 표시.
 - **알림 큐:** 최근 7일 신규 신청·면담을 반별로 묶음. `GET/POST /api/admin/alert-queue` (`admin_alert_ack_at`로 확인 처리).
 
-**졸업 시 선생님 DM:** `/admin/students`, `/admin/users` 졸업 다이얼로그에서 발송 여부·수신 선생님 선택. 졸업면담 제출 시 담당 선생님에게 자동 DM (`lib/notifications/graduation-teacher-dm.ts`). DM 실패해도 졸업 처리는 유지됩니다.
+**선생님 비활성 vs 모집마감:** `isActive=false` → 신규 학생에게 **숨김**(기존 담당은 유지). `maxStudents=0` 또는 정원 가득 → 목록에 **보이되 선택 불가**. 인원 동기화(`syncTeacherStudentCount`)는 `currentStudents`만 갱신하고 `isActive`를 덮어쓰지 않습니다.
+
+**Discord DM (입학·졸업):** 신청 즉시 승인 시 **학생 입학 DM** + 선생님 알림 DM. 졸업 시 **학생 졸업 DM** + 선생님 DM. 모두 `DiscordDmLog`에 기록되며 `/admin/dm-logs`에서 재시도 가능. **OAuth 로그인 ≠ Bot DM 가능** — 봇 토큰·서버 가입·수신자 DM 설정이 필요합니다. DM 실패해도 입학/졸업 DB는 유지됩니다.
 
 ### 🔗 Discord 연동 요약
 
@@ -215,6 +241,8 @@ node scripts/verify-user-role.mjs
 |------|------|
 | 사용자 식별 | `User.discordId` (닉 변경해도 유지) |
 | 학생↔선생님 | `User.teacherId` → `Teacher` |
+| 배정 이력 | `AssignmentHistory` (배정·재배정·졸업·퇴교·복구) |
+| Bot DM 기록 | `DiscordDmLog` + `/admin/dm-logs` 재시도 |
 | 일반 표시명 | 서버 닉 → 글로벌 → username |
 | 관리자 표시명 | `displayNickname` → 서버 닉 → … |
 | 길드 동기화 | `lib/discord/guild.ts`, TTL `GUILD_SYNC_TTL_SEC` (기본 300초) |
@@ -473,6 +501,7 @@ npm run dev         # http://localhost:3000
 | `20250625200000_content_posts` | `ContentPost` · `ContentImage` (컨텐츠 소개) |
 | `20250627120000_content_uploaded_file` | `ContentUploadedFile` (Blob 미연결 시 이미지 바이너리) |
 | `20250626100000_enrollment_stat` | `EnrollmentStat` — 공개 인원 집계 스냅샷 |
+| `20250628120000_discord_dm_assignment_history` | `DiscordDmLog` · `AssignmentHistory` |
 
 > 메인 홈 레이아웃·통계는 DB 자동 집계입니다. `EnrollmentStat`은 표시용 캐시이며 User·Teacher 원본은 변경하지 않습니다.
 
@@ -525,19 +554,30 @@ npm run dev         # http://localhost:3000
 
 ---
 
-## 🎓 졸업 시 선생님 DM
+## 🎓 Discord DM (입학·졸업)
 
-학생 졸업 처리 시 담당 선생님(또는 선택한 선생님)에게 **Discord Bot DM**으로 알림을 보냅니다.
+| 이벤트 | 수신자 | 유형 (`DiscordDmLog.type`) |
+|--------|--------|---------------------------|
+| 수강 신청 즉시 승인 | 학생 | `admission_student` |
+| 수강 신청 즉시 승인 | 담당 선생님 | `application_teacher` |
+| 졸업 처리 | 학생 | `graduation_student` |
+| 졸업 처리 | 선생님 | `graduation_teacher` |
+| 졸업면담 제출 | 담당 선생님 | `interview_teacher` |
 
 | 경로 | 동작 |
 |------|------|
-| `/admin/students` · `/admin/users` | 졸업 다이얼로그 — DM 발송 체크, 수신 선생님 선택 |
-| 졸업면담 제출 (`POST /api/interviews`) | 담당 선생님에게 자동 DM |
-| API body | `sendTeacherDm` (기본 true), `dmTeacherId` (선택) |
+| `/admin/students` · `/admin/users` | 졸업 다이얼로그 — 선생님 DM 체크, 수신 선생님 선택 |
+| `/admin/dm-logs` | 발송 내역·실패 재시도 |
+| API | `GET/POST /api/admin/dm-logs`, `POST .../[id]/retry` |
 
-**전제:** `Teacher.discordUserId` 연결 + `DISCORD_BOT_TOKEN` 설정. DM 실패 시에도 졸업 DB 처리는 완료됩니다.
+**전제 (외부 설정 — 코드로 임의 처리하지 않음):**
 
-구현: `src/lib/notifications/graduation-teacher-dm.ts` · `src/components/admin/graduate-student-dialog.tsx`
+1. `DISCORD_BOT_TOKEN` — 봇이 길드에 초대되어 있어야 함
+2. 학생/선생님 Discord User ID (`User.discordId` / `Teacher.discordUserId`)
+3. 수신자가 봇과 **공통 서버**에 있거나 DM을 허용한 상태
+4. 수신자 개인 DM 차단 시 `failed`로 기록 → 관리자가 재시도
+
+구현: `src/lib/discord/dm-service.ts` · `src/lib/notifications/*-dm.ts`
 
 ---
 
@@ -680,6 +720,9 @@ sequenceDiagram
 | GET | `/api/admin/withdrawn` | 퇴교생 |
 | GET | `/api/admin/teachers?for=student-assign` | 학생관리용 선생님 목록 (잔여 정원순) |
 | GET/POST/PATCH/DELETE | `/api/admin/teachers`, `[id]` | 선생님 CRUD |
+| GET/PUT | `/api/admin/teacher-discord-roles` | Discord 선생님 역할명·우선순위 (`SiteSetting`) |
+| GET | `/api/admin/dm-logs` | Bot DM 발송 내역 (`?status=` · `?type=`) |
+| POST | `/api/admin/dm-logs/[id]/retry` | 실패·스킵 DM 재시도 |
 | GET/POST/PATCH/DELETE | `/api/admin/contents`, `[id]` | 컨텐츠 소개 CRUD |
 | POST | `/api/admin/contents/upload` | FormData 이미지 (Blob → 실패 시 DB) |
 | GET | `/api/admin/contents/upload` | Blob 연결 상태 (관리자, 토큰 값 미노출) |
@@ -722,9 +765,16 @@ sequenceDiagram
 
 ### 전체 모델
 
-`User` · `Class` · `Teacher` · `TeacherClass` · `Application` · `Interview` · `PointHistory` · `InterviewDeletionLog` · `GraduationReview` · `AdminRole` · `AdminRoleRequest` · `AdminRoleAuditLog` · `SiteSetting` · `ContentPost` · `ContentImage`
+`User` · `Class` · `Teacher` · `TeacherClass` · `Application` · `Interview` · `PointHistory` · `InterviewDeletionLog` · `GraduationReview` · `AdminRole` · `AdminRoleRequest` · `AdminRoleAuditLog` · `SiteSetting` · `ContentPost` · `ContentImage` · `ContentUploadedFile` · `EnrollmentStat` · **`DiscordDmLog`** · **`AssignmentHistory`**
 
-`SiteSetting` 키 예: `notices`, `statsMonthlyApplicationsOverride`, `homeSiteStatsOverride`, `homeClassStatsOverride`
+| 모델 | 용도 |
+|------|------|
+| `DiscordDmLog` | Bot DM 발송 기록 (`type` · `status` · `attempts`) — OAuth와 별개 |
+| `AssignmentHistory` | 배정·재배정·졸업·퇴교·복구 이력 |
+| `EnrollmentStat` | 공개 인원 집계 스냅샷 |
+| `ContentUploadedFile` | Blob 미연결 시 이미지 바이너리 |
+
+`SiteSetting` 키 예: `notices`, `teacher_discord_roles`, `statsMonthlyApplicationsOverride`, `homeSiteStatsOverride`, `homeClassStatsOverride`
 
 스키마: `prisma/schema.prisma`
 
@@ -769,7 +819,9 @@ import { ds } from '@/styles/design-system';
 | 컨텐츠 이미지 업로드 실패 (503) | **원인:** Vercel에 `BLOB_READ_WRITE_TOKEN` 없거나 Blob Store 미연결. **해결:** 배포 후 DB 폴백(`/api/content-images/…`) 자동 사용. Blob CDN 원하면 Storage Connect + Redeploy · `GET /api/admin/contents/upload`로 `probe.ok` 확인 |
 | 학생관리 테이블 잘림·열 눌림 | `/admin/students`는 `layout="wide"` 적용 여부 확인 · 표 영역 좌우 스크롤 · `student-teacher-assign` Select 폭 |
 | 선생님 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 · 카드/상세는 `getActiveStudentCountsByTeacher` 통일 |
-| 졸업 DM 미발송 | `Teacher.discordUserId` 연결 확인 · `DISCORD_BOT_TOKEN` · 봇 DM 권한 |
+| 졸업·입학 DM 미발송 | `/admin/dm-logs`에서 `skipped`/`failed` 확인 · `DISCORD_BOT_TOKEN` · 서버 가입 · 수신자 DM 허용 · 선생님은 `discordUserId` 연결 |
+| Discord 역할인데 선생님 아님 | `/admin/teachers` 역할명 **정확 일치** · 또는 선생님 관리에 직접 등록·ID 연결 (등록 우선) |
+| 모집마감인데 선생님 안 보임 | `isActive`가 false로 덮였는지 확인 — 인원 동기화는 `isActive`를 바꾸지 않아야 함. 비활성=숨김, 모집마감=`maxStudents`/정원 |
 | Bot 닉 403 | 역할 순위 · MANAGE_NICKNAMES |
 | Windows EPERM prisma | node 프로세스 종료 후 재시도 |
 
