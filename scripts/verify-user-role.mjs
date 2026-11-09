@@ -51,12 +51,16 @@ function isStudentByGuildTenure(user, now = new Date()) {
   return joined > cutoff;
 }
 
+function isActiveAssignedStudentCandidate(user) {
+  return user.status === 'active' && !!user.teacherId;
+}
+
 function inferUserRole(user, ctx, now = new Date()) {
   if (isAdminUser(user)) return 'admin';
-  // 등록 Teacher 우선
   if (isTeacherByDiscordUserId(user.discordId, ctx)) return 'teacher';
   const allowed = (ctx.teacherDiscordRoles ?? DEFAULT_TEACHER_DISCORD_ROLES).map((r) => r.name);
   if (hasAnyTeacherDiscordRole(parseRoleNames(user.discordRoleNames), allowed)) return 'teacher';
+  if (isActiveAssignedStudentCandidate(user)) return 'student';
   if (isStudentByGuildTenure(user, now)) return 'student';
   return 'resident';
 }
@@ -106,7 +110,7 @@ const cases = [
   },
   {
     name: '케이스 2: adminRole → admin',
-    user: { adminRole: { id: '1' }, isInGuild: true, guildJoinedAt: oneMonthAgo },
+    user: { adminRole: { id: '1' }, isInGuild: true, guildJoinedAt: oneMonthAgo, status: 'active', teacherId: 't1' },
     expectedRole: 'admin',
     inStudentList: false,
   },
@@ -136,13 +140,70 @@ const cases = [
   },
   {
     name: '케이스 7: Teacher 등록(discordUserId) 우선',
-    user: { discordId: '111', isInGuild: true, guildJoinedAt: threeMonthsAgo },
+    user: { discordId: '111', isInGuild: true, guildJoinedAt: threeMonthsAgo, status: 'active', teacherId: 't1' },
     ctx: {
       teacherDiscordUserIds: new Set(['111']),
       teacherDiscordNames: new Set(),
       teacherDiscordRoles: DEFAULT_TEACHER_DISCORD_ROLES,
     },
     expectedRole: 'teacher',
+    inStudentList: false,
+  },
+  {
+    name: '케이스 8: active+teacherId · 가입 3달 → student (배정 유지)',
+    user: {
+      isInGuild: true,
+      guildJoinedAt: threeMonthsAgo,
+      status: 'active',
+      teacherId: 'teacher-1',
+    },
+    expectedRole: 'student',
+    inStudentList: true,
+  },
+  {
+    name: '케이스 9: 명시적 resident + teacherId → resident 유지',
+    user: {
+      siteRole: 'resident',
+      status: 'active',
+      teacherId: 'teacher-1',
+      isInGuild: true,
+      guildJoinedAt: threeMonthsAgo,
+    },
+    expectedRole: 'resident',
+    inStudentList: false,
+  },
+  {
+    name: '케이스 10: graduated + teacherId → resident(자동) · 재학생 아님',
+    user: {
+      status: 'graduated',
+      teacherId: 'teacher-1',
+      isInGuild: true,
+      guildJoinedAt: threeMonthsAgo,
+    },
+    expectedRole: 'resident',
+    inStudentList: false,
+  },
+  {
+    name: '케이스 11: withdrawn + teacherId · 가입 3달 → teacherId만으로 student 안 됨',
+    user: {
+      status: 'withdrawn',
+      teacherId: 'teacher-1',
+      isInGuild: true,
+      guildJoinedAt: threeMonthsAgo,
+    },
+    expectedRole: 'resident',
+    inStudentList: false,
+  },
+  {
+    name: '케이스 12: AdminRole + teacherId → admin (student 전환 방지)',
+    user: {
+      adminRole: { id: 'a1' },
+      status: 'active',
+      teacherId: 'teacher-1',
+      isInGuild: true,
+      guildJoinedAt: threeMonthsAgo,
+    },
+    expectedRole: 'admin',
     inStudentList: false,
   },
 ];

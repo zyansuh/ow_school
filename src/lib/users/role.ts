@@ -35,6 +35,9 @@ export type UserRoleFields = {
   discordUsername?: string;
   discordServerNick?: string | null;
   discordNickname?: string | null;
+  /** 재학 배정 판별 — active + teacherId → student (가입 기간과 무관) */
+  status?: string | null;
+  teacherId?: string | null;
 };
 
 export type UserRoleContext = {
@@ -116,16 +119,30 @@ export function isTeacherByTeacherRecordName(
   return false;
 }
 
+/** 재학 중 담당 선생님 배정 — 가입 기간과 무관하게 학생으로 본다 */
+export function isActiveAssignedStudentCandidate(
+  user: Pick<UserRoleFields, 'status' | 'teacherId'>,
+): boolean {
+  return user.status === 'active' && !!user.teacherId;
+}
+
 /**
  * siteRole 미설정 시 자동 분류
- * 우선순위: 관리자 → **선생님 관리에 등록된 사람** → Discord 선생님 역할 → 학생 재직기간 → 마을주민
+ * 1) AdminRole → admin
+ * 2) Teacher 등록 / Discord 선생님 역할 → teacher
+ * 3) status=active && teacherId → student (2달 경과해도 유지)
+ * 4) 가입 2달 미만 → student
+ * 5) else → resident
+ *
+ * 명시적 siteRole(admin/teacher/student/resident)은 getUserRole에서 우선 적용.
+ * graduated/withdrawn은 status≠active라 3번에 걸리지 않음.
  */
 export function inferUserRole(user: UserRoleFields, ctx: UserRoleContext): SiteUserRole {
   if (isAdminUser(user)) return 'admin';
-  // 관리자가 입력·연결한 Teacher 레코드를 Discord 역할보다 우선
   if (isTeacherByDiscordUserId(user.discordId, ctx)) return 'teacher';
   if (isTeacherByTeacherRecordName(user, ctx)) return 'teacher';
   if (isTeacherDiscordRole(user, ctx)) return 'teacher';
+  if (isActiveAssignedStudentCandidate(user)) return 'student';
   if (isStudentByGuildTenure(user)) return 'student';
   return 'resident';
 }
