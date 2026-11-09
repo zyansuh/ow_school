@@ -15,14 +15,15 @@ export type TeacherUserRef = {
   adminRole?: unknown | null;
 };
 
-/** Discord `신입반교사` 역할 또는 Teacher DB 연결 */
+/** 등록된 Teacher 연결 또는 Discord 선생님 역할(설정 목록) */
 export function hasTeacherDiscordRole(
   discordRoleNames?: string | null,
-  ctx?: Pick<UserRoleContext, 'teacherDiscordUserIds'>,
+  ctx?: Pick<UserRoleContext, 'teacherDiscordUserIds' | 'teacherDiscordRoles'>,
   discordId?: string,
 ): boolean {
-  if (isTeacherDiscordRole({ discordRoleNames })) return true;
+  // 관리자 등록(discordUserId) 우선
   if (discordId && ctx?.teacherDiscordUserIds?.has(discordId)) return true;
+  if (isTeacherDiscordRole({ discordRoleNames }, ctx)) return true;
   return false;
 }
 
@@ -33,7 +34,7 @@ export async function resolveTeacherEntityForUser(user: TeacherUserRef) {
   return findTeacherByDiscordUserId(user.discordId);
 }
 
-/** 세션·권한: admin이면 teacher 아님. teacher는 신입반교사 역할 또는 Teacher 레코드 */
+/** 세션·권한: admin이면 teacher 아님. teacher는 등록 Teacher 또는 Discord 선생님 역할 */
 export async function resolveIsTeacherForUser(user: TeacherUserRef): Promise<boolean> {
   if (user.adminRole) return false;
   const ctx = await loadUserRoleContext();

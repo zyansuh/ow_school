@@ -4,7 +4,12 @@
  */
 import assert from 'node:assert/strict';
 
-const TEACHER_DISCORD_ROLE_NAME = '신입반교사';
+const DEFAULT_TEACHER_DISCORD_ROLES = [
+  { name: '신입반 주임교사', priority: 1 },
+  { name: '신입반 교사', priority: 2 },
+  { name: '신입반 보조교사', priority: 3 },
+  { name: '신입반교사', priority: 2 },
+];
 const STUDENT_GUILD_TENURE_MONTHS = 2;
 
 function parseRoleNames(json) {
@@ -21,8 +26,9 @@ function isAdminUser(user) {
   return !!user.adminRole;
 }
 
-function hasNewTeacherDiscordRole(roleNames) {
-  return roleNames.includes(TEACHER_DISCORD_ROLE_NAME);
+function hasAnyTeacherDiscordRole(roleNames, allowedNames) {
+  const allowed = new Set(allowedNames);
+  return roleNames.some((n) => allowed.has(n));
 }
 
 function isTeacherByDiscordUserId(discordId, ctx) {
@@ -45,35 +51,55 @@ function isStudentByGuildTenure(user, now = new Date()) {
   return joined > cutoff;
 }
 
-function inferUserRole(user, ctx) {
+function inferUserRole(user, ctx, now = new Date()) {
   if (isAdminUser(user)) return 'admin';
-  if (hasNewTeacherDiscordRole(parseRoleNames(user.discordRoleNames))) return 'teacher';
+  // 등록 Teacher 우선
   if (isTeacherByDiscordUserId(user.discordId, ctx)) return 'teacher';
-  if (isStudentByGuildTenure(user)) return 'student';
+  const allowed = (ctx.teacherDiscordRoles ?? DEFAULT_TEACHER_DISCORD_ROLES).map((r) => r.name);
+  if (hasAnyTeacherDiscordRole(parseRoleNames(user.discordRoleNames), allowed)) return 'teacher';
+  if (isStudentByGuildTenure(user, now)) return 'student';
   return 'resident';
 }
 
-function getUserRole(user, ctx) {
+function getUserRole(user, ctx, now = new Date()) {
   const override = user.siteRole?.trim();
   if (override === 'resident' || override === 'student' || override === 'teacher' || override === 'admin') {
     return override;
   }
-  return inferUserRole(user, ctx);
+  return inferUserRole(user, ctx, now);
 }
 
-function isStudentUser(user, ctx) {
-  return getUserRole(user, ctx) === 'student';
+function isStudentUser(user, ctx, now = new Date()) {
+  return getUserRole(user, ctx, now) === 'student';
 }
 
-const now = new Date('2026-06-25T12:00:00Z');
-const oneMonthAgo = new Date('2026-05-25T12:00:00Z');
-const threeMonthsAgo = new Date('2026-03-25T12:00:00Z');
+const now = new Date();
+const oneMonthAgo = new Date(now);
+oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+const threeMonthsAgo = new Date(now);
+threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-const emptyCtx = { teacherDiscordUserIds: new Set(), teacherDiscordNames: new Set() };
+const emptyCtx = {
+  teacherDiscordUserIds: new Set(),
+  teacherDiscordNames: new Set(),
+  teacherDiscordRoles: DEFAULT_TEACHER_DISCORD_ROLES,
+};
 
 const cases = [
   {
-    name: '케이스 1: 신입반교사 → teacher',
+    name: '케이스 1: 신입반 주임교사 → teacher',
+    user: { discordRoleNames: JSON.stringify(['신입반 주임교사']), isInGuild: true, guildJoinedAt: oneMonthAgo },
+    expectedRole: 'teacher',
+    inStudentList: false,
+  },
+  {
+    name: '케이스 1b: 신입반 보조교사 → teacher',
+    user: { discordRoleNames: JSON.stringify(['신입반 보조교사']), isInGuild: true, guildJoinedAt: oneMonthAgo },
+    expectedRole: 'teacher',
+    inStudentList: false,
+  },
+  {
+    name: '케이스 1c: 레거시 신입반교사 → teacher',
     user: { discordRoleNames: JSON.stringify(['신입반교사']), isInGuild: true, guildJoinedAt: oneMonthAgo },
     expectedRole: 'teacher',
     inStudentList: false,
@@ -108,12 +134,24 @@ const cases = [
     expectedRole: 'student',
     inStudentList: true,
   },
+  {
+    name: '케이스 7: Teacher 등록(discordUserId) 우선',
+    user: { discordId: '111', isInGuild: true, guildJoinedAt: threeMonthsAgo },
+    ctx: {
+      teacherDiscordUserIds: new Set(['111']),
+      teacherDiscordNames: new Set(),
+      teacherDiscordRoles: DEFAULT_TEACHER_DISCORD_ROLES,
+    },
+    expectedRole: 'teacher',
+    inStudentList: false,
+  },
 ];
 
 let passed = 0;
 for (const c of cases) {
-  const role = getUserRole(c.user, emptyCtx);
-  const inList = isStudentUser(c.user, emptyCtx);
+  const ctx = c.ctx ?? emptyCtx;
+  const role = getUserRole(c.user, ctx, now);
+  const inList = isStudentUser(c.user, ctx, now);
   assert.equal(role, c.expectedRole, `${c.name}: role`);
   assert.equal(inList, c.inStudentList, `${c.name}: student list`);
   console.log(`✓ ${c.name}`);

@@ -2,8 +2,16 @@ import { parseRoleNames } from '@/lib/discord/guild';
 import { isStudentByGuildTenure } from '@/lib/discord/guild-tenure';
 import { prisma } from '@/lib/prisma';
 import { isDiscordSnowflake } from '@/lib/discord/id';
+import {
+  DEFAULT_TEACHER_DISCORD_ROLES,
+  getTeacherDiscordRoles,
+  hasAnyTeacherDiscordRole,
+  resolveHighestTeacherDiscordRole,
+  teacherDiscordRoleNames,
+  type TeacherDiscordRoleEntry,
+} from '@/lib/teacher/discord-roles';
 
-/** Discord 서버 역할명 — 정확히 일치해야 선생님으로 분류 */
+/** @deprecated 단일 역할명 — DEFAULT_TEACHER_DISCORD_ROLES / SiteSetting 사용 */
 export const TEACHER_DISCORD_ROLE_NAME = '신입반교사';
 
 export const SITE_USER_ROLES = ['resident', 'student', 'teacher', 'admin'] as const;
@@ -30,14 +38,24 @@ export type UserRoleFields = {
 };
 
 export type UserRoleContext = {
+  /** 관리자에 등록된 Teacher.discordUserId — 역할 분류·운영의 1순위 */
   teacherDiscordUserIds: Set<string>;
   /** Teacher.discord 필드(서버 닉 등) — discordUserId 미연결 선생님 보조 매칭 */
   teacherDiscordNames: Set<string>;
+  /** Discord 선생님 역할명 (SiteSetting 또는 기본값) */
+  teacherDiscordRoles: TeacherDiscordRoleEntry[];
 };
 
 function normalizeTeacherNameKey(value: string | null | undefined): string | null {
   const v = value?.trim().toLowerCase();
   return v && !isDiscordSnowflake(v) ? v : null;
+}
+
+function allowedRoleNames(ctx?: Pick<UserRoleContext, 'teacherDiscordRoles'>): string[] {
+  const roles = ctx?.teacherDiscordRoles?.length
+    ? ctx.teacherDiscordRoles
+    : DEFAULT_TEACHER_DISCORD_ROLES;
+  return teacherDiscordRoleNames(roles);
 }
 
 export function isSiteUserRole(value: string | null | undefined): value is SiteUserRole {
@@ -52,13 +70,29 @@ export function isAdminUser(user: Pick<UserRoleFields, 'adminRole'>): boolean {
   return !!user.adminRole;
 }
 
-/** Discord `신입반교사` 역할 보유 여부 (정확 매칭) */
-export function hasNewTeacherDiscordRole(roleNames: string[]): boolean {
-  return roleNames.includes(TEACHER_DISCORD_ROLE_NAME);
+/** Discord 선생님 역할 보유 여부 (설정 목록 정확 매칭) */
+export function hasNewTeacherDiscordRole(
+  roleNames: string[],
+  allowedNames: string[] = teacherDiscordRoleNames(DEFAULT_TEACHER_DISCORD_ROLES),
+): boolean {
+  return hasAnyTeacherDiscordRole(roleNames, allowedNames);
 }
 
-export function isTeacherDiscordRole(user: Pick<UserRoleFields, 'discordRoleNames'>): boolean {
-  return hasNewTeacherDiscordRole(roleNamesFromUser(user));
+export function isTeacherDiscordRole(
+  user: Pick<UserRoleFields, 'discordRoleNames'>,
+  ctx?: Pick<UserRoleContext, 'teacherDiscordRoles'>,
+): boolean {
+  return hasNewTeacherDiscordRole(roleNamesFromUser(user), allowedRoleNames(ctx));
+}
+
+export function getTeacherDiscordRoleTier(
+  user: Pick<UserRoleFields, 'discordRoleNames'>,
+  ctx?: Pick<UserRoleContext, 'teacherDiscordRoles'>,
+): TeacherDiscordRoleEntry | null {
+  const roles = ctx?.teacherDiscordRoles?.length
+    ? ctx.teacherDiscordRoles
+    : DEFAULT_TEACHER_DISCORD_ROLES;
+  return resolveHighestTeacherDiscordRole(roleNamesFromUser(user), roles);
 }
 
 export function isTeacherByDiscordUserId(
@@ -82,12 +116,16 @@ export function isTeacherByTeacherRecordName(
   return false;
 }
 
-/** siteRole 미설정 시 Discord·Teacher·AdminRole·서버 가입 기간 기준 자동 분류 */
+/**
+ * siteRole 미설정 시 자동 분류
+ * 우선순위: 관리자 → **선생님 관리에 등록된 사람** → Discord 선생님 역할 → 학생 재직기간 → 마을주민
+ */
 export function inferUserRole(user: UserRoleFields, ctx: UserRoleContext): SiteUserRole {
   if (isAdminUser(user)) return 'admin';
-  if (isTeacherDiscordRole(user)) return 'teacher';
+  // 관리자가 입력·연결한 Teacher 레코드를 Discord 역할보다 우선
   if (isTeacherByDiscordUserId(user.discordId, ctx)) return 'teacher';
   if (isTeacherByTeacherRecordName(user, ctx)) return 'teacher';
+  if (isTeacherDiscordRole(user, ctx)) return 'teacher';
   if (isStudentByGuildTenure(user)) return 'student';
   return 'resident';
 }
@@ -122,9 +160,7 @@ export async function loadTeacherDiscordUserIdSet(): Promise<Set<string>> {
     where: { discordUserId: { not: null } },
     select: { discordUserId: true },
   });
-  return new Set(
-    rows.map((r) => r.discordUserId).filter((id): id is string => !!id),
-  );
+  return new Set(rows.map((r) => r.discordUserId).filter((id): id is string => !!id));
 }
 
 async function loadTeacherDiscordNameSet(): Promise<Set<string>> {
@@ -140,12 +176,21 @@ async function loadTeacherDiscordNameSet(): Promise<Set<string>> {
   return names;
 }
 
+export function emptyUserRoleContext(): UserRoleContext {
+  return {
+    teacherDiscordUserIds: new Set(),
+    teacherDiscordNames: new Set(),
+    teacherDiscordRoles: [...DEFAULT_TEACHER_DISCORD_ROLES],
+  };
+}
+
 export async function loadUserRoleContext(): Promise<UserRoleContext> {
-  const [teacherDiscordUserIds, teacherDiscordNames] = await Promise.all([
+  const [teacherDiscordUserIds, teacherDiscordNames, teacherDiscordRoles] = await Promise.all([
     loadTeacherDiscordUserIdSet(),
     loadTeacherDiscordNameSet(),
+    getTeacherDiscordRoles(),
   ]);
-  return { teacherDiscordUserIds, teacherDiscordNames };
+  return { teacherDiscordUserIds, teacherDiscordNames, teacherDiscordRoles };
 }
 
 export function filterStudentUsers<T extends UserRoleFields>(

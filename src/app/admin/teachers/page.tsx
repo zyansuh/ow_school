@@ -19,6 +19,7 @@ import {
   type AdminTeacher,
 } from '@/hooks/admin/use-admin-teachers';
 import { TeacherFormDialog } from '@/components/admin/teachers/teacher-form-dialog';
+import { TeacherDiscordRolesPanel } from '@/components/admin/teachers/teacher-discord-roles-panel';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { AdminSavedViewsBar } from '@/components/admin/admin-saved-views-bar';
 import { AdminClassFilterBar } from '@/components/admin/admin-class-filter-bar';
@@ -157,13 +158,15 @@ function AdminTeachersInner() {
     <div className={ds.pageGap}>
       <AdminPageHeader
         title="선생님 관리"
-        description="선생님 등록·수정 및 활동 상태를 관리합니다. 한 선생님이 여러 반을 담당할 수 있습니다."
+        description="선생님 등록·수정 및 활동 상태를 관리합니다. 등록·Discord 연결된 선생님이 수강 신청·배정의 기준입니다."
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="h-4 w-4" /> 추가
           </Button>
         }
       />
+
+      <TeacherDiscordRolesPanel />
 
       <AdminClassFilterBar className="mb-3" />
       <div className="flex flex-wrap gap-2 mb-4">
