@@ -31,16 +31,18 @@
 1. [프로젝트 소개](#-이-프로젝트는)
 2. [사이트 이용자 역할](#-사이트-이용자-역할)
 3. [주요 기능](#-주요-기능)
-4. [사용 기술](#-사용-기술-tech-stack)
-5. [아키텍처 · 소스 구조](#️-아키텍처)
-6. [빠른 시작](#-빠른-시작)
-7. [배포 · CI](#-vercel-배포)
-8. [Discord 연동](#-discord-서버-연동)
-9. [포인트 · 반 안내](#-포인트-시스템)
-10. [API 레퍼런스](#-api-레퍼런스)
-11. [데이터 모델](#️-데이터-모델)
-12. [개발 규칙](#-개발-규칙)
-13. [트러블슈팅](#-트러블슈팅)
+4. [배정 이력 · 트랜잭션 일관성](#-배정-이력--트랜잭션-일관성)
+5. [사용 기술](#-사용-기술-tech-stack)
+6. [아키텍처 · 소스 구조](#️-아키텍처)
+7. [빠른 시작](#-빠른-시작)
+8. [배포 · CI](#-vercel-배포)
+9. [Discord 연동](#-discord-서버-연동)
+10. [포인트 · 반 안내](#-포인트-시스템)
+11. [API 레퍼런스](#-api-레퍼런스)
+12. [데이터 모델 · DB 운영](#️-데이터-모델)
+13. [운영 스크립트](#-운영-스크립트)
+14. [개발 규칙](#-개발-규칙)
+15. [트러블슈팅](#-트러블슈팅)
 
 ---
 
@@ -73,12 +75,15 @@
 
 ### 역할 정의
 
-| 표시 | DB 값 | 자동 분류 우선순위 |
-|------|-------|-------------------|
-| 관리자 | `admin` | `AdminRole` 테이블 존재 |
-| 선생님 | `teacher` | **선생님 관리 등록**(`Teacher.discordUserId`) 우선 · Discord 역할(`신입반 주임교사`/`신입반 교사`/`신입반 보조교사`, `/admin/teachers`에서 편집) |
-| 학생 | `student` | Discord **서버 가입 2달 미만** (`guildJoinedAt` 기준) |
-| 마을주민 | `resident` | 가입 2달 이상 · 미가입 · 위에 해당 없음 |
+| 표시 | DB 값 | 자동 분류 우선순위 (`siteRole`이 비어 있을 때) |
+|------|-------|------------------------------------------------|
+| 관리자 | `admin` | `AdminRole` 행 존재 |
+| 선생님 | `teacher` | **선생님 관리 등록**(`Teacher.discordUserId` / 닉 매칭) 우선 · Discord 역할(`신입반 주임교사` 등, `/admin/teachers`에서 편집) |
+| 학생 | `student` | ① **`status=active` && `teacherId` 있음** (가입 기간과 무관, 재학 배정 유지) → ② Discord **서버 가입 2달 미만** (`guildJoinedAt`) |
+| 마을주민 | `resident` | 위 조건 없음 · 졸업(`graduated`)·퇴교(`withdrawn`)는 `status≠active`라 ①에 걸리지 않음 |
+
+> **핵심:** 담당 선생님이 배정된 재학생은 가입 후 2달이 지나도 **자동으로 마을주민으로 떨어지지 않습니다.**  
+> 명시적 `siteRole`(예: `resident`)이 있으면 자동 분류보다 **항상 우선**합니다.
 
 ### 역할 해석 흐름
 
@@ -94,9 +99,11 @@ flowchart TD
     H -->|예| G
     H -->|아니오| I{Discord 선생님 역할?}
     I -->|예| G
-    I -->|아니오| J{가입 2달 미만?}
+    I -->|아니오| J{status=active AND teacherId?}
     J -->|예| K[student]
-    J -->|아니오| L[resident]
+    J -->|아니오| L{가입 2달 미만?}
+    L -->|예| K
+    L -->|아니오| M[resident]
 ```
 
 ### Discord 선생님 역할 (관리자 설정)
@@ -118,15 +125,17 @@ flowchart TD
 
 | 파일 | 역할 |
 |------|------|
-| `src/lib/users/role.ts` | `getUserRole`, `inferUserRole`, `isStudentUser` |
+| `src/lib/users/role.ts` | `getUserRole`, `inferUserRole`, `isActiveAssignedStudentCandidate`, `isStudentUser` |
 | `src/lib/teacher/discord-roles.ts` | Discord 선생님 역할 기본값·SiteSetting CRUD |
 | `src/lib/teacher/recruiting.ts` | 비활성 vs 모집마감 분리 |
 | `src/lib/discord/guild-tenure.ts` | `guildJoinedAt`, 2달 기준 `isStudentByGuildTenure` |
 | `src/lib/users/display.ts` | 관리자 화면 `displayNickname` 우선 표시 |
 
 ```bash
-# DB 없이 역할 분류 순수 함수 검증
+# DB 없이 역할 분류 순수 함수 검증 (케이스 1–12)
 node scripts/verify-user-role.mjs
+# 실제 Neon DB 유저에 현행 정책 적용 집계 (읽기 전용)
+node scripts/verify-role-policy-db.mjs
 # 비활성 vs 모집마감 분리 검증
 node scripts/verify-recruiting.mjs
 ```
@@ -134,9 +143,10 @@ node scripts/verify-recruiting.mjs
 **참고**
 
 - `guildJoinedAt`은 Discord Member API `joined_at` 동기화 값. 없으면 **최초 로그인일(`createdAt`)** 을 보조 기준으로 사용.
-- **학생 관리**(`/admin/students`)·홈 통계의 “학생 수”는 `student` 역할만 집계 (마을주민 제외).
+- **학생 관리**(`/admin/students`)·홈 통계의 “학생 수”는 `student` 역할만 집계 (마을주민 제외). `status`·`teacherId`를 역할 판별에 쓰므로 User 조회 시 해당 필드를 빼면 안 됩니다.
 - **메인 홈 통계**(학생 수·선생님 인원·졸업생 수·클래스 카드 인원)는 **DB에서 자동 집계**하여 표시합니다 (`src/lib/home/stats.ts`, `class-stats.ts`). ISR 캐시 60~120초.
 - 관리자로 `siteRole=admin` 지정 시 `AdminRole` 부여, 다른 역할로 변경 시 `AdminRole` 해제.
+- Admin / Teacher 판별은 `active+teacherId`보다 **항상 앞**에 있어, 관리자·선생님이 실수로 배정돼도 student로 떨어지지 않습니다.
 
 ---
 
@@ -191,10 +201,10 @@ node scripts/verify-recruiting.mjs
 
 | 동작 | DB 변경 | 비고 |
 |------|---------|------|
-| **졸업** | `status → graduated`, `classId`/`teacherId` null | `AssignmentHistory(graduated)` · 학생·선생님 DM · 인원 재계산 |
-| **졸업 취소** | `status → active`, 마지막 담당·반 복원 | `AssignmentHistory` → 면담 → 승인 신청 순으로 복원 |
-| **퇴교** | `status → withdrawn`, `classId`/`teacherId` null | `AssignmentHistory(withdrawn)` · 레코드 삭제 없음 |
-| **퇴교 복구** | `status → active` + 가능하면 담당 복원 | `/admin/withdrawn` · 이력 기반 복원 |
+| **졸업** | `status → graduated`, `classId`/`teacherId` null | **동일 트랜잭션**으로 `AssignmentHistory(graduated)` · 커밋 후 학생·선생님 DM · 인원 재계산 |
+| **졸업 취소** | `status → active`, 마지막 담당·반 복원 | TX로 `AssignmentHistory(restored)` · 복원 순서: History → 면담 → 승인 신청 |
+| **퇴교** | `status → withdrawn`, `classId`/`teacherId` null | TX로 `AssignmentHistory(withdrawn)` · 레코드 삭제 없음 |
+| **퇴교 복구** | `status → active` + 가능하면 담당 복원 | TX로 `restored` · `/admin/withdrawn` |
 
 **졸업 취소 UI:** `/admin/graduated`, `/admin/users` (졸업 관리 열), API `PATCH` `action: ungraduate` / `statusAction: ungraduate`
 
@@ -233,7 +243,48 @@ node scripts/verify-recruiting.mjs
 
 **선생님 비활성 vs 모집마감:** `isActive=false` → 신규 학생에게 **숨김**(기존 담당은 유지). `maxStudents=0` 또는 정원 가득 → 목록에 **보이되 선택 불가**. 인원 동기화(`syncTeacherStudentCount`)는 `currentStudents`만 갱신하고 `isActive`를 덮어쓰지 않습니다.
 
-**Discord DM (입학·졸업):** 신청 즉시 승인 시 **학생 입학 DM** + 선생님 알림 DM. 졸업 시 **학생 졸업 DM** + 선생님 DM. 모두 `DiscordDmLog`에 기록되며 `/admin/dm-logs`에서 재시도 가능. **OAuth 로그인 ≠ Bot DM 가능** — 봇 토큰·서버 가입·수신자 DM 설정이 필요합니다. DM 실패해도 입학/졸업 DB는 유지됩니다.
+**Discord DM (입학·졸업):** 신청 즉시 승인 시 **학생 입학 DM** + 선생님 알림 DM. 졸업 시 **학생 졸업 DM** + 선생님 DM. 모두 `DiscordDmLog`에 기록되며 `/admin/dm-logs`에서 재시도 가능. **OAuth 로그인 ≠ Bot DM 가능** — 봇 토큰·서버 가입·수신자 DM 설정이 필요합니다. **DM은 DB 트랜잭션 밖에서** 호출되므로 실패해도 입학/졸업·배정 이력은 롤백되지 않습니다.
+
+---
+
+## 🧾 배정 이력 · 트랜잭션 일관성
+
+관리자·선생님·학생이 **하나의 홈페이지 + 하나의 Neon DB(`neondb.public`)** 에서 동작합니다. 학생 전용 PostgreSQL 스키마/`DATABASE_URL_ST`는 사용하지 않습니다.
+
+### 원칙
+
+| 원칙 | 설명 |
+|------|------|
+| **User + AssignmentHistory 동일 TX** | 배정·재배정·졸업·퇴교·복구 시 `prisma.$transaction` 안에서 User 갱신과 이력 INSERT를 함께 커밋 |
+| **Discord DM은 TX 밖** | 입학/졸업 알림 DM은 커밋 **이후** fire-and-forget · 실패 시 `DiscordDmLog`에만 남고 DB 상태·이력은 유지 |
+| **이력 불변에 가깝게** | `AssignmentHistory`에는 User/Teacher FK를 걸지 않음(삭제 후에도 스냅샷 보존). `userId`/`teacherId`/`classId`는 당시 값 문자열 |
+| **레거시 백필은 승인 후** | 기존 재학생에게 과거 `assigned` 행을 넣는 스크립트는 기본 `--dry-run`. `--execute`는 별도 승인 |
+
+### `AssignmentHistory.action`
+
+| action | 발생 시점 |
+|--------|-----------|
+| `assigned` | 신청 승인 · 관리자 최초 배정 |
+| `reassigned` | 담당 변경·해제 · 승인 취소로 배정 해제 |
+| `graduated` | 졸업 |
+| `withdrawn` | 퇴교 |
+| `restored` | 졸업/퇴교 취소로 재학 복구 |
+
+### 구현 파일
+
+| 파일 | 역할 |
+|------|------|
+| `src/lib/students/assignment-history.ts` | `recordAssignmentHistory(input, db?)` · TX 클라이언트 주입 가능 |
+| `src/lib/students/assignment.ts` | `assignStudentTeacher` — User+이력 TX |
+| `src/lib/students/graduation.ts` | `graduateUser` / `restoreGraduatedUser` — TX 후 DM |
+| `src/lib/students/withdrawal.ts` | `withdrawStudent` / `restoreWithdrawnStudent` — TX |
+| `src/lib/applications/status.ts` | 신청 승인/거절 시 User+이력 TX (DM은 service 레이어) |
+
+### 복원 우선순위 (`resolveLastStudentAssignment`)
+
+1. `AssignmentHistory`에서 최근 `assigned` \| `reassigned` \| `restored`
+2. (보조) 최근 면담의 선생님 힌트
+3. (보조) 최근 승인(`approved`) 신청
 
 ### 🔗 Discord 연동 요약
 
@@ -308,9 +359,13 @@ peaceful_game/
 ├── .env.example
 ├── .github/workflows/ci.yml
 ├── scripts/
-│   ├── vercel-build.mjs     # prisma generate → migrate deploy → next build
-│   ├── verify-user-role.mjs # 역할 분류 단위 검증
-│   ├── refactor-imports.mjs # import 경로 일괄 치환 (리팩터용)
+│   ├── vercel-build.mjs                  # prisma generate → migrate deploy → next build
+│   ├── verify-user-role.mjs              # 역할 분류 순수 함수 검증 (DB 없음)
+│   ├── verify-role-policy-db.mjs         # 실제 DB에 정책 적용 집계 (읽기 전용)
+│   ├── analyze-assignment-backfill.mjs   # 백필 대상 산출 (읽기 전용)
+│   ├── backfill-assignment-history.mjs   # AssignmentHistory 레거시 백필 (기본 dry-run)
+│   ├── verify-recruiting.mjs             # 비활성 vs 모집마감
+│   ├── refactor-imports.mjs
 │   └── optimize-images.mjs
 ├── prisma/
 │   ├── schema.prisma
@@ -359,9 +414,11 @@ peaceful_game/
 | | `discord-field.ts`, `discord-link.ts` | Discord 필드 검증·백필 |
 | | `delete.ts`, `query.ts` | 삭제, 목록 쿼리 |
 | **students/** | `users.ts` | 활성·졸업 학생 조회/카운트 |
-| | `assignment.ts` | 담당 선생님 배정·복원 |
-| | `graduation.ts` | 졸업·졸업 취소 |
-| **users/** | `role.ts`, `display.ts`, `header.ts` | 역할, 표시명, 헤더 라벨 |
+| | `assignment.ts` | 담당 선생님 배정·재배정 (User+이력 TX) |
+| | `assignment-history.ts` | `AssignmentHistory` 기록·최근 배정 조회 (TX 주입) |
+| | `graduation.ts` | 졸업·졸업 취소 (TX 후 DM) |
+| | `withdrawal.ts` | 퇴교·퇴교 취소 (TX) |
+| **users/** | `role.ts`, `display.ts`, `header.ts` | 역할(`active+teacherId` 포함), 표시명, 헤더 라벨 |
 | **home/** | `stats.ts`, `class-stats.ts`, `ensure-classes.ts` | 홈 DB 자동 통계, 반 자동 생성 |
 | **interviews/** | `access.ts`, `utils.ts` | 면담 권한, 동아리명 파싱 |
 | **applications/** | `policy.ts`, `service.ts`, `status.ts` | 신청 정책·생성·상태 변경 |
@@ -468,6 +525,8 @@ npm run dev         # http://localhost:3000
 | `npm run lint` | `tsc --noEmit` |
 | `npm run db:push` / `db:seed` / `db:setup` | Prisma |
 | `npm run images:optimize` | WebP 변환 |
+
+역할·배필 검증 스크립트는 [운영 스크립트](#-운영-스크립트) 참고.
 
 ---
 
@@ -750,6 +809,17 @@ sequenceDiagram
 
 ## 🗄️ 데이터 모델
 
+### 단일 DB · 스키마 정책
+
+| 항목 | 정책 |
+|------|------|
+| DB | Neon PostgreSQL **하나** (`DATABASE_URL` / `DIRECT_URL`) |
+| 스키마 | **`public`만** 사용 — 관리자·선생님·학생 기능 공존 |
+| 학생 전용 스키마 | **만들지 않음** (별도 `DATABASE_URL_ST` 불필요) |
+| 스키마 변경 | nullable·additive 우선 · **승인 후** migrate · 운영 데이터 보존 |
+
+Prisma 모델과 Neon `public` 테이블은 `20250628120000_discord_dm_assignment_history`까지 정합합니다. 학생 기능용 **필수** 추가 테이블/컬럼은 없습니다. (권장 인덱스 등은 별도 승인.)
+
 ### `User` 주요 필드
 
 | 필드 | 설명 |
@@ -757,11 +827,38 @@ sequenceDiagram
 | `discordId` | Discord User ID (unique) |
 | `discordServerNick` / `discordNickname` | 서버 닉 · 글로벌 표시명 |
 | `displayNickname` | 관리자 화면용 오버라이드 (Discord 닉 변경 아님) |
-| `siteRole` | `resident` \| `student` \| `teacher` \| `admin` \| null |
+| `siteRole` | `resident` \| `student` \| `teacher` \| `admin` \| null — 있으면 자동 분류 무시 |
 | `guildJoinedAt` | 서버 가입 시각 |
 | `isInGuild` | 길드 가입 여부 (DB 기준) |
 | `status` | `active` \| `graduated` \| `withdrawn` |
-| `classId` / `teacherId` | 반 · 담당 선생님 |
+| `classId` / `teacherId` | 반 · 담당 선생님 (`teacherId` FK → `Teacher`, ON DELETE SET NULL) |
+
+역할 자동 분류에서 **`status=active` && `teacherId`** 이면 가입 기간과 무관하게 `student`입니다.
+
+### `AssignmentHistory` 컬럼
+
+| 컬럼 | 설명 |
+|------|------|
+| `userId` | 대상 사용자 ID (필수) |
+| `teacherId` / `classId` | 당시 담당·반 (nullable) |
+| `action` | `assigned` \| `reassigned` \| `graduated` \| `withdrawn` \| `restored` |
+| `note` | 관리용 메모 (신청 ID, 재배정 이전 선생님 등) |
+| `createdAt` | 기본값 `CURRENT_TIMESTAMP` |
+
+인덱스: `(userId, createdAt)`, `(teacherId, createdAt)`, `(action, createdAt)`.
+
+### `DiscordDmLog` 컬럼 (요약)
+
+| 컬럼 | 설명 |
+|------|------|
+| `type` | `admission_student` · `application_teacher` · `graduation_*` · `interview_teacher` 등 |
+| `recipientDiscordId` | 수신 Discord snowflake |
+| `userId` / `teacherId` | 관련 User·Teacher (선택) |
+| `status` | 기본 `pending` · `sent` / `failed` / `skipped` |
+| `attempts` / `lastAttemptAt` | 재시도 횟수·시각 |
+| `skipReason` / `error` | 스킵·실패 사유 |
+
+DB 레벨 유니크(중복 발송 방지)는 없으며, 앱 로그 + `/admin/dm-logs` 재시도로 운영합니다.
 
 ### 전체 모델
 
@@ -770,13 +867,48 @@ sequenceDiagram
 | 모델 | 용도 |
 |------|------|
 | `DiscordDmLog` | Bot DM 발송 기록 (`type` · `status` · `attempts`) — OAuth와 별개 |
-| `AssignmentHistory` | 배정·재배정·졸업·퇴교·복구 이력 |
+| `AssignmentHistory` | 배정·재배정·졸업·퇴교·복구 이력 (User와 동일 TX로 기록) |
 | `EnrollmentStat` | 공개 인원 집계 스냅샷 |
 | `ContentUploadedFile` | Blob 미연결 시 이미지 바이너리 |
 
-`SiteSetting` 키 예: `notices`, `teacher_discord_roles`, `statsMonthlyApplicationsOverride`, `homeSiteStatsOverride`, `homeClassStatsOverride`
+`SiteSetting` 키 예: `notices`, `teacher_discord_roles`, `statsMonthlyApplicationsOverride`, `homeSiteStatsOverride`, `homeClassStatsOverride`, `admin_saved_views`, `admin_ops_notes`, `admin_alert_ack_at`
 
 스키마: `prisma/schema.prisma`
+
+---
+
+## 🛠️ 운영 스크립트
+
+> `.env`의 `DATABASE_URL`을 사용합니다. **읽기 전용** 스크립트는 DB를 수정하지 않습니다. 백필 `--execute`는 **승인 후에만**.
+
+| 스크립트 | 쓰기 | 용도 |
+|----------|:----:|------|
+| `scripts/verify-user-role.mjs` | ❌ | `inferUserRole` 케이스 검증 (admin 우선, `active+teacherId`→student, graduated/withdrawn 제외 등) |
+| `scripts/verify-role-policy-db.mjs` | ❌ | Neon 실유저에 구정책 vs 현행 정책 역할 집계 비교 |
+| `scripts/analyze-assignment-backfill.mjs` | ❌ | `AssignmentHistory` 백필 대상 수·샘플 산출 |
+| `scripts/backfill-assignment-history.mjs` | ⚠️ | 레거시 재학생에 `assigned` 이력 INSERT. 기본 `--dry-run` |
+| `scripts/verify-recruiting.mjs` | ❌ | 선생님 비활성 vs 모집마감 단위 검증 |
+
+```bash
+# 역할 (로컬, DB 불필요)
+node scripts/verify-user-role.mjs
+
+# 역할 정책 · DB 읽기
+node scripts/verify-role-policy-db.mjs
+
+# 백필 대상 분석 (읽기만)
+node scripts/analyze-assignment-backfill.mjs
+
+# 백필 — 기본은 dry-run (INSERT 없음)
+node scripts/backfill-assignment-history.mjs --dry-run
+
+# 승인 후에만 실행
+# node scripts/backfill-assignment-history.mjs --execute
+# node scripts/backfill-assignment-history.mjs --verify --batch=<batchId>
+# node scripts/backfill-assignment-history.mjs --rollback --batch=<batchId>
+```
+
+백필 스크립트는 **User / Teacher 행을 수정하지 않습니다.** note에 배치 ID를 남겨 `--verify` / `--rollback`이 가능합니다.
 
 ---
 
@@ -819,7 +951,9 @@ import { ds } from '@/styles/design-system';
 | 컨텐츠 이미지 업로드 실패 (503) | **원인:** Vercel에 `BLOB_READ_WRITE_TOKEN` 없거나 Blob Store 미연결. **해결:** 배포 후 DB 폴백(`/api/content-images/…`) 자동 사용. Blob CDN 원하면 Storage Connect + Redeploy · `GET /api/admin/contents/upload`로 `probe.ok` 확인 |
 | 학생관리 테이블 잘림·열 눌림 | `/admin/students`는 `layout="wide"` 적용 여부 확인 · 표 영역 좌우 스크롤 · `student-teacher-assign` Select 폭 |
 | 선생님 인원 불일치 | Discord 동기화 → `currentStudents` 재계산 · 카드/상세는 `getActiveStudentCountsByTeacher` 통일 |
-| 졸업·입학 DM 미발송 | `/admin/dm-logs`에서 `skipped`/`failed` 확인 · `DISCORD_BOT_TOKEN` · 서버 가입 · 수신자 DM 허용 · 선생님은 `discordUserId` 연결 |
+| 졸업·입학 DM 미발송 | `/admin/dm-logs`에서 `skipped`/`failed` 확인 · `DISCORD_BOT_TOKEN` · 서버 가입 · 수신자 DM 허용 · 선생님은 `discordUserId` 연결. DM 실패는 **정상적으로 DB를 롤백하지 않음** |
+| 가입 2달 넘었는데 학생이 마을주민으로 보임 | `status=active`이고 `teacherId`가 있는지 확인. 있으면 `inferUserRole`이 student여야 함 · `siteRole` 수동 `resident`면 그대로 유지 |
+| AssignmentHistory가 비어 있음 | 신규 배정부터 기록됨. 레거시는 `analyze-assignment-backfill` → 승인 후 `backfill-assignment-history --execute` |
 | Discord 역할인데 선생님 아님 | `/admin/teachers` 역할명 **정확 일치** · 또는 선생님 관리에 직접 등록·ID 연결 (등록 우선) |
 | 모집마감인데 선생님 안 보임 | `isActive`가 false로 덮였는지 확인 — 인원 동기화는 `isActive`를 바꾸지 않아야 함. 비활성=숨김, 모집마감=`maxStudents`/정원 |
 | Bot 닉 403 | 역할 순위 · MANAGE_NICKNAMES |
