@@ -34,6 +34,10 @@ model User {
   adminRoleRequests AdminRoleRequest[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+
+  /** 담당 선생님별 학생 조회 · 재학(active)+배정 필터 */
+  @@index([teacherId])
+  @@index([status, teacherId])
 }
 
 model Class {
@@ -111,6 +115,10 @@ model Application {
   status       String   @default("approved")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([teacherId])
+  @@index([status, createdAt])
 }
 
 model Interview {
@@ -274,6 +282,7 @@ model DiscordDmLog {
   @@index([type, createdAt])
   @@index([recipientDiscordId])
   @@index([userId])
+  @@index([teacherId])
 }
 
 /** 학생↔선생님 배정 이력 — 졸업·퇴교·재배정 후에도 보존 */

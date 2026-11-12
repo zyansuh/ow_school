@@ -561,8 +561,11 @@ npm run dev         # http://localhost:3000
 | `20250627120000_content_uploaded_file` | `ContentUploadedFile` (Blob 미연결 시 이미지 바이너리) |
 | `20250626100000_enrollment_stat` | `EnrollmentStat` — 공개 인원 집계 스냅샷 |
 | `20250628120000_discord_dm_assignment_history` | `DiscordDmLog` · `AssignmentHistory` |
+| `20261113120000_student_lookup_indexes` | `User(teacherId)` · `User(status,teacherId)` · `Application(userId/teacherId/status)` · `DiscordDmLog(teacherId)` 인덱스 (데이터 변경 없음) |
 
 > 메인 홈 레이아웃·통계는 DB 자동 집계입니다. `EnrollmentStat`은 표시용 캐시이며 User·Teacher 원본은 변경하지 않습니다.
+>
+> **`DISCORD_BOT_TOKEN`:** 환경 변수만 사용합니다(테이블 없음). 미설정 시 DM은 `DiscordDmLog`에 `skipped`/`no_bot_token`으로만 기록되고 발송은 생략됩니다.
 
 ---
 
@@ -834,6 +837,8 @@ Prisma 모델과 Neon `public` 테이블은 `20250628120000_discord_dm_assignmen
 | `classId` / `teacherId` | 반 · 담당 선생님 (`teacherId` FK → `Teacher`, ON DELETE SET NULL) |
 
 역할 자동 분류에서 **`status=active` && `teacherId`** 이면 가입 기간과 무관하게 `student`입니다.
+
+인덱스: `User_teacherId_idx`, `User_status_teacherId_idx` — 선생님 포털·학생 목록 조회용.
 
 ### `AssignmentHistory` 컬럼
 
