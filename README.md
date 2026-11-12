@@ -36,13 +36,15 @@
 6. [아키텍처 · 소스 구조](#️-아키텍처)
 7. [빠른 시작](#-빠른-시작)
 8. [배포 · CI](#-vercel-배포)
-9. [Discord 연동](#-discord-서버-연동)
-10. [포인트 · 반 안내](#-포인트-시스템)
-11. [API 레퍼런스](#-api-레퍼런스)
-12. [데이터 모델 · DB 운영](#️-데이터-모델)
-13. [운영 스크립트](#-운영-스크립트)
-14. [개발 규칙](#-개발-규칙)
-15. [트러블슈팅](#-트러블슈팅)
+9. [Prisma 마이그레이션 · 인덱스](#-prisma-마이그레이션--인덱스)
+10. [Discord 연동 · Bot DM](#-discord-dm-입학졸업)
+11. [포인트 · 반 안내](#-포인트-시스템)
+12. [API 레퍼런스](#-api-레퍼런스)
+13. [데이터 모델 · DB 운영](#️-데이터-모델)
+14. [운영 스크립트](#-운영-스크립트)
+15. [개발 규칙](#-개발-규칙)
+16. [트러블슈팅](#-트러블슈팅)
+17. [최근 변경 요약](#-최근-변경-요약)
 
 ---
 
@@ -505,7 +507,7 @@ npm run dev         # http://localhost:3000
 | `NEXTAUTH_URL` | ✅ | 로컬 `http://localhost:3000` · Production `https://ow-school.vercel.app` |
 | `DISCORD_CLIENT_ID` / `SECRET` | ✅ | OAuth (Developer Portal과 동일 앱) |
 | `DISCORD_GUILD_ID` | ⭐ | 서버 ID (미가입 로그인 차단) |
-| `DISCORD_BOT_TOKEN` | ⭐ | 닉 변경·동기화 |
+| `DISCORD_BOT_TOKEN` | ⭐ | Bot API: 길드 동기화·닉 변경·**입학/졸업 DM**. **DB에 저장하지 않음**(환경 변수만). 미설정 시 DM은 발송 생략 + `DiscordDmLog.skipReason=no_bot_token` |
 | `AUTH_DEBUG` | — | `true`일 때만 Auth.js 상세 로그. **Production에서는 끄기**(Secret 노출) |
 | `GUILD_SYNC_TTL_SEC` | — | 캐시 TTL (기본 300) |
 | `DEFAULT_ADMIN_DISCORD_IDS` | — | 쉼표 구분 기본 관리자 ID |
@@ -561,11 +563,68 @@ npm run dev         # http://localhost:3000
 | `20250627120000_content_uploaded_file` | `ContentUploadedFile` (Blob 미연결 시 이미지 바이너리) |
 | `20250626100000_enrollment_stat` | `EnrollmentStat` — 공개 인원 집계 스냅샷 |
 | `20250628120000_discord_dm_assignment_history` | `DiscordDmLog` · `AssignmentHistory` |
-| `20261113120000_student_lookup_indexes` | `User(teacherId)` · `User(status,teacherId)` · `Application(userId/teacherId/status)` · `DiscordDmLog(teacherId)` 인덱스 (데이터 변경 없음) |
+| `20261113120000_student_lookup_indexes` | 학생·신청·DM **조회용 인덱스만** 추가 (행 데이터·컬럼 변경 없음) — 상세는 아래 |
 
 > 메인 홈 레이아웃·통계는 DB 자동 집계입니다. `EnrollmentStat`은 표시용 캐시이며 User·Teacher 원본은 변경하지 않습니다.
->
-> **`DISCORD_BOT_TOKEN`:** 환경 변수만 사용합니다(테이블 없음). 미설정 시 DM은 `DiscordDmLog`에 `skipped`/`no_bot_token`으로만 기록되고 발송은 생략됩니다.
+
+---
+
+## 🧭 Prisma 마이그레이션 · 인덱스
+
+### 운영 원칙
+
+| 원칙 | 설명 |
+|------|------|
+| 단일 DB | Neon `neondb` · 스키마 **`public`만** (관리자·선생님·학생 동일) |
+| additive 우선 | `CREATE TABLE` / `ADD COLUMN` nullable / `CREATE INDEX` — DROP·강제 NOT NULL 지양 |
+| 적용 경로 | 로컬·CI·Vercel 빌드: `npx prisma migrate deploy` (`scripts/vercel-build.mjs`) |
+| 시드 | 프로덕션에서 `RUN_DB_SEED` **설정하지 않음** |
+| 봇 토큰 | `DISCORD_BOT_TOKEN`은 **마이그레이션 대상 아님** (Secret/env만) |
+
+```bash
+# 로컬·운영 DB에 미적용 마이그레이션만 적용 (데이터 시드 없음)
+npx prisma migrate deploy
+
+# 스키마 변경 후 클라이언트 재생성
+npx prisma generate
+```
+
+### `20250628120000_discord_dm_assignment_history` (테이블)
+
+학생 입학/졸업 DM 기록과 배정 이력을 위해 **이미 적용됨**.
+
+| 테이블 | 용도 |
+|--------|------|
+| `DiscordDmLog` | Bot DM 발송·스킵·실패·재시도 로그 |
+| `AssignmentHistory` | 배정·재배정·졸업·퇴교·복구 스냅샷 |
+
+### `20261113120000_student_lookup_indexes` (인덱스만)
+
+담당 학생·신청·DM 목록 조회 성능을 위한 **additive 인덱스**. 기존 User/Teacher/Application/DiscordDmLog **행은 수정하지 않음**.
+
+| 인덱스명 | 테이블 | 컬럼 | 사용처 |
+|----------|--------|------|--------|
+| `User_teacherId_idx` | `User` | `teacherId` | 선생님 포털·학생 관리 「담당별」 |
+| `User_status_teacherId_idx` | `User` | `status, teacherId` | 재학(`active`)+배정 필터 · 역할 집계 |
+| `Application_userId_idx` | `Application` | `userId` | 마이페이지·내 신청 |
+| `Application_teacherId_idx` | `Application` | `teacherId` | 선생님별 신청 |
+| `Application_status_createdAt_idx` | `Application` | `status, createdAt` | 승인 대기 목록 |
+| `DiscordDmLog_teacherId_idx` | `DiscordDmLog` | `teacherId` | `/admin/dm-logs` 선생님 필터 |
+
+파일: `prisma/migrations/20261113120000_student_lookup_indexes/migration.sql` · Prisma: `User`/`Application`/`DiscordDmLog`의 `@@index`.
+
+### 학생 기능 DB 체크리스트 (현황)
+
+| 항목 | 상태 |
+|------|------|
+| 학생 전용 PostgreSQL 스키마 | **불필요** — `public` 공용 |
+| `User.teacherId` / `status` / `classId` | ✅ |
+| `User` ↔ `Teacher` FK | ✅ |
+| `AssignmentHistory` 테이블·인덱스 | ✅ |
+| `DiscordDmLog` 테이블·인덱스 | ✅ |
+| 담당 학생 조회 인덱스 | ✅ (`20261113120000_…`) |
+| `DISCORD_BOT_TOKEN` 테이블화 | ❌ 하지 않음 (env) |
+| AssignmentHistory 레거시 백필 | 스크립트 준비 · `--execute`는 승인 후 |
 
 ---
 
@@ -618,6 +677,10 @@ npm run dev         # http://localhost:3000
 
 ## 🎓 Discord DM (입학·졸업)
 
+Bot **개인 DM**은 OAuth 로그인과 별개입니다. 발송·스킵·실패는 모두 `DiscordDmLog`에 남고, **DB 트랜잭션(배정·졸업) 밖**에서 실행됩니다.
+
+### 이벤트 ↔ 로그 타입
+
 | 이벤트 | 수신자 | 유형 (`DiscordDmLog.type`) |
 |--------|--------|---------------------------|
 | 수강 신청 즉시 승인 | 학생 | `admission_student` |
@@ -626,20 +689,55 @@ npm run dev         # http://localhost:3000
 | 졸업 처리 | 선생님 | `graduation_teacher` |
 | 졸업면담 제출 | 담당 선생님 | `interview_teacher` |
 
+### 상태 · 스킵 사유
+
+| `status` | 의미 |
+|----------|------|
+| `pending` | 발송 시도 직전/중 |
+| `sent` | Discord API 성공 |
+| `failed` | API 오류·차단 등 (`error` 필드) |
+| `skipped` | 의도적으로 미발송 (`skipReason`) |
+
+| `skipReason` | 언제 |
+|--------------|------|
+| `no_bot_token` | `DISCORD_BOT_TOKEN` 미설정·빈 값 — **발송만 생략**, 입학/졸업 DB는 유지 |
+| `no_recipient` | `User.discordId` / `Teacher.discordUserId` 없음 |
+| (호출부 지정) | 관리자가 DM 체크 해제 등 |
+
+### 관리 UI · API
+
 | 경로 | 동작 |
 |------|------|
 | `/admin/students` · `/admin/users` | 졸업 다이얼로그 — 선생님 DM 체크, 수신 선생님 선택 |
-| `/admin/dm-logs` | 발송 내역·실패 재시도 |
-| API | `GET/POST /api/admin/dm-logs`, `POST .../[id]/retry` |
+| `/admin/dm-logs` | 발송 내역·실패/스킵 재시도 |
+| API | `GET /api/admin/dm-logs`, `POST .../[id]/retry` |
 
-**전제 (외부 설정 — 코드로 임의 처리하지 않음):**
+### 전제 (외부 설정)
 
-1. `DISCORD_BOT_TOKEN` — 봇이 길드에 초대되어 있어야 함
-2. 학생/선생님 Discord User ID (`User.discordId` / `Teacher.discordUserId`)
-3. 수신자가 봇과 **공통 서버**에 있거나 DM을 허용한 상태
-4. 수신자 개인 DM 차단 시 `failed`로 기록 → 관리자가 재시도
+1. Vercel·로컬 `.env`에 `DISCORD_BOT_TOKEN` (Developer Portal → Bot → Reset Token). **같은 Discord 앱**의 `DISCORD_CLIENT_ID`와 짝을 맞출 것
+2. 봇이 `DISCORD_GUILD_ID` 서버에 초대되어 있어야 함 (Server Members Intent 등)
+3. 수신 Discord User ID (`User.discordId` / `Teacher.discordUserId`)
+4. 수신자가 봇과 공통 서버에 있거나 DM 허용 — 차단 시 `failed` → `/admin/dm-logs` 재시도
 
-구현: `src/lib/discord/dm-service.ts` · `src/lib/notifications/*-dm.ts`
+구현: `src/lib/discord/dm-service.ts` (`sendTrackedDiscordDm`, `retryDiscordDmLog`) · `src/lib/notifications/*-dm.ts` · 설정 로딩 `getGuildConfig()` (`src/lib/discord/guild.ts`)
+
+```mermaid
+sequenceDiagram
+    participant Admin as 관리자/승인 플로우
+    participant TX as Prisma TX
+    participant DM as sendTrackedDiscordDm
+    participant Log as DiscordDmLog
+    participant API as Discord Bot API
+    Admin->>TX: User 배정/졸업 + AssignmentHistory
+    TX-->>Admin: commit
+    Admin->>DM: fire-and-forget
+    alt 토큰/수신자 없음
+        DM->>Log: status=skipped
+    else 정상
+        DM->>Log: pending → sent/failed
+        DM->>API: Create DM + Send Message
+    end
+```
 
 ---
 
@@ -821,7 +919,7 @@ sequenceDiagram
 | 학생 전용 스키마 | **만들지 않음** (별도 `DATABASE_URL_ST` 불필요) |
 | 스키마 변경 | nullable·additive 우선 · **승인 후** migrate · 운영 데이터 보존 |
 
-Prisma 모델과 Neon `public` 테이블은 `20250628120000_discord_dm_assignment_history`까지 정합합니다. 학생 기능용 **필수** 추가 테이블/컬럼은 없습니다. (권장 인덱스 등은 별도 승인.)
+Prisma 모델과 Neon `public`은 `20261113120000_student_lookup_indexes`까지 정합합니다. 학생 기능용 **필수 테이블/컬럼은 이미 충족**이며, 조회 인덱스도 적용되었습니다.
 
 ### `User` 주요 필드
 
@@ -838,7 +936,21 @@ Prisma 모델과 Neon `public` 테이블은 `20250628120000_discord_dm_assignmen
 
 역할 자동 분류에서 **`status=active` && `teacherId`** 이면 가입 기간과 무관하게 `student`입니다.
 
-인덱스: `User_teacherId_idx`, `User_status_teacherId_idx` — 선생님 포털·학생 목록 조회용.
+| 인덱스 | 컬럼 |
+|--------|------|
+| `User_discordId_key` | `discordId` (unique) |
+| `User_teacherId_idx` | `teacherId` |
+| `User_status_teacherId_idx` | `status, teacherId` |
+
+### `Application` 인덱스
+
+| 인덱스 | 컬럼 | 용도 |
+|--------|------|------|
+| `Application_userId_idx` | `userId` | 내 신청 |
+| `Application_teacherId_idx` | `teacherId` | 선생님별 신청 |
+| `Application_status_createdAt_idx` | `status, createdAt` | 상태·최신순 목록 |
+
+FK: `userId`→`User`, `teacherId`→`Teacher`, `classId`→`Class`.
 
 ### `AssignmentHistory` 컬럼
 
@@ -850,20 +962,23 @@ Prisma 모델과 Neon `public` 테이블은 `20250628120000_discord_dm_assignmen
 | `note` | 관리용 메모 (신청 ID, 재배정 이전 선생님 등) |
 | `createdAt` | 기본값 `CURRENT_TIMESTAMP` |
 
-인덱스: `(userId, createdAt)`, `(teacherId, createdAt)`, `(action, createdAt)`.
+인덱스: `(userId, createdAt)`, `(teacherId, createdAt)`, `(action, createdAt)`. User/Teacher FK 없음(이력 스냅샷 보존).
 
-### `DiscordDmLog` 컬럼 (요약)
+### `DiscordDmLog` 컬럼
 
 | 컬럼 | 설명 |
 |------|------|
 | `type` | `admission_student` · `application_teacher` · `graduation_*` · `interview_teacher` 등 |
 | `recipientDiscordId` | 수신 Discord snowflake |
 | `userId` / `teacherId` | 관련 User·Teacher (선택) |
+| `content` | 발송(또는 발송 예정) 본문 |
 | `status` | 기본 `pending` · `sent` / `failed` / `skipped` |
-| `attempts` / `lastAttemptAt` | 재시도 횟수·시각 |
+| `attempts` / `lastAttemptAt` | 재시도 횟수·시각 (`attempts` 기본 0) |
 | `skipReason` / `error` | 스킵·실패 사유 |
+| `createdAt` / `updatedAt` | 생성·갱신 |
 
-DB 레벨 유니크(중복 발송 방지)는 없으며, 앱 로그 + `/admin/dm-logs` 재시도로 운영합니다.
+인덱스: `(status, createdAt)`, `(type, createdAt)`, `recipientDiscordId`, `userId`, **`teacherId`**.  
+DB 레벨 유니크(중복 발송 방지)는 없으며, 앱 로그 + `/admin/dm-logs` 재시도로 운영합니다. **봇 토큰은 이 테이블에 저장하지 않습니다.**
 
 ### 전체 모델
 
@@ -934,6 +1049,8 @@ import { ds } from '@/styles/design-system';
 - 비즈니스 로직은 `lib/{도메인}/`에 추가
 - UI는 `components/{도메인}/`, 클라이언트 상태는 `hooks/{도메인}/`
 - DB 스키마 변경 시 `prisma/migrations/`에 **nullable·additive** 우선 (운영 데이터 보존)
+- 새 마이그레이션 추가 후 로컬에서 `npx prisma migrate deploy`로 Neon 적용 → Vercel도 빌드 시 동일 명령 실행
+- Secret(`DISCORD_BOT_TOKEN` 등)은 스키마/마이그레이션에 넣지 않음 — `.env.example`에 키만 문서화
 
 ### 동적 라우트
 
@@ -961,10 +1078,14 @@ import { ds } from '@/styles/design-system';
 | AssignmentHistory가 비어 있음 | 신규 배정부터 기록됨. 레거시는 `analyze-assignment-backfill` → 승인 후 `backfill-assignment-history --execute` |
 | Discord 역할인데 선생님 아님 | `/admin/teachers` 역할명 **정확 일치** · 또는 선생님 관리에 직접 등록·ID 연결 (등록 우선) |
 | 모집마감인데 선생님 안 보임 | `isActive`가 false로 덮였는지 확인 — 인원 동기화는 `isActive`를 바꾸지 않아야 함. 비활성=숨김, 모집마감=`maxStudents`/정원 |
+| migrate deploy 실패 / P1002 | `DIRECT_URL`(풀러 아닌 Direct) 확인 · Neon 슬립 깨우기 · Vercel 빌드 로그의 migration 이름 확인 |
+| 인덱스 누락 의심 | `_prisma_migrations`에 `20261113120000_student_lookup_indexes` 있는지 · `pg_indexes`에 `User_teacherId_idx` 등 존재 여부 |
 | Bot 닉 403 | 역할 순위 · MANAGE_NICKNAMES |
 | Windows EPERM prisma | node 프로세스 종료 후 재시도 |
 
-### 운영 DB 컬럼 수동 추가 (예시)
+> 신규 환경은 **수동 ALTER보다** `npx prisma migrate deploy`를 사용하세요. 아래는 비상시 참고용입니다.
+
+### 운영 DB 컬럼 수동 추가 (예시 · 레거시)
 
 ```sql
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "displayNickname" TEXT;
@@ -1007,9 +1128,53 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "guildJoinedAt" TIMESTAMP(3);
 | 문서 | 내용 |
 |------|------|
 | [ROADMAP.md](docs/ROADMAP.md) | 향후 작업 · 체크리스트 |
-| [.env.example](.env.example) | 환경 변수 템플릿 |
+| [.env.example](.env.example) | 환경 변수 템플릿 (`DISCORD_BOT_TOKEN` 포함) |
+| `prisma/schema.prisma` | 전체 모델 · 인덱스 |
+| `prisma/migrations/` | 버전별 SQL (배포는 `migrate deploy`) |
 
 버그 제보 · PR 환영합니다.
+
+---
+
+## 📌 최근 변경 요약
+
+### 역할 · 학생 유지
+
+| 커밋/영역 | 내용 |
+|-----------|------|
+| `fix(role)` | `status=active` && `teacherId` → **가입 2달 경과해도 student** 유지. Admin/Teacher 판별이 우선 |
+| `scripts/verify-user-role.mjs` | 케이스 8–12 (배정 유지·명시적 resident·졸업/퇴교·admin 우선) |
+| `scripts/verify-role-policy-db.mjs` | Neon 실데이터 읽기 전용 정책 집계 |
+
+### 배정 이력 · 트랜잭션
+
+| 영역 | 내용 |
+|------|------|
+| `assignment.ts` / `graduation.ts` / `withdrawal.ts` / `applications/status.ts` | User 갱신 + `AssignmentHistory` **동일 `$transaction`** |
+| `assignment-history.ts` | `recordAssignmentHistory(..., db?)` — TX 클라이언트 주입 |
+| Discord DM | **TX 커밋 이후** 호출 · 실패해도 입학/졸업/이력 롤백 없음 |
+
+### DB 마이그레이션
+
+| 마이그레이션 | 내용 |
+|-------------|------|
+| `20250628120000_discord_dm_assignment_history` | `DiscordDmLog` · `AssignmentHistory` 테이블 |
+| `20261113120000_student_lookup_indexes` | User/Application/DiscordDmLog **조회 인덱스 6개** (데이터 변경 없음) |
+
+### Discord Bot
+
+| 항목 | 내용 |
+|------|------|
+| 토큰 | env 키 **`DISCORD_BOT_TOKEN`** (`.env.example` · Vercel Secrets) |
+| 미설정 시 | 발송 생략 · `DiscordDmLog`에 `skipped` / `no_bot_token` |
+| DB | 토큰용 테이블/컬럼 **없음** |
+
+### 운영 스크립트 (백필)
+
+| 스크립트 | 기본 |
+|----------|------|
+| `analyze-assignment-backfill.mjs` | 읽기만 |
+| `backfill-assignment-history.mjs` | `--dry-run` 기본 · `--execute`는 승인 후 · User/Teacher 미수정 |
 
 ---
 
